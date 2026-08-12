@@ -6,6 +6,12 @@ import { logEvent } from '../core/GameState.js';
 
 let audioCtx = null, musicNodes = [], musicPlaying = false, musicGain = null, musicVolume = 0.28;
 
+// V0.3.0 — ambiance adaptative: toute la musique passe par ce filtre passe-bas commun. On ne
+// rebranche jamais les nappes individuellement — juste sa fréquence de coupure, qui monte/descend
+// selon l'état du jeu (calme/tension/alerte). C'est ce qui rend la transition audible et fluide.
+let masterFilter = null;
+let ambienceState = 'calm';
+
 export function isMusicPlaying() { return musicPlaying; }
 
 export function initAudio() {
@@ -14,10 +20,37 @@ export function initAudio() {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         musicGain = audioCtx.createGain();
         musicGain.gain.value = musicVolume;
-        musicGain.connect(audioCtx.destination);
+        masterFilter = audioCtx.createBiquadFilter();
+        masterFilter.type = 'lowpass';
+        masterFilter.frequency.value = 20000; // ouvert par défaut (calme) — indistinguable d'un lien direct
+        masterFilter.Q.value = 0.5;
+        musicGain.connect(masterFilter);
+        masterFilter.connect(audioCtx.destination);
       } catch (e) {
         logEvent('❌ Audio indisponible sur ce navigateur: ' + e.message, 'warn');
       }
+    }
+
+// Bascule fluide de l'ambiance sonore entre 'calm' (nappe ouverte), 'tension' (Timefall/Tempête
+// Chirale — filtre étouffé, oppressant) et un pulse ponctuel d'alerte (BT détecté).
+const AMBIENCE_CUTOFF = { calm: 20000, tension: 900 };
+
+export function setAmbienceState(state) {
+      if (!audioCtx || !masterFilter) { ambienceState = state; return; }
+      ambienceState = state;
+      const target = AMBIENCE_CUTOFF[state] ?? AMBIENCE_CUTOFF.calm;
+      masterFilter.frequency.cancelScheduledValues(audioCtx.currentTime);
+      masterFilter.frequency.setTargetAtTime(target, audioCtx.currentTime, 1.4); // transition ~4s, pas de saut brutal
+    }
+
+// Pulse ponctuel (pas un état persistant): étouffe brièvement puis revient à l'ambiance courante —
+// pour un repérage BT, pas pour un changement météo durable.
+export function pulseAlertAmbience() {
+      if (!audioCtx || !masterFilter) return;
+      const now = audioCtx.currentTime;
+      masterFilter.frequency.cancelScheduledValues(now);
+      masterFilter.frequency.setTargetAtTime(500, now, 0.08);
+      masterFilter.frequency.setTargetAtTime(AMBIENCE_CUTOFF[ambienceState] ?? AMBIENCE_CUTOFF.calm, now + 0.5, 1.2);
     }
 
 export function audioDiag() {
@@ -353,7 +386,114 @@ export function playMenuChime() {
       audioCtx.resume().then(play).catch(e => logEvent('❌ Chime échoué: ' + e.message, 'warn'));
     }
 
+// --- SFX contextuels V0.3.0 — courts, synthétisés, mêmes garde-fous (initAudio + resume si suspendu) ---
+
+export function playConstructionThud() {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const now = audioCtx.currentTime;
+        [0, 0.11].forEach((offset, i) => {
+          const osc = audioCtx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(90 - i * 15, now + offset);
+          osc.frequency.exponentialRampToValueAtTime(35, now + offset + 0.25);
+          const g = audioCtx.createGain();
+          g.gain.setValueAtTime(0.28, now + offset);
+          g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.35);
+          osc.connect(g);
+          g.connect(audioCtx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + 0.4);
+        });
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
+export function playValidationChime(pitch = 1) {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const now = audioCtx.currentTime;
+        [523.3, 659.3].forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          osc.type = 'triangle';
+          osc.frequency.value = freq * pitch;
+          const g = audioCtx.createGain();
+          g.gain.value = 0;
+          osc.connect(g);
+          g.connect(audioCtx.destination);
+          const start = now + i * 0.07;
+          osc.start(start);
+          g.gain.linearRampToValueAtTime(0.09, start + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+          osc.stop(start + 0.55);
+        });
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
+export function playRefusalTone() {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.3);
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 500;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(filter);
+        filter.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
+export function playRainSwell() {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const dur = 1.2;
+        const bSize = Math.floor(audioCtx.sampleRate * dur);
+        const buf = audioCtx.createBuffer(1, bSize, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bSize; i++) data[i] = (Math.random() * 2 - 1) * Math.min(1, i / (bSize * 0.3));
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1800;
+        filter.Q.value = 0.5;
+        const g = audioCtx.createGain();
+        g.gain.value = 0.05;
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(audioCtx.destination);
+        src.start();
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
 // --- Abonnements EventBus : engine/systems ne joue jamais de son directement, il émet un événement
 // et c'est le moteur audio qui décide comment le traduire en son. ---
 eventBus.on('sfx:drum', (type) => playCinematicDrum(type));
 eventBus.on('sfx:brass', (intensity) => playBrassStinger(intensity));
+
+// V0.3.0 — ambiance adaptative Météo/Combat/Quêtes: Exploration calme -> Tension Timefall -> Alerte BT.
+eventBus.on('weather:timefallStarted', () => { setAmbienceState('tension'); playRainSwell(); });
+eventBus.on('weather:chiralStormStarted', () => { setAmbienceState('tension'); playRainSwell(); });
+eventBus.on('weather:cleared', () => setAmbienceState('calm'));
+eventBus.on('combat:btDetected', () => { pulseAlertAmbience(); playCinematicDrum('impact'); });
+eventBus.on('quest:urgent', () => playValidationChime(0.7));
+eventBus.on('quest:accepted', () => playValidationChime(1));
+eventBus.on('quest:negotiated', () => playValidationChime(1.25));
+eventBus.on('quest:refused', () => playRefusalTone());
+eventBus.on('shelter:built', () => playConstructionThud());

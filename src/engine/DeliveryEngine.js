@@ -469,7 +469,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
         condition: 100, // état du cargo à l'arrivée -> note S/A/B/C (#1)
         btExposure: sampleBTExposure(porter.x, porter.y, destX, destY), // 0-5 cellules BT sur le trajet
         detection: 0, spotted: false, // jauge de détection progressive (#B)
-        quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need, urgentQuestId: questOpts.urgentQuestId, zeroDamage: questOpts.zeroDamage } : null,
+        quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need, urgentQuestId: questOpts.urgentQuestId, zeroDamage: questOpts.zeroDamage, icon: questOpts.icon } : null,
         raidId: (questOpts && questOpts.raidId) || null,
         destTerrain, lostCargoBonus, ghostName: ghostPCC ? ghostPCC.ghostName : null, // contexte pour le récit émergent
         maxSteps: Math.ceil(distance * B.maxStepsDistanceMult * timeMultiplier),

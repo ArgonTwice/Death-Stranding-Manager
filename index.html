@@ -91,6 +91,7 @@
       <button onclick="startPlacingPCC('generator')">⚡ Générateur Chiral ($800+)</button>
       <button onclick="startPlacingPCC('bridge')">🌉 Pont PCC ($700+)</button>
       <button onclick="startPlacingPCC('zipline')">🔗 Tyrolienne PCC ($900+)</button>
+      <button onclick="startPlacingPCC('timefallShelter')">⛺ Abri Anti-Timefall ($950+)</button>
       <button onclick="cancelPlacingPCC()" class="danger">✕ Annuler le placement</button>
       <div id="pccModeHint" style="font-size:9px; color:var(--amber); margin-top:2px;"></div>
 
@@ -208,6 +209,30 @@
     </div>
   </div>
 
+  <!-- MiniMap plein écran (V0.3.0) — même langage visuel que les autres modales .left -->
+  <div class="left" id="miniMapModal" onclick="if (event.target === this) closeMiniMapFullscreen()">
+    <div class="panel">
+      <button class="modal-close" onclick="closeMiniMapFullscreen()">✕</button>
+      <h2>◆ CARTE TACTIQUE</h2>
+      <canvas id="miniMapCanvasFull" width="640" height="640" style="width:100%; height:auto; background:#060504;"></canvas>
+    </div>
+  </div>
+
+  <!-- Tiroir de quêtes (V0.3.0) — glisse depuis la droite, ne bloque JAMAIS le Canvas (contrairement
+       aux modales .left qui recouvrent tout l'écran). Onglets Urgences/En cours/Terminées. -->
+  <div class="quest-drawer" id="questDrawer">
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closeQuestPanel()">✕</button>
+      <h2>◆ QUÊTES</h2>
+      <div class="qp-tabs">
+        <button class="qp-tab active" data-qp-tab="urgences" onclick="setQuestPanelTab('urgences')">🎯 Urgences</button>
+        <button class="qp-tab" data-qp-tab="encours" onclick="setQuestPanelTab('encours')">🚚 En cours</button>
+        <button class="qp-tab" data-qp-tab="terminees" onclick="setQuestPanelTab('terminees')">🏁 Terminées</button>
+      </div>
+      <div id="questDrawerBody" class="quest-drawer-body"></div>
+    </div>
+  </div>
+
   <div class="main">
     <div class="map-container">
       <div class="map-status-strip">
@@ -215,12 +240,27 @@
         <div class="voyant"><span class="dot dot-amber"></span> SIGNAL BRIDGES: STABLE</div>
         <div class="voyant"><span class="dot dot-purple"></span> SCAN ODRADEK: ACTIF</div>
       </div>
+      <!-- Chiral Forecast (V0.3.0): météo du territoire actif + prévision à N jours, toujours exacte -->
+      <div id="weatherForecastStrip" class="map-status-strip" aria-label="Prévision météo chirale"></div>
       <div id="mapToggle" style="display: flex; gap: 6px; margin-bottom: 6px;"></div>
       <canvas id="gameMap" width="800" height="400"></canvas>
       <div id="voidoutBanner">
         <div class="title">NÉANTISATION</div>
         <div class="subtitle">— une âme rejoint le rivage —</div>
       </div>
+
+      <!-- MiniMap (V0.3.0): vue synthétique du réseau, incrustée sur le coin de la carte, jamais
+           bloquante — le bouton ⛶ ouvre une version plein écran (.left, même langage visuel que
+           les autres modales tactiques). -->
+      <div class="minimap-widget">
+        <canvas id="miniMapCanvas" width="120" height="120"></canvas>
+        <button class="minimap-expand-btn" onclick="toggleMiniMapFullscreen()" aria-label="Agrandir la mini-carte">⛶</button>
+      </div>
+
+      <!-- Tiroir de quêtes (V0.3.0): glisse depuis le bord, ne recouvre jamais le Canvas -->
+      <button id="questDrawerToggle" class="quest-drawer-toggle" onclick="toggleQuestPanel()" aria-label="Quêtes">
+        🎯<span id="questDrawerBadge" class="quest-drawer-badge"></span>
+      </button>
     </div>
     
     <div class="stats panel">

@@ -10,6 +10,12 @@ import { createDelivery } from '../engine/DeliveryEngine.js';
 
 function absoluteDay() { return game.month * DAYS_PER_MONTH + game.dayInMonth; }
 
+function pushHistory(quest, outcome) {
+      game.urgentQuestHistory = game.urgentQuestHistory || [];
+      game.urgentQuestHistory.unshift({ flavor: quest.flavor, icon: quest.icon, outcome, day: absoluteDay() });
+      if (game.urgentQuestHistory.length > 20) game.urgentQuestHistory.length = 20;
+    }
+
 function pickQuestGiver(mapKey) {
       const d = game.mapsData[mapKey];
       const knots = (d && d.mainKnots) || [];
@@ -48,6 +54,7 @@ export function clearExpiredUrgentQuests() {
       game.urgentQuests = (game.urgentQuests || []).filter(q => {
         if (today > q.expiresDay) {
           if (q.mapKey === game.currentMap) logEvent(`⌛ Quête urgente expirée: ${q.flavor}`, 'warn');
+          pushHistory(q, 'expired');
           eventBus.emit('quest:expired', { quest: q });
           return false;
         }
@@ -89,7 +96,7 @@ export function acceptUrgentQuest(questId, porterId, route) {
       if (!p || p.map !== q.mapKey || p.status !== 'idle' || p.health <= 0) { logEvent('❌ Porteur indisponible'); return; }
       createDelivery(porterIdx, knot.x, knot.y, {
         reward: q.reward, flavor: q.flavor, riskCut: q.riskCut || 0, extraTimeMult: q.extraTimeMult || 1, route,
-        urgentQuestId: q.id, zeroDamage: q.zeroDamage
+        urgentQuestId: q.id, zeroDamage: q.zeroDamage, icon: q.icon
       });
       game.loyalty = Math.min(100, (game.loyalty ?? 50) + BALANCE.quest.acceptLoyaltyGain);
       game.urgentQuests = (game.urgentQuests || []).filter(x => x.id !== questId);
@@ -104,6 +111,7 @@ export function refuseUrgentQuest(questId) {
       const loss = q.zeroDamage ? BALANCE.quest.refuseUrgentMedicalLoyaltyLoss : BALANCE.quest.refuseLoyaltyLoss;
       game.loyalty = Math.max(0, (game.loyalty ?? 50) - loss);
       game.urgentQuests = (game.urgentQuests || []).filter(x => x.id !== questId);
+      pushHistory(q, 'refused');
       logEvent(`🚫 Quête urgente refusée: ${q.flavor} (loyauté -${loss})`, 'warn');
       eventBus.emit('quest:refused', { quest: q });
       eventBus.emit('render:request');
@@ -122,6 +130,7 @@ export function applyUrgentQuestOutcome(quest, success) {
         game.loyalty = Math.max(0, (game.loyalty ?? 50) - B.failLoyaltyLoss);
         logEvent(`📉 Loyauté -${B.failLoyaltyLoss} — quête urgente échouée`, 'warn');
       }
+      pushHistory(quest, success ? 'success' : 'fail');
       if (game.loyalty >= B.loyaltySchemaUnlockThreshold) eventBus.emit('quest:loyaltyUnlock', { loyalty: game.loyalty });
     }
 

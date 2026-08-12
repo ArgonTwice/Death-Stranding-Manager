@@ -18,8 +18,11 @@ import { buildStructure, computeLogisticsDashboard, infraCost, investInfrastruct
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { beachJump, equipSlots, equippedCount, forceRest, hire, porterTitle, repairGear, retirePorter } from '../systems/PorterSystem.js';
 import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel } from '../systems/PrepperSystem.js';
+import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
 import { refreshInspectorIfOpen } from './CanvasInspector.js';
 import { drawMap } from './MapRenderer.js';
+import { renderMiniMap } from './MiniMap.js';
+import { renderQuestPanel } from './QuestPanel.js';
 
 export function showEndScreen(score, scoresList) {
       const totalRoutes = Object.values(game.mapsData).reduce((s, d) => s + d.routes.size, 0);
@@ -60,9 +63,24 @@ export function render() {
       renderPorterTarget();
       renderAutomationPanel();
       renderLogisticsDashboard();
+      renderWeatherForecast();
+      renderMiniMap();
+      renderQuestPanel();
       refreshInspectorIfOpen();
       renderDebugHud();
       // drawMap tourne en boucle continue (rAF) depuis l'init, pas besoin de la relancer ici
+    }
+
+// V0.3.0 — Chiral Forecast: météo actuelle + prévision à N jours du territoire affiché, sur le
+// bandeau de statut au-dessus de la carte. Mis à jour aussi par eventBus ('weather:forecastUpdated')
+// pour un retour immédiat au changement de météo, sans attendre le prochain render() global.
+export function renderWeatherForecast() {
+      const el = document.getElementById('weatherForecastStrip');
+      if (!el) return;
+      const current = currentWeatherLabel(game.currentMap);
+      const forecast = forecastFor(game.currentMap);
+      el.innerHTML = `<span class="voyant">${current.icon} ${current.name}</span>` +
+        forecast.map((f, i) => `<span class="voyant wf-forecast">J+${i + 1} ${f.icon}</span>`).join('');
     }
 
 // HUD DE DEBUG — overlay discret (coin bas-droit), actif uniquement avec ?debug=1 dans l'URL.
@@ -615,3 +633,10 @@ eventBus.on('screen:hideEndScreen', () => {
   const el = document.getElementById('endScreen');
   if (el) el.style.display = 'none';
 });
+// V0.3.0
+eventBus.on('weather:forecastUpdated', () => renderWeatherForecast());
+eventBus.on('quest:urgent', () => renderQuestPanel());
+eventBus.on('quest:accepted', () => renderQuestPanel());
+eventBus.on('quest:negotiated', () => renderQuestPanel());
+eventBus.on('quest:refused', () => renderQuestPanel());
+eventBus.on('quest:expired', () => renderQuestPanel());

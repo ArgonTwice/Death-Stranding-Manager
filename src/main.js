@@ -18,10 +18,13 @@ import { buildStructure, buyEquip, buyVehicle, investInfrastructure, signSponsor
 import { cancelPlacingPCC, canvasClickToCell, placePCCAt, repairPCC, startPlacingPCC } from './systems/NetworkSystem.js';
 import { beachJump, forceRest, hire, repairGear, retirePorter, scoutCandidate } from './systems/PorterSystem.js';
 import { assignPrepperContract, connectKnot, negotiatePrepperContract } from './systems/PrepperSystem.js';
+import { negotiateUrgentQuest, refuseUrgentQuest } from './systems/QuestSystem.js';
 import { closeInspector, inspectMapCell } from './ui/CanvasInspector.js';
 import { render, renderPorters, showEndScreen } from './ui/HUD.js';
 import { drawMap } from './ui/MapRenderer.js';
+import { closeMiniMapFullscreen, toggleMiniMapFullscreen } from './ui/MiniMap.js';
 import { checkMobileMode, closeTabModal, setMobileTab } from './ui/Modals.js';
+import { acceptUrgentQuestFromUI, closeQuestPanel, setQuestPanelTab, toggleQuestPanel } from './ui/QuestPanel.js';
 
 // Câble l'horloge générique (core/GameLoop.js) sur la simulation réelle du jeu — GameLoop reste
 // agnostique du contenu, seul main.js (composition root) connaît advanceDay().
@@ -144,6 +147,14 @@ export async function chooseSlot(slot, mode) {
 window.game = game;
 window.runtime = runtime;
 window.eventBus = eventBus;
+window.acceptUrgentQuestFromUI = acceptUrgentQuestFromUI;
+window.negotiateUrgentQuest = negotiateUrgentQuest;
+window.refuseUrgentQuest = refuseUrgentQuest;
+window.toggleQuestPanel = toggleQuestPanel;
+window.closeQuestPanel = closeQuestPanel;
+window.setQuestPanelTab = setQuestPanelTab;
+window.toggleMiniMapFullscreen = toggleMiniMapFullscreen;
+window.closeMiniMapFullscreen = closeMiniMapFullscreen;
 window.acceptVisitorOffer = acceptVisitorOffer;
 window.advanceDay = advanceDay;
 window.assaultCamp = assaultCamp;
