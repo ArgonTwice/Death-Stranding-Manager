@@ -3,8 +3,9 @@
 
 import { currentRankIndex, game } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
-import { HQ } from './Balance.js';
+import { BALANCE, HQ } from './Balance.js';
 import { hireRaw } from '../systems/PorterSystem.js';
+import { porterLeagueTier } from '../systems/PorterLeague.js';
 
 export const SKILLS = {
       driver: { name: '🚗 Chauffeur', dmg: -0.3, speed: 0.2, equip: 'vehicle' },
@@ -239,8 +240,50 @@ export const PCC_TYPES = {
       bridge:    { name: 'Pont PCC', icon: '🌉', cost: 700, desc: 'annule la pénalité rivière à proximité' },
       zipline:   { name: 'Tyrolienne PCC', icon: '🔗', cost: 900, desc: '-20% temps à proximité' },
       timefallShelter: { name: 'Abri Anti-Timefall', icon: '⛺', cost: 950, desc: 'protège porteurs proches de l\'usure et du ralenti Timefall' },
-      advancedChiralShelter: { name: 'Abri Chiral Avancé', icon: '🏛️', cost: 1800, desc: 'protection Timefall + réparation auto des véhicules/convois à proximité' }
+      advancedChiralShelter: { name: 'Abri Chiral Avancé', icon: '🏛️', cost: 1800, desc: 'protection Timefall + réparation auto des véhicules/convois à proximité' },
+      superRelay: { name: 'Super-Relais Régional', icon: '📡', cost: 2500, desc: 'interconnecte le territoire au réseau régional — bonus permanent cumulatif' }
     };
+
+// Identité procédurale des porteurs (V0.5.0) — générée déterministiquement via un flux RNG dérivé
+// de porterSeed (PorterStorySystem.js), jamais via Math.random().
+export const PORTER_BACKGROUNDS = {
+      ex_mule:      { name: 'Ex-MULE repenti', icon: '🏴', talentGrade: 'combat' },
+      ex_medic:     { name: 'Ancien médecin', icon: '⚕️', talentGrade: 'service' },
+      ex_soldier:   { name: 'Ex-soldat Bridges', icon: '🎖️', talentGrade: 'combat' },
+      cartographer: { name: 'Cartographe indépendant', icon: '🗺️', talentGrade: 'reseau' },
+      wanderer:     { name: 'Vagabond du Rivage', icon: '🥾', talentGrade: 'discretion' },
+      porter_vet:   { name: 'Vétéran Bridges', icon: '📦', talentGrade: 'portage' }
+    };
+
+export const PORTER_PHOBIAS = {
+      timefall:  { name: 'Peur du Timefall', icon: '🌧️', desc: 'stress accru sous Timefall/Tempête Chirale' },
+      bt:        { name: 'BT Fear', icon: '👻', desc: 'stress accru en zone BT' },
+      isolation: { name: 'Peur de la solitude', icon: '🌑', desc: 'stress accru en mission solo' },
+      heights:   { name: 'Vertige', icon: '⛰️', desc: 'stress accru en terrain montagneux' }
+    };
+
+export const PORTER_JOYS = {
+      convoy:   { name: 'Aime les convois', icon: '🚛', desc: 'stress réduit en convoi' },
+      shelter:  { name: 'Passion des abris', icon: '⛺', desc: 'stress réduit près d\'un abri' },
+      solitude: { name: 'Aime la solitude', icon: '🌌', desc: 'stress réduit en mission solo' },
+      company:  { name: 'Aime la compagnie', icon: '🤝', desc: 'stress réduit en escouade' }
+    };
+
+// Traits Acquis débloqués par le Journal de bord (PorterStorySystem.js) après N faits marquants du
+// même type — mêmes champs que TRAITS (dmg_resist / stress_mult), appliqués en plus du trait de base.
+export const JOURNAL_MILESTONES = {
+      timefall_survived: { name: 'Tempête traversée', icon: '🌧️', acquiredTraitName: 'Résistant au Timefall', stress_mult: 0.9 },
+      raid_survived:      { name: 'Raid survécu', icon: '⚔️', acquiredTraitName: 'Vétéran des raids', dmg_resist: 0.05 },
+      perfect_delivery:   { name: 'Livraison parfaite', icon: '⭐', acquiredTraitName: 'Perfectionniste', dmg_resist: 0.03 },
+      bt_encounter:       { name: 'Rencontre BT', icon: '👻', acquiredTraitName: 'Sang-froid BT', stress_mult: 0.9 }
+    };
+
+export const LEAGUE_TIERS = [
+      { name: 'Bronze', icon: '🥉' },
+      { name: 'Argent', icon: '🥈' },
+      { name: 'Or', icon: '🥇' },
+      { name: 'Élite Chirale', icon: '💠' }
+    ];
 
 // Stratégies de Convoi Lourd (V0.4.0) — flavor + icônes; les coefficients numériques vivent dans
 // BALANCE.convoy.strategies (même clé).
@@ -336,7 +379,12 @@ export const SPONSORS = [
       { id: 'chiral_corp',  name: 'Chiral Corp', signingBonus: 4000, monthlyIncome: 300,
         cond: () => currentRankIndex() >= 2, desc: 'Rang Bridges Certifié minimum' },
       { id: 'mule_repenti', name: 'Syndicat discret (ex-MULE repenti)', signingBonus: 5000, monthlyIncome: 50,
-        cond: () => game.materials.mule_scrap >= 2, desc: 'Conserver ≥ 2 ferraille MULE en stock' }
+        cond: () => game.materials.mule_scrap >= 2, desc: 'Conserver ≥ 2 ferraille MULE en stock' },
+      // V0.5.0 — sponsors de prestige, débloqués par la Ligue (PorterLeague.js), contrats VIP à hautes récompenses
+      { id: 'bridges_elite', name: 'Bridges — Division Élite', signingBonus: 8000, monthlyIncome: 450, vip: true,
+        cond: () => porterLeagueTier() >= BALANCE.league.vipContractMinTier, desc: `Ligue ${LEAGUE_TIERS[BALANCE.league.vipContractMinTier].name} minimum` },
+      { id: 'fragile_express', name: 'Fragile Express', signingBonus: 6000, monthlyIncome: 600, vip: true,
+        cond: () => porterLeagueTier() >= BALANCE.league.vipContractMinTier, desc: `Ligue ${LEAGUE_TIERS[BALANCE.league.vipContractMinTier].name} minimum` }
     ];
 
 export const SPLASH_TICKER_LINES = [

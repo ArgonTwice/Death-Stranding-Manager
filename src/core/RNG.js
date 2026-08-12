@@ -49,5 +49,18 @@ function nextRange(min, max) {
   return min + next() * (max - min);
 }
 
-export const RNG = { setSeed, getSeed, next, nextInt, nextRange };
-export { setSeed, getSeed, next, nextInt, nextRange };
+// V0.5.0 — flux indépendant dérivé d'une seed explicite (porterSeed etc.), sans toucher au flux
+// global partagé ci-dessus. Sert à générer une identité procédurale (PorterStorySystem.js) qui ne
+// dépend QUE de sa propre seed stockée — reproductible bit-à-bit même si l'ordre des autres tirages
+// RNG.next() ailleurs dans la simulation change entre deux versions du code.
+function deriveGenerator(seed) {
+  const gen = mulberry32(seed >>> 0);
+  return {
+    next: gen,
+    nextInt: (maxExclusive) => Math.floor(gen() * maxExclusive),
+    nextRange: (min, max) => min + gen() * (max - min)
+  };
+}
+
+export const RNG = { setSeed, getSeed, next, nextInt, nextRange, deriveGenerator };
+export { setSeed, getSeed, next, nextInt, nextRange, deriveGenerator };

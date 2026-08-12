@@ -6,6 +6,8 @@ import { game, logEvent, runtime } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
 import { BALANCE, DIFFICULTIES } from '../data/Balance.js';
 import { FIRST_NAMES, GRADES, GRADE_TITLES, LAST_NAMES, RELICS, SKILLS, TRAITS, VEHICLE_CAPACITY, countryInfo, gradeLevel, rollTrait } from '../data/Constants.js';
+import { recordLegendIfEligible } from './LegacySystem.js';
+import { acquiredTraitDmgResist, applyIdentityToPorter } from './PorterStorySystem.js';
 
 export function gearEffectiveness(p) {
       const wear = p.gearWear || 0;
@@ -47,7 +49,7 @@ export function equipSlots(p) {
     }
 
 export function porterResist(p) {
-      return Math.min(BALANCE.porter.resistCap, (SKILLS[p.skill].dmg_resist || 0) + (TRAITS[p.trait].dmg_resist || 0) + gradeLevel(p, 'combat') * BALANCE.porter.resistGradeCombatMult + (p.legendaryBoost || 0));
+      return Math.min(BALANCE.porter.resistCap, (SKILLS[p.skill].dmg_resist || 0) + (TRAITS[p.trait].dmg_resist || 0) + gradeLevel(p, 'combat') * BALANCE.porter.resistGradeCombatMult + (p.legendaryBoost || 0) + acquiredTraitDmgResist(p));
     }
 
 export function equippedCount(p) {
@@ -97,6 +99,7 @@ export function hireRaw(skill, trait, rare) {
         health: 100, stress: 0, status: "idle", gearWear: 0,
         equipment: { boots: 0, exo: 0, scanner: 0, cryptobiote: 0, bolagun: 0, cryobox: 0, harness: 0, climbing_anchor: 0, vehicle: null }
       });
+      applyIdentityToPorter(game.porters[id]); // V0.5.0: identité procédurale (background/phobie/joie/DOOMS/talent)
       return game.porters[id];
     }
 
@@ -144,7 +147,8 @@ export function recordHallOfFame(p, cause) {
         name: p.name, skill: p.skill, trait: p.trait, likes: p.likes, level: p.level,
         grades: { ...p.grades }, cause, month: game.month
       });
-      game.hallOfFame = game.hallOfFame.slice(0, 20); // garde les 20 plus récents
+      game.hallOfFame = game.hallOfFame.slice(0, 20); // garde les 20 plus récents (cette partie)
+      recordLegendIfEligible(p, cause); // V0.5.0: mémorisation entre les parties (Hall of Fame interactif)
     }
 
 export function retirePorter(id) {

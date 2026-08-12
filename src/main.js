@@ -21,10 +21,12 @@ import { assignPrepperContract, connectKnot, negotiatePrepperContract } from './
 import { negotiateUrgentQuest, refuseUrgentQuest } from './systems/QuestSystem.js';
 import { closeInspector, inspectMapCell } from './ui/CanvasInspector.js';
 import { closeConvoyPanel, launchConvoyFromUI, renderConvoyEscortList, toggleConvoyPanel, updateConvoyPreview } from './ui/ConvoyPanel.js';
+import { closeHallOfFamePanel, toggleHallOfFamePanel } from './ui/HallOfFamePanel.js';
 import { render, renderPorters, showEndScreen } from './ui/HUD.js';
 import { drawMap } from './ui/MapRenderer.js';
 import { closeMiniMapFullscreen, toggleMiniMapFullscreen } from './ui/MiniMap.js';
 import { checkMobileMode, closeTabModal, setMobileTab } from './ui/Modals.js';
+import { closePorterDrawer, openPorterDrawer, setPorterDrawerTab } from './ui/PorterDrawer.js';
 import { acceptUrgentQuestFromUI, closeQuestPanel, setQuestPanelTab, toggleQuestPanel } from './ui/QuestPanel.js';
 
 // Câble l'horloge générique (core/GameLoop.js) sur la simulation réelle du jeu — GameLoop reste
@@ -161,6 +163,11 @@ window.closeConvoyPanel = closeConvoyPanel;
 window.renderConvoyEscortList = renderConvoyEscortList;
 window.updateConvoyPreview = updateConvoyPreview;
 window.launchConvoyFromUI = launchConvoyFromUI;
+window.openPorterDrawer = openPorterDrawer;
+window.closePorterDrawer = closePorterDrawer;
+window.setPorterDrawerTab = setPorterDrawerTab;
+window.toggleHallOfFamePanel = toggleHallOfFamePanel;
+window.closeHallOfFamePanel = closeHallOfFamePanel;
 window.acceptVisitorOffer = acceptVisitorOffer;
 window.advanceDay = advanceDay;
 window.assaultCamp = assaultCamp;

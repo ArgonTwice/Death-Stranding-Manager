@@ -442,5 +442,39 @@ export const BALANCE = {
   },
   telemetry: {
     historyCap: 30
+  },
+  // V0.5.0 — Legends & Procedural Soul Update
+  story: {
+    phobiaStressPerDay: 6, // par jour où la phobie du porteur est "déclenchée" par son environnement
+    joyStressReliefPerDay: 4, // par jour où sa joie est satisfaite
+    doomsDetectionMultPerLevel: 0.12, // par niveau de DOOMS (0-3), réduit la vitesse de détection BT
+    talentGradeBonus: 3, // bonus de départ dans la catégorie de grade tirée par le talent initial
+    journalHistoryCap: 15,
+    milestoneCountForAcquiredTrait: 3 // nb de faits marquants du même type requis pour débloquer un Trait Acquis
+  },
+  league: {
+    // 4 échelons Bronze/Argent/Or/Élite Chirale, seuils cumulatifs sur réputation + livraisons totales
+    tierThresholds: [
+      { minReputation: 0, minCompleted: 0 },
+      { minReputation: 45, minCompleted: 15 },
+      { minReputation: 65, minCompleted: 60 },
+      { minReputation: 80, minCompleted: 180 }
+    ],
+    vipContractMinTier: 2, // Or minimum pour débloquer les contrats VIP des sponsors de prestige
+    vipContractRewardMult: 2.2,
+    vipContractSpawnChance: 0.1
+  },
+  regionalNetwork: {
+    cost: 2500,
+    bonusRewardMultPerRelay: 0.03, // cumulatif, plafonné à maxRelaysCounted
+    bonusRiskCutPerRelay: 0.015,
+    maxRelaysCounted: 5
+  },
+  legacy: {
+    structureCarryOverFraction: 0.5, // NG+: fraction du niveau des installations reportée (schémas)
+    hardcoreTimefallWeightMult: 1.6, // NG+ "Hardcore Timefall": multiplie les poids Timefall/Tempête Chirale du forecast
+    legendMinLevel: 3, // seuil pour qu'un porteur du Hall of Fame devienne une "légende" persistée entre parties
+    legendMinLikes: 20,
+    hallOfFameCap: 25
   }
 };

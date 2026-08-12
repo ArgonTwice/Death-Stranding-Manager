@@ -93,6 +93,7 @@
       <button onclick="startPlacingPCC('zipline')">🔗 Tyrolienne PCC ($900+)</button>
       <button onclick="startPlacingPCC('timefallShelter')">⛺ Abri Anti-Timefall ($950+)</button>
       <button onclick="startPlacingPCC('advancedChiralShelter')">🏛️ Abri Chiral Avancé ($1800+)</button>
+      <button onclick="startPlacingPCC('superRelay')">📡 Super-Relais Régional ($2500+)</button>
       <button onclick="cancelPlacingPCC()" class="danger">✕ Annuler le placement</button>
       <div id="pccModeHint" style="font-size:9px; color:var(--amber); margin-top:2px;"></div>
 
@@ -247,6 +248,29 @@
     </div>
   </div>
 
+  <!-- Fiche de porteur (V0.5.0) — tiroir glissant, onglets Résumé (lecture 3s) / Psychologie / Journal -->
+  <div class="quest-drawer" id="porterDrawer">
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closePorterDrawer()">✕</button>
+      <h2>◆ FICHE PORTEUR</h2>
+      <div class="qp-tabs">
+        <button class="qp-tab porter-drawer-tab active" data-pd-tab="resume" onclick="setPorterDrawerTab('resume')">⚡ Résumé</button>
+        <button class="qp-tab porter-drawer-tab" data-pd-tab="psychologie" onclick="setPorterDrawerTab('psychologie')">🧠 Psychologie</button>
+        <button class="qp-tab porter-drawer-tab" data-pd-tab="journal" onclick="setPorterDrawerTab('journal')">📖 Journal</button>
+      </div>
+      <div id="porterDrawerBody" class="quest-drawer-body"></div>
+    </div>
+  </div>
+
+  <!-- Hall of Fame (V0.5.0) — tiroir glissant, légendes entre les parties + porteurs de cette partie -->
+  <div class="quest-drawer" id="hallOfFameDrawer">
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closeHallOfFamePanel()">✕</button>
+      <h2>◆ HALL OF FAME</h2>
+      <div id="hallOfFameDrawerBody" class="quest-drawer-body"></div>
+    </div>
+  </div>
+
   <div class="main">
     <div class="map-container">
       <div class="map-status-strip">
@@ -279,6 +303,11 @@
       <!-- Tiroir de convois (V0.4.0): même comportement, décalé pour ne pas chevaucher le bouton quêtes -->
       <button id="convoyDrawerToggle" class="quest-drawer-toggle convoy-drawer-toggle" onclick="toggleConvoyPanel()" aria-label="Convois">
         🚛
+      </button>
+
+      <!-- Hall of Fame (V0.5.0): légendes entre les parties -->
+      <button id="hallOfFameDrawerToggle" class="quest-drawer-toggle halloffame-drawer-toggle" onclick="toggleHallOfFamePanel()" aria-label="Hall of Fame">
+        🏆
       </button>
     </div>
     

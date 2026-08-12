@@ -57,6 +57,7 @@ export const game = {
       urgentQuestHistory: [], // V0.3.0 — historique borné (succès/échec/refus/expiration) pour l'onglet "Terminées" de QuestPanel.js
       convoys: [], // V0.4.0 — convois lourds en transit (ConvoySystem.js). Éphémère comme game.deliveries: jamais persisté.
       telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, // V0.4.0 — rapport de performance logistique cumulé (TelemetrySystem.js), persisté
+      hardcoreTimefall: false, // V0.5.0 — modificateur NG+ (LegacySystem.js): météo Timefall/Tempête Chirale plus fréquente
       // --- Propriétés repliées depuis d'anciennes variables top-level module-scope (refacto ES Modules) ---
       gameEnded: false,
       quarterSnapshot: { completed: 0, deaths: 0, money: 10000 },
@@ -77,6 +78,7 @@ export const runtime = {
       rainDrops: [],
       dustParticles: [],
       announcedRank: 0,
+      announcedLeagueTier: 0, // V0.5.0 — même garde-fou que announcedRank, pour league:promoted
       announcedUnlocks: {},
       currentSlot: 1,
       activeCampEvents: [], // valeur réelle affectée après la déclaration de CAMP_EVENTS, plus bas

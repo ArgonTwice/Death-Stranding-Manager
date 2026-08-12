@@ -81,7 +81,9 @@ const result = {
   forecast: d.forecast || [],
   // V0.4.0 — couvre le déterminisme des convois/télémétrie (auto-dispatch peut composer des convois via RNG)
   telemetry: game.telemetry || null,
-  convoysActive: (game.convoys || []).length
+  convoysActive: (game.convoys || []).length,
+  // V0.5.0 — couvre le déterminisme de l'identité procédurale (porterSeed) et du journal de bord
+  porterIdentities: game.porters.map(p => ({ porterSeed: p.porterSeed, background: p.background, phobia: p.phobia, joy: p.joy, doomsLevel: p.doomsLevel, journalCount: (p.journal || []).length, acquiredTraitIds: p.acquiredTraitIds || [] }))
 };
 
 process.stdout.write(JSON.stringify(result));

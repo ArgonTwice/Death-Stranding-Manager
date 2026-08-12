@@ -6,8 +6,8 @@ import { eventBus } from '../core/EventBus.js';
 import { DEBUG } from '../core/Debug.js';
 import { checkRankUp, currentRankIndex, game, logEvent, runtime } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
-import { DAYS_PER_MONTH, GAME_LENGTH_MONTHS, MAP_HEIGHT, MAP_WIDTH, RANKS, STRUCTURE_MIN_RANK } from '../data/Balance.js';
-import { CAMP_TRAIT_LABELS, COUNTRIES, GRADES, PCC_TYPES, PREPPER_ARCHETYPES, RECIPES, RELICS, ROUTE_TYPES, SKILLS, SPONSORS, STRUCTURES, TITLES, TRAITS, cellKey, countryInfo, gradeLevel } from '../data/Constants.js';
+import { BALANCE, DAYS_PER_MONTH, GAME_LENGTH_MONTHS, MAP_HEIGHT, MAP_WIDTH, RANKS, STRUCTURE_MIN_RANK } from '../data/Balance.js';
+import { CAMP_TRAIT_LABELS, COUNTRIES, GRADES, JOURNAL_MILESTONES, LEAGUE_TIERS, PCC_TYPES, PORTER_BACKGROUNDS, PORTER_PHOBIAS, PREPPER_ARCHETYPES, RECIPES, RELICS, ROUTE_TYPES, SKILLS, SPONSORS, STRUCTURES, TITLES, TRAITS, cellKey, countryInfo, gradeLevel } from '../data/Constants.js';
 import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, sendToIncinerator } from '../engine/CombatEngine.js';
 import { acceptVisitorOffer, craft, dismissVisitor, launchQuestFromUI, sendDelivery } from '../engine/DeliveryEngine.js';
 import { dominantStructure, nextLockedCountry, setActiveBranch, switchMap } from '../engine/MapEngine.js';
@@ -18,12 +18,15 @@ import { buildStructure, computeLogisticsDashboard, infraCost, investInfrastruct
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { beachJump, equipSlots, equippedCount, forceRest, hire, porterTitle, repairGear, retirePorter } from '../systems/PorterSystem.js';
 import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel } from '../systems/PrepperSystem.js';
+import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
 import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
 import { refreshInspectorIfOpen } from './CanvasInspector.js';
 import { renderConvoyPanel } from './ConvoyPanel.js';
+import { renderHallOfFamePanel } from './HallOfFamePanel.js';
 import { drawMap } from './MapRenderer.js';
 import { renderMiniMap } from './MiniMap.js';
+import { refreshPorterDrawerIfOpen } from './PorterDrawer.js';
 import { renderQuestPanel } from './QuestPanel.js';
 
 export function showEndScreen(score, scoresList) {
@@ -70,6 +73,8 @@ export function render() {
       renderQuestPanel();
       renderConvoyPanel();
       renderTelemetryReport();
+      renderHallOfFamePanel();
+      refreshPorterDrawerIfOpen();
       refreshInspectorIfOpen();
       renderDebugHud();
       // drawMap tourne en boucle continue (rAF) depuis l'init, pas besoin de la relancer ici
@@ -255,12 +260,15 @@ export function renderLogisticsDashboard() {
 export function renderSponsor() {
       const el = document.getElementById('sponsorDisplay');
       if (!el) return;
+      const tier = porterLeagueTier();
+      const label = LEAGUE_TIERS[tier];
+      const leagueLine = `<div style="margin-bottom:4px;">${label.icon} Ligue Porteurs: <b>${label.name}</b>${tier < LEAGUE_TIERS.length - 1 ? ` (prochain palier: rép. ${BALANCE.league.tierThresholds[tier + 1].minReputation}, livraisons ${BALANCE.league.tierThresholds[tier + 1].minCompleted})` : ' — palier maximum'}</div>`;
       if (game.sponsor) {
-        el.innerHTML = `🤝 Sponsor: ${game.sponsor.name} (+$${game.sponsor.monthlyIncome}/mois) — ${game.sponsor.desc}`;
+        el.innerHTML = leagueLine + `🤝 Sponsor: ${game.sponsor.name} (+$${game.sponsor.monthlyIncome}/mois) — ${game.sponsor.desc}`;
         return;
       }
-      el.innerHTML = 'Aucun sponsor.<br>' + SPONSORS.map(s =>
-        `<button onclick="signSponsor('${s.id}')" style="font-size:8px; margin:1px;">Signer: ${s.name} (+$${s.signingBonus}, +$${s.monthlyIncome}/mois)</button>`
+      el.innerHTML = leagueLine + 'Aucun sponsor.<br>' + SPONSORS.map(s =>
+        `<button onclick="signSponsor('${s.id}')" style="font-size:8px; margin:1px;">${s.vip ? '💠 ' : ''}Signer: ${s.name} (+$${s.signingBonus}, +$${s.monthlyIncome}/mois)</button>`
       ).join('');
     }
 
@@ -560,7 +568,7 @@ export function renderPorters() {
             <span class="porter-card-lvl">Lv${p.level} · ${SKILLS[p.skill].name}${p.status === 'left' ? ' (licencié)' : ''}</span>
           </div>
           ${porterTitle(p) ? `<div class="porter-card-title">"${porterTitle(p)}"</div>` : ''}
-          <div style="font-size: 9px; color: var(--text-dim);">${TRAITS[p.trait].name} · ❤️ ${p.likes} · 🎒 ${equippedCount(p)}/${equipSlots(p)}</div>
+          <div style="font-size: 9px; color: var(--text-dim);">${TRAITS[p.trait].name} · ❤️ ${p.likes} · 🎒 ${equippedCount(p)}/${equipSlots(p)}${p.phobia && PORTER_PHOBIAS[p.phobia] ? ` · ${PORTER_PHOBIAS[p.phobia].icon}` : ''}${p.background && PORTER_BACKGROUNDS[p.background] ? ` ${PORTER_BACKGROUNDS[p.background].icon}` : ''}</div>
           ${(p.gearWear || 0) > 0 ? `<div style="font-size:9px; color:${p.gearWear >= 70 ? 'var(--blood)' : 'var(--amber-dim)'}; margin-top:2px;">🔧 Usure équip. ${p.gearWear}%${p.gearWear >= 50 ? ' ⚠️' : ''}
             <button onclick="repairGear(${p.id})" style="font-size:8px; padding:2px 6px; margin-left:4px; width:auto; display:inline;">Réparer ($${Math.ceil(p.gearWear * 5)})</button></div>` : ''}
 
@@ -596,6 +604,7 @@ export function renderPorters() {
             <button onclick="forceRest(${p.id})" ${p.status !== 'idle' || p.health <= 0 ? 'disabled' : ''}>
               😴 Repos ($${Math.ceil((p.salary / 2) * (1 + p.stress / 100))})
             </button>
+            <button class="full-width" onclick="openPorterDrawer(${p.id})">🪪 Fiche du porteur</button>
             ${p.level >= 5 ? `<button onclick="retirePorter(${p.id})" ${p.status !== 'idle' ? 'disabled' : ''}>🎖️ Retraite</button>` : ''}
             ${otherUnlocked.map(c => `
             <button class="full-width" onclick="beachJump(${p.id}, '${c.key}')" ${p.status !== 'idle' || p.health <= 0 ? 'disabled' : ''}>
@@ -665,3 +674,9 @@ eventBus.on('quest:expired', () => renderQuestPanel());
 eventBus.on('convoy:created', () => renderConvoyPanel());
 eventBus.on('convoy:departed', () => { renderConvoyPanel(); renderTelemetryReport(); });
 eventBus.on('convoy:arrived', () => renderTelemetryReport());
+// V0.5.0
+eventBus.on('porter:fearTriggered', ({ porterId }) => refreshPorterDrawerIfOpen(porterId));
+eventBus.on('porter:joyTriggered', ({ porterId }) => refreshPorterDrawerIfOpen(porterId));
+eventBus.on('porter:milestoneReached', ({ porterId }) => refreshPorterDrawerIfOpen(porterId));
+eventBus.on('porter:traitAcquired', ({ porterId }) => refreshPorterDrawerIfOpen(porterId));
+eventBus.on('legacy:legendRecorded', () => renderHallOfFamePanel());

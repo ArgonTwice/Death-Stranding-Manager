@@ -48,6 +48,7 @@ export function placePCCAt(x, y) {
       markMapDirty();
       logEvent(`🏗️ ${PCC_TYPES[type].name} posé en (${x},${y}) (-$${cost})`, 'good');
       if (type === 'timefallShelter' || type === 'advancedChiralShelter') eventBus.emit('shelter:built', { mapKey: game.currentMap, x, y, advanced: type === 'advancedChiralShelter' }); // V0.3.0/V0.4.0: SoundEngine joue un SFX de construction
+      if (type === 'superRelay') eventBus.emit('regionalNetwork:relayBuilt', { mapKey: game.currentMap, x, y }); // V0.5.0
       runtime.placingPCC = null;
       eventBus.emit('render:request');
     }

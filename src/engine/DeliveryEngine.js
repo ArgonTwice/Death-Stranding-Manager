@@ -17,6 +17,9 @@ import { gearEffectiveness, porterCapacity, porterResist, recordHallOfFame, roll
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
 import { applyUrgentQuestOutcome, clearExpiredUrgentQuests, tickUrgentQuestSpawns } from '../systems/QuestSystem.js';
 import { reportConvoyMemberOutcome } from '../systems/ConvoySystem.js';
+import { checkLeaguePromotion, generateVipContract } from '../systems/PorterLeague.js';
+import { acquiredTraitStressMult, applyPsychologyDailyEffects, doomsDetectionMult, recordJournalEntry } from '../systems/PorterStorySystem.js';
+import { regionalNetworkRewardMult, regionalNetworkRiskCut } from '../systems/RegionalNetwork.js';
 import { applyAdvancedShelterRepairs } from '../systems/ShelterSystem.js';
 import { timefallSpeedMult } from '../systems/TimefallSystem.js';
 import { tickWeatherSystem } from '../systems/WeatherSystem.js';
@@ -432,6 +435,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       let reward = questOpts ? Math.ceil(questOpts.reward * (1 + gradeLevel(porter, 'service') * B.serviceGradeRewardMult)) : Math.ceil(distance * B.rewardDistanceMult * (1 + game.reputation / B.reputationRewardDivisor) * cargo.rewardMult);
       if (porter.equipment.vehicle) reward *= B.vehicleRewardMult;
       reward = Math.ceil(reward * (1 + (game.infraInvestments || 0) * B.infraRewardMultPerInvestment)); // investissements infrastructure, permanent
+      reward = Math.ceil(reward * regionalNetworkRewardMult()); // V0.5.0: bonus permanent des Super-Relais régionaux
 
       // Surcharge: ratio masse cargo / capacité porteur — au-delà de 0.9 ça pénalise risque + vitesse (canon: balance/stamina DS)
       const overload = overloadRatio(porter, cargo);
@@ -440,7 +444,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       const onRoute = isOnRoute(destX, destY);
       const campRiskCut = dominantStructure() === 'shelter' ? B.shelterDominantRiskCut : 0;
       const route = ROUTE_TYPES[(questOpts && questOpts.route)] || null;
-      const event = generateEvent(porter, distance, destX, destY, cargo.riskMod + overloadRiskMod - (questOpts && questOpts.riskCut || 0) - festivalValue('riskCut') - campRiskCut + (route ? route.riskMod : 0)); // riskCut: raid + festival + spécialité camp + itinéraire
+      const event = generateEvent(porter, distance, destX, destY, cargo.riskMod + overloadRiskMod - (questOpts && questOpts.riskCut || 0) - festivalValue('riskCut') - campRiskCut + (route ? route.riskMod : 0) - regionalNetworkRiskCut()); // riskCut: raid + festival + spécialité camp + itinéraire + V0.5.0 Super-Relais
       let timeMultiplier = (porter.equipment.vehicle ? VEHICLE_SPEED[porter.equipment.vehicle] : 1) * cargo.timeMult * (route ? route.timeMult : 1) * ((questOpts && questOpts.extraTimeMult) || 1);
       if (onRoute) timeMultiplier *= Math.max(B.onRouteTimeFloor, B.onRouteTimeBase - gradeLevel(porter, 'reseau') * B.onRouteReseauGradeMult) * (1 - (game.structures.zipline || 0) * B.ziplineStructureTimeMultPerLevel) * (dominantStructure() === 'zipline' ? B.ziplineDominantTimeMult : 1) * (isNearPCC(destX, destY, 'zipline') ? B.ziplinePccTimeMult : 1); // -30% temps + Porter Grade Réseau + zipline + spécialité camp + tyrolienne PCC
       // Cargo lourd sans véhicule: pénalité de temps supplémentaire
@@ -561,7 +565,7 @@ export function tick() {
           }
 
           // Stress (Cryptobiotes canon: atténuent les effets de la Frappe Temporelle; trait Nerveux amplifie)
-          p.stress += Math.max(0, evt.stress - p.equipment.cryptobiote * B.cryptobioteStressMitPerUnit) * (TRAITS[p.trait].stress_mult || 1);
+          p.stress += Math.max(0, evt.stress - p.equipment.cryptobiote * B.cryptobioteStressMitPerUnit) * (TRAITS[p.trait].stress_mult || 1) * acquiredTraitStressMult(p); // V0.5.0: Traits Acquis (journal de bord)
           if (evt.reward) d.reward += evt.reward;
           d.reward = Math.max(0, d.reward);
 
@@ -579,7 +583,7 @@ export function tick() {
         if (d.btExposure > 0 && !d.spotted && d.timeRemaining > 0) {
           const p2 = game.porters[d.porter];
           const scannerLvl = p2.equipment.scanner || 0;
-          const detectRate = d.btExposure * B.detectionRatePerExposure * (1 - scannerLvl * B.detectionScannerMult - gradeLevel(p2, 'discretion') * B.detectionDiscretionGradeMult);
+          const detectRate = d.btExposure * B.detectionRatePerExposure * (1 - scannerLvl * B.detectionScannerMult - gradeLevel(p2, 'discretion') * B.detectionDiscretionGradeMult) * doomsDetectionMult(p2); // V0.5.0: niveau DOOMS procédural
           d.detection += Math.max(1, detectRate);
           if (d.detection >= B.detectionThreshold && p2.health > 0) {
             d.spotted = true;
@@ -606,6 +610,7 @@ export function tick() {
             applyUrgentQuestOutcome(d.quest, false, null);
             reportConvoyMemberOutcome(d.quest, false);
             eventBus.emit('delivery:resolved', { reward: 0, onRoute: d.onRoute, routeType: d.routeType, success: false });
+            if (d.btExposure > 0) recordJournalEntry(p, 'bt_encounter'); // V0.5.0
             p.status = "dead";
             continue;
           }
@@ -646,6 +651,11 @@ export function tick() {
           applyUrgentQuestOutcome(d.quest, !(d.quest && d.quest.zeroDamage && d.condition < 100), rating);
           reportConvoyMemberOutcome(d.quest, true);
           eventBus.emit('delivery:resolved', { reward: d.reward, onRoute: d.onRoute, routeType: d.routeType, success: true });
+          // V0.5.0 — Journal de bord: ne retient que les faits marquants (jamais les livraisons routinières)
+          if (rating.grade === 'S') recordJournalEntry(p, 'perfect_delivery');
+          if (d.raidId || (d.quest && d.quest.convoyId)) recordJournalEntry(p, 'raid_survived');
+          if (d.btExposure > 0) recordJournalEntry(p, 'bt_encounter');
+          { const wd = game.mapsData[d.map]; if (wd && wd.weather && (wd.weather.type === 'timefall' || wd.weather.type === 'duststorm')) recordJournalEntry(p, 'timefall_survived'); }
           p.likes += rating.likes;
           if (rating.grade === 'S') game.reputation = Math.min(100, game.reputation + B.sRankReputationGain); // bonus S-rank
 
@@ -771,6 +781,9 @@ export function advanceDay() {
       tickUrgentQuestSpawns(); // V0.3.0: chance quotidienne de quête urgente indépendante de la météo (réputation)
       clearExpiredUrgentQuests();
       applyAdvancedShelterRepairs(); // V0.4.0: réparation auto véhicules/convois près d'un Abri Chiral Avancé
+      applyPsychologyDailyEffects(); // V0.5.0: phobie/joie procédurales (stress quotidien)
+      checkLeaguePromotion(); // V0.5.0: promotion de Ligue Porteurs
+      generateVipContract(); // V0.5.0: contrat VIP sponsor de prestige (Ligue Or+)
 
       game.dayInMonth++;
       if (game.dayInMonth >= DAYS_PER_MONTH) {

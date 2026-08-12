@@ -8,6 +8,9 @@ import { RNG } from '../core/RNG.js';
 import { DIFFICULTIES, GAME_LENGTH_MONTHS, HQ, RANKS } from '../data/Balance.js';
 import { CAMP_EVENTS, FESTIVALS, RELICS, VISITOR_OFFERS, pickN, rollTrait } from '../data/Constants.js';
 import { generateBTZones, generateMainKnots, generateMuleCamps, generateTerrain, loadMapData } from '../engine/MapEngine.js';
+import { applyLegacyCarryOver } from '../systems/LegacySystem.js';
+import { porterLeagueTier } from '../systems/PorterLeague.js';
+import { ensurePorterIdentity } from '../systems/PorterStorySystem.js';
 import { render } from '../ui/HUD.js';
 
 export function computeScore() {
@@ -51,12 +54,14 @@ export function startNewGamePlus() {
       const carryCollection = [...game.collection];
       const carryTitles = [...game.titles];
       const bonusCash = Math.min(5000, Math.round(computeScore() / 10));
+      const previousStructures = { ...game.structures }; // V0.5.0: instantané AVANT le reset de newGame()
       newGame(false);
       game.ngPlus = true; // débloque le x2 pour cette run
       game.legacyBonus = carryLegacy;
       game.collection = carryCollection;
       game.titles = carryTitles;
       game.money += bonusCash;
+      applyLegacyCarryOver(previousStructures); // V0.5.0: schémas partiellement reportés + Hardcore Timefall
       logEvent(`✨ NOUVELLE PARTIE+ — héritage conservé: +${Math.round(carryLegacy * 100)}% XP, ${carryCollection.length} reliques, ${carryTitles.length} titres, +$${bonusCash} de départ`, 'good');
       eventBus.emit('render:request');
       saveGame(true);
@@ -125,7 +130,7 @@ export function serializeGame() {
         duos: game.duos, sponsor: game.sponsor, automation: game.automation, difficulty: game.difficulty, dayInMonth: game.dayInMonth, monthState: game.monthState, ngPlus: game.ngPlus, infraInvestments: game.infraInvestments, subsidiaries: game.subsidiaries || [],
         activeRelicIds: game.activeRelicIds, activeCampEventIds: runtime.activeCampEvents.map(e => e.id), activeVisitorOfferIds: runtime.activeVisitorOffers.map(o => o.id), activeFestivalIds: runtime.activeFestivalsPool.map(f => f.id),
         loyalty: game.loyalty, urgentQuests: game.urgentQuests || [], urgentQuestHistory: game.urgentQuestHistory || [],
-        telemetry: game.telemetry || null
+        telemetry: game.telemetry || null, hardcoreTimefall: !!game.hardcoreTimefall
       };
     }
 
@@ -141,7 +146,7 @@ export function deserializeGame(s) {
         gearWear: p.gearWear || 0,
         equipment: { harness: 0, climbing_anchor: 0, ...p.equipment },
         status: p.status === 'en route' ? 'idle' : p.status
-      }));
+      })).map(p => ensurePorterIdentity(p)); // V0.5.0: backfill déterministe pour porteurs pré-V0.5.0
       game.deliveries = [];
       game.convoys = []; // V0.4.0: en transit uniquement, jamais persisté (même logique que game.deliveries)
       game.structures = s.structures || {};
@@ -178,6 +183,7 @@ export function deserializeGame(s) {
       game.urgentQuests = s.urgentQuests || [];
       game.urgentQuestHistory = s.urgentQuestHistory || [];
       game.telemetry = s.telemetry || { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } };
+      game.hardcoreTimefall = !!s.hardcoreTimefall;
       runtime.activeCampEvents = s.activeCampEventIds ? CAMP_EVENTS.filter(e => s.activeCampEventIds.includes(e.id)) : CAMP_EVENTS;
       runtime.activeVisitorOffers = s.activeVisitorOfferIds ? VISITOR_OFFERS.filter(o => s.activeVisitorOfferIds.includes(o.id)) : VISITOR_OFFERS;
       runtime.activeFestivalsPool = s.activeFestivalIds ? FESTIVALS.filter(f => s.activeFestivalIds.includes(f.id)) : FESTIVALS;
@@ -185,6 +191,7 @@ export function deserializeGame(s) {
       const diffEl = document.getElementById('difficultySelect');
       if (diffEl) diffEl.value = game.difficulty;
       runtime.announcedRank = currentRankIndex();
+      runtime.announcedLeagueTier = porterLeagueTier(); // V0.5.0: n'annonce pas les paliers de ligue déjà atteints au chargement
     }
 
 export async function saveGame(silent = false) {
@@ -222,10 +229,11 @@ export function newGame(confirmFirst, slot) {
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';
       const startMoney = DIFFICULTIES[difficulty].startMoney;
-      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } } });
+      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false });
       Object.keys(game.equipBought).forEach(k => game.equipBought[k] = 0);
       game.gameEnded = false;
       runtime.announcedRank = 0;
+      runtime.announcedLeagueTier = 0;
       game.dayInMonth = 0;
       runtime.gameSpeed = 1;
       runtime.paused = false;

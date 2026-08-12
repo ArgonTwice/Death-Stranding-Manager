@@ -16,10 +16,13 @@ import { setMapWeather, triggerDuststorm, triggerTimefall } from '../engine/Weat
 
 function rollWeatherType() {
       const B = BALANCE.weatherSystem;
-      const total = B.calmWeight + B.timefallWeight + B.chiralStormWeight;
+      const hardcoreMult = game.hardcoreTimefall ? BALANCE.legacy.hardcoreTimefallWeightMult : 1; // V0.5.0 NG+
+      const timefallWeight = B.timefallWeight * hardcoreMult;
+      const chiralStormWeight = B.chiralStormWeight * hardcoreMult;
+      const total = B.calmWeight + timefallWeight + chiralStormWeight;
       const r = RNG.next() * total;
       if (r < B.calmWeight) return 'calm';
-      if (r < B.calmWeight + B.timefallWeight) return 'timefall';
+      if (r < B.calmWeight + timefallWeight) return 'timefall';
       return 'duststorm';
     }
 
