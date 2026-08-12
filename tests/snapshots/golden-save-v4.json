@@ -1,0 +1,600 @@
+{
+  "v": 3,
+  "money": 116734,
+  "month": 5,
+  "reputation": 100,
+  "completed": 66,
+  "deaths": 0,
+  "porters": [
+    {
+      "id": 0,
+      "name": "Wren Marchetti",
+      "skill": "scout",
+      "trait": "chiral_affinity",
+      "likes": 165,
+      "grades": {
+        "portage": 0,
+        "combat": 15,
+        "discretion": 150,
+        "service": 0,
+        "reseau": 0
+      },
+      "map": "mexico",
+      "x": 0,
+      "y": 6,
+      "xp": 206.90512499999997,
+      "level": 5,
+      "salary": 580,
+      "health": 63.32691914662719,
+      "stress": 40,
+      "status": "en route",
+      "gearWear": 19,
+      "equipment": {
+        "boots": 1,
+        "exo": 0,
+        "scanner": 1,
+        "cryptobiote": 0,
+        "bolagun": 0,
+        "cryobox": 0,
+        "harness": 0,
+        "climbing_anchor": 0,
+        "vehicle": null
+      }
+    },
+    {
+      "id": 1,
+      "name": "Otis Okonkwo",
+      "skill": "hauler",
+      "trait": "ironback",
+      "likes": 400,
+      "grades": {
+        "portage": 50,
+        "combat": 0,
+        "discretion": 325,
+        "service": 0,
+        "reseau": 25
+      },
+      "map": "mexico",
+      "x": 5,
+      "y": 0,
+      "xp": 463.07625,
+      "level": 10,
+      "salary": 930,
+      "health": 100,
+      "stress": 0,
+      "status": "en route",
+      "gearWear": 24,
+      "equipment": {
+        "boots": 0,
+        "exo": 0,
+        "scanner": 0,
+        "cryptobiote": 0,
+        "bolagun": 0,
+        "cryobox": 0,
+        "harness": 0,
+        "climbing_anchor": 0,
+        "vehicle": "truck"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Otis Njoku",
+      "skill": "driver",
+      "trait": "clumsy",
+      "likes": 241,
+      "grades": {
+        "portage": 15,
+        "combat": 11,
+        "discretion": 215,
+        "service": 0,
+        "reseau": 0
+      },
+      "map": "mexico",
+      "x": 1,
+      "y": 9,
+      "xp": 327.23249999999996,
+      "level": 7,
+      "salary": 720,
+      "health": 79.23306861111661,
+      "stress": 0,
+      "status": "idle",
+      "gearWear": 24,
+      "equipment": {
+        "boots": 0,
+        "exo": 0,
+        "scanner": 0,
+        "cryptobiote": 0,
+        "bolagun": 0,
+        "cryobox": 0,
+        "harness": 0,
+        "climbing_anchor": 0,
+        "vehicle": null
+      }
+    },
+    {
+      "id": 3,
+      "name": "Rurik Solheim",
+      "skill": "dooms",
+      "trait": "nervous",
+      "likes": 225,
+      "grades": {
+        "portage": 0,
+        "combat": 0,
+        "discretion": 225,
+        "service": 0,
+        "reseau": 0
+      },
+      "map": "mexico",
+      "x": 2,
+      "y": 9,
+      "xp": 230.19875,
+      "level": 5,
+      "salary": 580,
+      "health": 100,
+      "stress": 0,
+      "status": "en route",
+      "gearWear": 14,
+      "equipment": {
+        "boots": 0,
+        "exo": 0,
+        "scanner": 0,
+        "cryptobiote": 0,
+        "bolagun": 0,
+        "cryobox": 0,
+        "harness": 0,
+        "climbing_anchor": 0,
+        "vehicle": null
+      }
+    },
+    {
+      "id": 4,
+      "name": "Saoirse Kovač",
+      "skill": "scout",
+      "trait": "early_riser",
+      "likes": 312,
+      "grades": {
+        "portage": 0,
+        "combat": 8,
+        "discretion": 300,
+        "service": 0,
+        "reseau": 0
+      },
+      "map": "mexico",
+      "x": 2,
+      "y": 9,
+      "xp": 324.8175,
+      "level": 7,
+      "salary": 720,
+      "health": 100,
+      "stress": 0,
+      "status": "en route",
+      "gearWear": 14,
+      "equipment": {
+        "boots": 0,
+        "exo": 0,
+        "scanner": 0,
+        "cryptobiote": 0,
+        "bolagun": 0,
+        "cryobox": 0,
+        "harness": 0,
+        "climbing_anchor": 0,
+        "vehicle": null
+      }
+    },
+    {
+      "id": 5,
+      "name": "Ilse Duquette",
+      "skill": "hauler",
+      "trait": "nervous",
+      "likes": 225,
+      "grades": {
+        "portage": 0,
+        "combat": 0,
+        "discretion": 225,
+        "service": 0,
+        "reseau": 0
+      },
+      "map": "mexico",
+      "x": 3,
+      "y": 0,
+      "xp": 222.78375,
+      "level": 5,
+      "salary": 580,
+      "health": 100,
+      "stress": 0,
+      "status": "en route",
+      "gearWear": 18,
+      "equipment": {
+        "boots": 0,
+        "exo": 0,
+        "scanner": 0,
+        "cryptobiote": 0,
+        "bolagun": 0,
+        "cryobox": 0,
+        "harness": 0,
+        "climbing_anchor": 0,
+        "vehicle": null
+      }
+    }
+  ],
+  "structures": {
+    "training": 1,
+    "shelter": 1,
+    "depot": 1
+  },
+  "currentMap": "mexico",
+  "mapsData": {
+    "mexico": {
+      "btZones": [
+        "0,2",
+        "0,7",
+        "1,7",
+        "1,8",
+        "2,2",
+        "2,3",
+        "2,7",
+        "4,9",
+        "5,9",
+        "6,2",
+        "6,6",
+        "7,1",
+        "7,2",
+        "9,8"
+      ],
+      "terrain": {
+        "1,2": "mountain",
+        "1,9": "mountain",
+        "2,5": "mountain",
+        "2,8": "river",
+        "3,4": "mountain",
+        "3,5": "river",
+        "3,6": "mountain",
+        "4,3": "mountain",
+        "5,9": "mountain",
+        "6,0": "river",
+        "6,6": "mountain",
+        "7,5": "mountain",
+        "8,4": "river",
+        "9,2": "river",
+        "9,3": "mountain",
+        "9,9": "mountain"
+      },
+      "routes": [
+        "5,5",
+        "4,5",
+        "3,5",
+        "3,6",
+        "3,4",
+        "2,6",
+        "2,5",
+        "5,4",
+        "5,3",
+        "5,2",
+        "5,1",
+        "6,1",
+        "6,0",
+        "7,0",
+        "3,3",
+        "4,1",
+        "3,1",
+        "2,1",
+        "1,1",
+        "0,1",
+        "0,0",
+        "3,7",
+        "3,8",
+        "2,8",
+        "2,9",
+        "1,9"
+      ],
+      "craters": [],
+      "branches": [
+        {
+          "x": 5,
+          "y": 5
+        }
+      ],
+      "activeBranch": 0,
+      "mainKnots": [
+        {
+          "x": 7,
+          "y": 0,
+          "name": "Edge Knot City",
+          "archetype": "engineer",
+          "relation": 38,
+          "needs": {
+            "medical": 61.53242415236309,
+            "food": 50.12047061193734,
+            "tech": 74.31954052597284
+          },
+          "contracts": [
+            {
+              "id": "pc-mexico-0-5-6866",
+              "prepperIdx": 0,
+              "mapKey": "mexico",
+              "need": "tech",
+              "flavor": "Edge Knot City réclame pièces technologiques d'urgence",
+              "reward": 779,
+              "expiresMonth": 7,
+              "negotiable": true,
+              "negotiated": false
+            }
+          ]
+        },
+        {
+          "x": 3,
+          "y": 3,
+          "name": "South Knot City",
+          "archetype": "engineer",
+          "relation": 31,
+          "needs": {
+            "medical": 75.3052802332677,
+            "food": 50.53147265082225,
+            "tech": 55.78991687661037
+          },
+          "contracts": []
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "name": "Lake Knot City",
+          "archetype": "botanist",
+          "relation": 32,
+          "needs": {
+            "medical": 81.48441907623783,
+            "food": 57.67412397796288,
+            "tech": 66.48463285379111
+          },
+          "contracts": []
+        },
+        {
+          "x": 1,
+          "y": 9,
+          "name": "Capital Knot City",
+          "archetype": "medic",
+          "relation": 35,
+          "needs": {
+            "medical": 56.056242351420224,
+            "food": 65.43377369586378,
+            "tech": 49.4900670693256
+          },
+          "contracts": []
+        }
+      ],
+      "sideQuests": [
+        {
+          "id": "sq-mexico-3-8930",
+          "x": 8,
+          "y": 8,
+          "reward": 827,
+          "flavor": "Un chercheur du réseau chiral demande des relevés cartographiques contre une bonne récompense",
+          "expiresMonth": 7
+        }
+      ],
+      "muleCamps": [
+        {
+          "id": "mule-0",
+          "x": 7,
+          "y": 9,
+          "strength": 3,
+          "status": "hostile",
+          "safeUntilMonth": null,
+          "needsIncineration": false
+        },
+        {
+          "id": "mule-1",
+          "x": 8,
+          "y": 1,
+          "strength": 3,
+          "status": "hostile",
+          "safeUntilMonth": null,
+          "needsIncineration": false
+        }
+      ],
+      "catchers": [],
+      "pccInstalls": [
+        {
+          "type": "generator",
+          "x": 6,
+          "y": 5,
+          "durability": 87
+        }
+      ],
+      "lostCargo": [],
+      "weather": {
+        "type": "timefall",
+        "untilMonth": 6
+      }
+    }
+  },
+  "log": [
+    {
+      "text": "[5] 📊 BILAN — revenus +$23757 / salaires -$3550 = +$20207",
+      "level": "good"
+    },
+    {
+      "text": "[5] ☔ Frappe Temporelle sur la zone — le chiral se déforme, l'équipement s'use",
+      "level": "info"
+    },
+    {
+      "text": "[5] 🗣️ 🔧 Edge Knot City (Ingénieur) a une requête — relation ⭐⭐☆☆☆",
+      "level": "good"
+    },
+    {
+      "text": "[5] 🚶 🥾 Porteur en cavale est reparti (offre expirée)",
+      "level": "info"
+    },
+    {
+      "text": "[5] ⭐ Otis Njoku → Level 7",
+      "level": "info"
+    },
+    {
+      "text": "[5] ✅ Otis Njoku livraison exemplaire [S]! +$50 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ✅ Ilse Duquette livraison exemplaire [S]! +$1493 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ⭐ Otis Okonkwo → Level 10",
+      "level": "info"
+    },
+    {
+      "text": "[5] ✅ Otis Okonkwo livraison exemplaire [S]! +$642 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ⭐ Rurik Solheim → Level 5",
+      "level": "info"
+    },
+    {
+      "text": "[5] ✅ Rurik Solheim livraison exemplaire [S]! +$1771 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ✅ Otis Okonkwo livraison exemplaire [S]! +$300 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ⭐ Otis Okonkwo → Level 9",
+      "level": "info"
+    },
+    {
+      "text": "[5] ✅ Otis Okonkwo livraison exemplaire [S]! +$2819 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ⭐ Saoirse Kovač → Level 7",
+      "level": "info"
+    },
+    {
+      "text": "[5] ✅ Saoirse Kovač livraison exemplaire [S]! +$1670 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ⭐ Otis Okonkwo → Level 8",
+      "level": "info"
+    },
+    {
+      "text": "[5] ✅ Otis Okonkwo livraison exemplaire [S]! +$2782 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ⭐ Ilse Duquette → Level 5",
+      "level": "info"
+    },
+    {
+      "text": "[5] ✅ Ilse Duquette livraison exemplaire [S]! +$3054 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ⭐ Wren Marchetti → Level 5",
+      "level": "info"
+    },
+    {
+      "text": "[5] ✅ Rurik Solheim livraison exemplaire [S]! +$1970 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ✅ Saoirse Kovač livraison exemplaire [S]! +$981 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] ✅ Otis Okonkwo livraison exemplaire [S]! +$2906 +25❤️",
+      "level": "good"
+    },
+    {
+      "text": "[5] 🌐 Un porteur inconnu a emprunté votre Générateur Chiral — +4❤️ pour Saoirse Kovač",
+      "level": "good"
+    }
+  ],
+  "equipBought": {
+    "boots": 1,
+    "exo": 0,
+    "scanner": 1,
+    "cryptobiote": 0,
+    "bolagun": 0,
+    "cryobox": 0,
+    "harness": 0,
+    "climbing_anchor": 0,
+    "truck": 1,
+    "bike": 0,
+    "trike": 0
+  },
+  "gameEnded": false,
+  "materials": {
+    "chiral_crystal": 2,
+    "mule_scrap": 0,
+    "blood_grenades": 0,
+    "blood_bags": 0
+  },
+  "titles": [
+    "first_blood"
+  ],
+  "quarterSnapshot": {
+    "completed": 34,
+    "deaths": 0,
+    "money": 80388
+  },
+  "activeFestival": null,
+  "hallOfFame": [],
+  "visitor": null,
+  "bonds": {},
+  "legacyBonus": 0,
+  "collection": [
+    "higgs_mask_piece"
+  ],
+  "duos": [],
+  "sponsor": {
+    "id": "bridges_hq",
+    "name": "Bridges HQ",
+    "monthlyIncome": 100,
+    "desc": "Aucune condition (sponsor de base)"
+  },
+  "automation": {
+    "autoRest": false,
+    "autoRestThreshold": 70,
+    "autoRepair": false,
+    "autoRepairThreshold": 60,
+    "autoReturn": false
+  },
+  "difficulty": "normal",
+  "dayInMonth": 0,
+  "monthState": {
+    "viewMap": "mexico",
+    "moneyBeforeOps": 96527,
+    "salaryCost": 3550
+  },
+  "ngPlus": false,
+  "infraInvestments": 0,
+  "subsidiaries": [],
+  "activeRelicIds": [
+    "higgs_mask_piece",
+    "mule_insignia",
+    "timefall_crystal",
+    "odradek_lens",
+    "chiral_thread"
+  ],
+  "activeCampEventIds": [
+    "howls",
+    "flu",
+    "calm_weather",
+    "sprout",
+    "tinkering",
+    "forgotten_pkg"
+  ],
+  "activeVisitorOfferIds": [
+    "smuggler",
+    "cheap_gear",
+    "informant",
+    "mercenary",
+    "buyback"
+  ],
+  "activeFestivalIds": [
+    "safety_drive",
+    "flash_sale",
+    "trade_fair",
+    "harvest_fest"
+  ]
+}

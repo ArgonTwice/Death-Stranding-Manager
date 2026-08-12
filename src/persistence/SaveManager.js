@@ -2,7 +2,9 @@
 // Généré depuis le monolithe index.html original (refacto ES Modules, comportement inchangé).
 
 import { eventBus } from '../core/EventBus.js';
+import { debugLog } from '../core/Debug.js';
 import { currentRankIndex, game, logEvent, runtime } from '../core/GameState.js';
+import { RNG } from '../core/RNG.js';
 import { DIFFICULTIES, GAME_LENGTH_MONTHS, HQ, RANKS } from '../data/Balance.js';
 import { CAMP_EVENTS, FESTIVALS, RELICS, VISITOR_OFFERS, pickN, rollTrait } from '../data/Constants.js';
 import { generateBTZones, generateMainKnots, generateMuleCamps, generateTerrain, loadMapData } from '../engine/MapEngine.js';
@@ -229,6 +231,7 @@ export function newGame(confirmFirst, slot) {
       runtime.activeVisitorOffers = pickN(VISITOR_OFFERS, 5);
       runtime.activeFestivalsPool = pickN(FESTIVALS, 4);
       initFreshMap();
+      debugLog(`RNG seed pour cette partie: ${RNG.getSeed()}`);
       logEvent(`🎮 Nouvelle partie [${DIFFICULTIES[difficulty].label}] — Chiral Network ONLINE`);
       eventBus.emit('screen:hideEndScreen');
       eventBus.emit('render:request');

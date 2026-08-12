@@ -2,6 +2,7 @@
 // Généré depuis le monolithe index.html original (refacto ES Modules, comportement inchangé).
 
 import { currentRankIndex, game } from '../core/GameState.js';
+import { RNG } from '../core/RNG.js';
 import { HQ } from './Balance.js';
 import { hireRaw } from '../systems/PorterSystem.js';
 
@@ -22,7 +23,7 @@ export const TRAITS = {
 
 export function rollTrait() {
       const keys = Object.keys(TRAITS);
-      return keys[Math.floor(Math.random() * keys.length)];
+      return keys[Math.floor(RNG.next() * keys.length)];
     }
 
 export const STRUCTURES = {
@@ -78,7 +79,7 @@ export const VEHICLE_CAPACITY = { truck: 150, bike: 80, trike: 50 };
 export function pickCargoType() {
       const entries = Object.entries(CARGO_TYPES);
       const total = entries.reduce((s, [, c]) => s + c.weight, 0);
-      let r = Math.random() * total;
+      let r = RNG.next() * total;
       for (const [key, c] of entries) { r -= c.weight; if (r <= 0) return key; }
       return 'standard';
     }
@@ -163,7 +164,7 @@ export function pickN(pool, n) {
       const copy = [...pool];
       const picked = [];
       for (let i = 0; i < n && copy.length; i++) {
-        picked.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+        picked.push(copy.splice(Math.floor(RNG.next() * copy.length), 1)[0]);
       }
       return picked;
     }
@@ -277,7 +278,7 @@ export const CAMP_EVENTS = [
       { id: 'flu', name: '🤒 Une grippe passe au camp', effect: () => {
         const actives = game.porters.filter(p => p.status !== 'dead' && p.status !== 'left');
         if (actives.length) {
-          const sick = actives[Math.floor(Math.random() * actives.length)];
+          const sick = actives[Math.floor(RNG.next() * actives.length)];
           sick.health = Math.max(10, sick.health - 15);
         }
       } },
@@ -294,7 +295,7 @@ export const CAMP_EVENTS = [
       { id: 'radio_signal', name: '📻 Une vieille fréquence radio capte un message codé', effect: () => { game.materials.mule_scrap += 1; } },
       { id: 'tinkering', name: '🛠️ Un porteur bricole une amélioration de fortune', effect: () => {
         const idle = game.porters.filter(p => p.status === 'idle');
-        if (idle.length) idle[Math.floor(Math.random() * idle.length)].xp += 20;
+        if (idle.length) idle[Math.floor(RNG.next() * idle.length)].xp += 20;
       } },
       { id: 'sprout', name: '🌱 Une pousse improbable perce le sol chiral', effect: () => { game.reputation = Math.min(100, game.reputation + 1); game.money += 150; } }
     ];

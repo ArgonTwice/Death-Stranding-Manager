@@ -3,13 +3,13 @@
 
 import { eventBus } from '../core/EventBus.js';
 import { game, logEvent, runtime } from '../core/GameState.js';
-import { DIFFICULTIES } from '../data/Balance.js';
+import { RNG } from '../core/RNG.js';
+import { BALANCE, DIFFICULTIES } from '../data/Balance.js';
 import { FIRST_NAMES, GRADES, GRADE_TITLES, LAST_NAMES, RELICS, SKILLS, TRAITS, VEHICLE_CAPACITY, countryInfo, gradeLevel, rollTrait } from '../data/Constants.js';
-import { render } from '../ui/HUD.js';
 
 export function gearEffectiveness(p) {
       const wear = p.gearWear || 0;
-      return wear <= 50 ? 1 : Math.max(0.3, 1 - (wear - 50) / 70);
+      return wear <= BALANCE.porter.gearEffectivenessWearThreshold ? 1 : Math.max(BALANCE.porter.gearEffectivenessMin, 1 - (wear - BALANCE.porter.gearEffectivenessWearThreshold) / BALANCE.porter.gearEffectivenessWearRange);
     }
 
 export function repairGear(porterId) {
@@ -17,7 +17,7 @@ export function repairGear(porterId) {
       if (!p) return;
       const wear = p.gearWear || 0;
       if (wear <= 0) { logEvent('❌ Équipement déjà en parfait état'); return; }
-      const cost = Math.ceil(wear * 5);
+      const cost = Math.ceil(wear * BALANCE.porter.repairCostPerWearPoint);
       if (game.money < cost) { logEvent(`❌ Budget réparation ($${cost})`); return; }
       game.money -= cost;
       p.gearWear = 0;
@@ -26,28 +26,28 @@ export function repairGear(porterId) {
     }
 
 export function porterCapacity(p) {
-      return 60 + p.equipment.exo * 20 + p.equipment.boots * 8
-        + (SKILLS[p.skill].carry || 0) * 100
+      return BALANCE.porter.capacityBase + p.equipment.exo * BALANCE.porter.capacityExoBonus + p.equipment.boots * BALANCE.porter.capacityBootsBonus
+        + (SKILLS[p.skill].carry || 0) * BALANCE.porter.capacitySkillCarryMult
         + (VEHICLE_CAPACITY[p.equipment.vehicle] || 0)
-        + gradeLevel(p, 'portage') * 5; // Porter Grade Portage (#4)
+        + gradeLevel(p, 'portage') * BALANCE.porter.capacityGradePortageMult; // Porter Grade Portage (#4)
     }
 
 export function pickPorterName() {
       const used = new Set(game.porters.map(p => p.name));
       let name, tries = 0;
       do {
-        name = `${FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)]}`;
+        name = `${FIRST_NAMES[Math.floor(RNG.next() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(RNG.next() * LAST_NAMES.length)]}`;
         tries++;
       } while (used.has(name) && tries < 20);
       return name;
     }
 
 export function equipSlots(p) {
-      return 3 + (p.skill === 'hauler' ? 1 : 0) + Math.floor(p.level / 3) + (p.equipment.harness || 0);
+      return BALANCE.porter.equipSlotsBase + (p.skill === 'hauler' ? BALANCE.porter.equipSlotsHaulerBonus : 0) + Math.floor(p.level / BALANCE.porter.equipSlotsPerLevel) + (p.equipment.harness || 0);
     }
 
 export function porterResist(p) {
-      return Math.min(0.85, (SKILLS[p.skill].dmg_resist || 0) + (TRAITS[p.trait].dmg_resist || 0) + gradeLevel(p, 'combat') * 0.03 + (p.legendaryBoost || 0));
+      return Math.min(BALANCE.porter.resistCap, (SKILLS[p.skill].dmg_resist || 0) + (TRAITS[p.trait].dmg_resist || 0) + gradeLevel(p, 'combat') * BALANCE.porter.resistGradeCombatMult + (p.legendaryBoost || 0));
     }
 
 export function equippedCount(p) {
@@ -62,7 +62,7 @@ export function forceRest(porterIdx) {
       if (game.money < cost) { logEvent(`❌ Budget repos ($${cost})`); return; }
       game.money -= cost;
       p.stress = 0;
-      p.health = Math.min(100, p.health + 25);
+      p.health = Math.min(100, p.health + BALANCE.porter.forceRestHealthRestore);
       logEvent(`😴 ${p.name} repos forcé (-$${cost}) stress→0`);
       eventBus.emit('render:request');
     }
@@ -71,14 +71,14 @@ export function beachJump(porterIdx, destKey) {
       // Canon DS2: transponder / Plate Gate — téléportation d'un territoire à l'autre
       const p = game.porters[porterIdx];
       if (p.status !== "idle" || p.health <= 0 || !game.mapsData[destKey] || destKey === p.map) return;
-      const cost = 400;
+      const cost = BALANCE.porter.beachJumpCost;
       if (game.money < cost) { logEvent(`❌ Budget Beach Jump ($${cost})`); return; }
       game.money -= cost;
       p.map = destKey;
       const d = game.mapsData[destKey];
       const spawn = d.branches[d.activeBranch] || d.branches[0];
       p.x = spawn.x; p.y = spawn.y;
-      p.stress = Math.min(100, p.stress + 15);
+      p.stress = Math.min(100, p.stress + BALANCE.porter.beachJumpStressIncrease);
       logEvent(`🌀 ${p.name} — Beach Jump → ${countryInfo(destKey).flag} ${countryInfo(destKey).name} (-$${cost})`);
       eventBus.emit('render:request');
     }
@@ -86,14 +86,14 @@ export function beachJump(porterIdx, destKey) {
 export function hireRaw(skill, trait, rare) {
       const id = game.porters.length;
       const skillKeys = Object.keys(SKILLS);
-      const s = skill || skillKeys[Math.floor(Math.random() * skillKeys.length)];
+      const s = skill || skillKeys[Math.floor(RNG.next() * skillKeys.length)];
       const t = trait || rollTrait();
       const branches = game.mapsData[game.currentMap].branches;
       const spawn = branches[game.mapsData[game.currentMap].activeBranch] || branches[0];
       game.porters.push({
         id, name: pickPorterName(), skill: s, trait: t, likes: 0,
         grades: { portage: 0, combat: 0, discretion: 0, service: 0, reseau: 0 }, map: game.currentMap,
-        x: spawn.x, y: spawn.y, xp: rare ? 100 : 0, level: rare ? 2 : 1, salary: Math.round((300 + (rare ? 70 : 0)) * DIFFICULTIES[game.difficulty || 'normal'].costMult),
+        x: spawn.x, y: spawn.y, xp: rare ? BALANCE.porter.hireRareXp : 0, level: rare ? BALANCE.porter.hireRareLevel : 1, salary: Math.round((BALANCE.porter.hireBaseSalary + (rare ? BALANCE.porter.hireRareSalaryBonus : 0)) * DIFFICULTIES[game.difficulty || 'normal'].costMult),
         health: 100, stress: 0, status: "idle", gearWear: 0,
         equipment: { boots: 0, exo: 0, scanner: 0, cryptobiote: 0, bolagun: 0, cryobox: 0, harness: 0, climbing_anchor: 0, vehicle: null }
       });
@@ -102,13 +102,13 @@ export function hireRaw(skill, trait, rare) {
 
 export function scoutCandidate() {
       const activeCount = game.porters.filter(p => p.status !== "dead" && p.status !== "left").length;
-      const fee = 150 + activeCount * 20;
+      const fee = BALANCE.porter.scoutBaseFee + activeCount * BALANCE.porter.scoutFeePerActivePorter;
       if (game.money < fee) { logEvent(`❌ Budget scoutisme ($${fee})`); return; }
       game.money -= fee;
       const skillKeys = Object.keys(SKILLS);
-      const skill = skillKeys[Math.floor(Math.random() * skillKeys.length)];
+      const skill = skillKeys[Math.floor(RNG.next() * skillKeys.length)];
       const trait = rollTrait();
-      const rare = Math.random() < 0.15; // Kairosoft: chance de candidat "prometteur"
+      const rare = RNG.next() < BALANCE.porter.scoutRareChance; // Kairosoft: chance de candidat "prometteur"
       game.scoutedCandidate = { skill, trait, rare };
       logEvent(`🔍 Candidat repéré: ${SKILLS[skill].name} ${TRAITS[trait].name}${rare ? ' ⭐ PROMETTEUR' : ''} (-$${fee})`);
       eventBus.emit('render:request');
@@ -116,7 +116,7 @@ export function scoutCandidate() {
 
 export function hire(fromScout) {
       const activeCount = game.porters.filter(p => p.status !== "dead" && p.status !== "left").length;
-      const cost = 500 + activeCount * 250; // scale sur effectif actif: licencier fait rebaisser le coût
+      const cost = BALANCE.porter.hireBaseCost + activeCount * BALANCE.porter.hireCostPerActivePorter; // scale sur effectif actif: licencier fait rebaisser le coût
       if (game.money < cost) { logEvent(`❌ Budget insuffisant ($${cost})`); return; }
       if (fromScout && !game.scoutedCandidate) { logEvent('❌ Aucun candidat scouté'); return; }
       game.money -= cost;
@@ -150,9 +150,9 @@ export function recordHallOfFame(p, cause) {
 export function retirePorter(id) {
       const p = game.porters.find(x => x.id === id);
       if (!p || p.status !== 'idle') { logEvent('❌ Le porteur doit être disponible (idle) pour partir à la retraite'); return; }
-      if (p.level < 5) { logEvent('❌ Niveau 5 requis pour la retraite'); return; }
+      if (p.level < BALANCE.porter.retireMinLevel) { logEvent(`❌ Niveau ${BALANCE.porter.retireMinLevel} requis pour la retraite`); return; }
       recordHallOfFame(p, 'retraité (légende)');
-      game.legacyBonus = (game.legacyBonus || 0) + 0.01; // +1% XP global, permanent, cumulatif
+      game.legacyBonus = (game.legacyBonus || 0) + BALANCE.porter.retireLegacyBonusPerRetire; // +1% XP global, permanent, cumulatif
 
       // Legs de prestige: le porteur actif le plus apprécié hérite de la moitié du grade dominant du retraité
       const heir = game.porters
@@ -164,7 +164,7 @@ export function retirePorter(id) {
         for (const c in GRADES) { const lvl = gradeLevel(p, c); if (lvl > bestLvl) { bestLvl = lvl; bestCat = c; } }
         if (bestCat && bestLvl > 0) {
           heir.prestigeBonus = heir.prestigeBonus || {};
-          heir.prestigeBonus[bestCat] = (heir.prestigeBonus[bestCat] || 0) + Math.max(1, Math.ceil(bestLvl / 2));
+          heir.prestigeBonus[bestCat] = (heir.prestigeBonus[bestCat] || 0) + Math.max(1, Math.ceil(bestLvl / BALANCE.porter.retireHeirPrestigeDivisor));
           legacyMsg = ` — lègue son expertise ${GRADES[bestCat].name} à ${heir.name}`;
         }
       }
@@ -179,15 +179,15 @@ export function porterTitle(p) {
         const lvl = gradeLevel(p, c);
         if (lvl > bestLevel) { bestLevel = lvl; best = c; }
       }
-      return bestLevel >= 2 ? GRADE_TITLES[best] : null; // titre affiché dès le niveau 2 (50 points)
+      return bestLevel >= BALANCE.porter.titleMinGradeLevel ? GRADE_TITLES[best] : null; // titre affiché dès le niveau 2 (50 points)
     }
 
 export function rollRelic() {
-      if (Math.random() > 0.05) return;
+      if (RNG.next() > BALANCE.porter.relicDiscoveryChance) return;
       const notFound = RELICS.filter(r => game.activeRelicIds.includes(r.id) && !game.collection.includes(r.id));
       if (!notFound.length) return;
-      const r = notFound[Math.floor(Math.random() * notFound.length)];
+      const r = notFound[Math.floor(RNG.next() * notFound.length)];
       game.collection.push(r.id);
-      game.money += 300;
-      logEvent(`🏺 RELIQUE DÉCOUVERTE: ${r.name} — ${r.desc} (+$300)`, 'good');
+      game.money += BALANCE.porter.relicMoneyReward;
+      logEvent(`🏺 RELIQUE DÉCOUVERTE: ${r.name} — ${r.desc} (+$${BALANCE.porter.relicMoneyReward})`, 'good');
     }

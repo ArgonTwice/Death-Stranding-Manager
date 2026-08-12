@@ -3,11 +3,11 @@
 
 import { eventBus } from '../core/EventBus.js';
 import { game, logEvent } from '../core/GameState.js';
-import { HQ, MAP_HEIGHT, MAP_WIDTH } from '../data/Balance.js';
+import { RNG } from '../core/RNG.js';
+import { BALANCE, HQ, MAP_HEIGHT, MAP_WIDTH } from '../data/Balance.js';
 import { COUNTRIES, KNOT_CITY_NAMES, STRUCTURES, cellKey, countryInfo } from '../data/Constants.js';
 import { migratePrepperKnot } from '../persistence/SaveMigrations.js';
 import { makePrepper } from '../systems/PrepperSystem.js';
-import { render } from '../ui/HUD.js';
 import { markMapDirty } from '../ui/MapRenderer.js';
 
 export function dominantStructure() {
@@ -51,7 +51,7 @@ export function nextLockedCountry() {
 
 export function expansionCost() {
       const unlockedCount = Object.keys(game.mapsData).length; // mexico compte pour 1 dès le départ
-      return Math.ceil(2500 * Math.pow(1.7, unlockedCount - 1));
+      return Math.ceil(BALANCE.map.expansionCostBase * Math.pow(BALANCE.map.expansionCostGrowth, unlockedCount - 1));
     }
 
 export function buildExpansion(mode) {
@@ -68,7 +68,7 @@ export function buildExpansion(mode) {
         return;
       }
       // Filiale indépendante: la Maison-Mère prend en charge une partie du coût d'installation
-      const cost = mode === 'subsidiary' ? Math.ceil(expansionCost() * 0.7) : expansionCost();
+      const cost = mode === 'subsidiary' ? Math.ceil(expansionCost() * BALANCE.map.subsidiaryCostMult) : expansionCost();
       if (game.money < cost) { logEvent(`❌ Budget expansion ($${cost})`); return; }
       game.money -= cost;
       const prevMap = game.currentMap;
@@ -86,7 +86,7 @@ export function buildExpansion(mode) {
       if (mode === 'subsidiary') {
         game.subsidiaries = game.subsidiaries || [];
         game.subsidiaries.push({ mapKey: next.key, motherMap: prevMap, foundedMonth: game.month });
-        game.legacyBonus = (game.legacyBonus || 0) + 0.005; // héritage partagé Maison-Mère/filiale, permanent
+        game.legacyBonus = (game.legacyBonus || 0) + BALANCE.map.subsidiaryLegacyBonus; // héritage partagé Maison-Mère/filiale, permanent
         logEvent(`🏢 FILIALE INDÉPENDANTE — ${next.flag} ${next.name} fondée (-$${cost}) — Maison-Mère: ${countryInfo(prevMap).name}, subvention mensuelle activée, +0.5% XP héritage permanent`, 'good');
       } else {
         logEvent(`🌀 PLATE GATE — ${next.flag} ${next.name} connecté au réseau chiral (-$${cost})`);
@@ -97,14 +97,14 @@ export function buildExpansion(mode) {
 export function foundBranch() {
       // Canon: "plusieurs entreprises par pays" — antennes secondaires de Bridges
       const d = game.mapsData[game.currentMap];
-      const cost = Math.ceil(2500 * Math.pow(1.6, d.branches.length - 1));
+      const cost = Math.ceil(BALANCE.map.branchCostBase * Math.pow(BALANCE.map.branchCostGrowth, d.branches.length - 1));
       if (game.money < cost) { logEvent(`❌ Budget antenne ($${cost})`); return; }
       let bx, by, tries = 0;
       do {
-        bx = Math.floor(Math.random() * MAP_WIDTH);
-        by = Math.floor(Math.random() * MAP_HEIGHT);
+        bx = Math.floor(RNG.next() * MAP_WIDTH);
+        by = Math.floor(RNG.next() * MAP_HEIGHT);
         tries++;
-      } while (tries < 25 && d.branches.some(b => Math.hypot(b.x - bx, b.y - by) < 3));
+      } while (tries < BALANCE.map.branchMaxTries && d.branches.some(b => Math.hypot(b.x - bx, b.y - by) < BALANCE.map.branchMinDistance));
       d.branches.push({ x: bx, y: by });
       d.routes.add(cellKey(bx, by)); // l'antenne démarre connectée au réseau local
       game.money -= cost;
@@ -122,9 +122,9 @@ export function generateTerrain() {
       for (let x = 0; x < MAP_WIDTH; x++) {
         for (let y = 0; y < MAP_HEIGHT; y++) {
           if (x === HQ.x && y === HQ.y) continue;
-          const roll = Math.random();
-          if (roll < 0.10) game.terrain[cellKey(x, y)] = 'mountain';
-          else if (roll < 0.18) game.terrain[cellKey(x, y)] = 'river';
+          const roll = RNG.next();
+          if (roll < BALANCE.map.mountainChanceThreshold) game.terrain[cellKey(x, y)] = 'mountain';
+          else if (roll < BALANCE.map.riverChanceThreshold) game.terrain[cellKey(x, y)] = 'river';
         }
       }
     }
@@ -134,7 +134,7 @@ const knotCityMap = {};
 export function knotCityName(x, y) {
       const key = `${game.currentMap}:${cellKey(x, y)}`;
       if (!knotCityMap[key]) {
-        knotCityMap[key] = KNOT_CITY_NAMES[Math.floor(Math.random() * KNOT_CITY_NAMES.length)];
+        knotCityMap[key] = KNOT_CITY_NAMES[Math.floor(RNG.next() * KNOT_CITY_NAMES.length)];
       }
       return knotCityMap[key];
     }
@@ -144,7 +144,7 @@ export function generateBTZones() {
       for (let x = 0; x < MAP_WIDTH; x++) {
         for (let y = 0; y < MAP_HEIGHT; y++) {
           if (x === HQ.x && y === HQ.y) continue;
-          if (Math.random() < 0.15) game.btZones.push(cellKey(x, y));
+          if (RNG.next() < BALANCE.map.btZoneChance) game.btZones.push(cellKey(x, y));
         }
       }
     }
@@ -154,19 +154,19 @@ let muleCampIdCounter = 0;
 export function generateMuleCamps() {
       const camps = [];
       let tries = 0;
-      while (camps.length < 2 + Math.floor(Math.random() * 2) && tries < 200) { // 2-3 camps
+      while (camps.length < BALANCE.map.muleCampCountBase + Math.floor(RNG.next() * BALANCE.map.muleCampCountRandRange) && tries < BALANCE.map.muleCampMaxTries) { // 2-3 camps
         tries++;
-        const x = Math.floor(Math.random() * MAP_WIDTH);
-        const y = Math.floor(Math.random() * MAP_HEIGHT);
-        if (Math.hypot(x - HQ.x, y - HQ.y) < 3) continue; // pas trop près du camp
-        if (camps.some(c => Math.hypot(c.x - x, c.y - y) < 3)) continue; // pas collés entre eux
-        camps.push({ id: `mule-${muleCampIdCounter++}`, x, y, strength: 1 + Math.floor(Math.random() * 3), status: 'hostile', safeUntilMonth: null, needsIncineration: false });
+        const x = Math.floor(RNG.next() * MAP_WIDTH);
+        const y = Math.floor(RNG.next() * MAP_HEIGHT);
+        if (Math.hypot(x - HQ.x, y - HQ.y) < BALANCE.map.muleCampMinDistanceFromHQ) continue; // pas trop près du camp
+        if (camps.some(c => Math.hypot(c.x - x, c.y - y) < BALANCE.map.muleCampMinDistanceBetween)) continue; // pas collés entre eux
+        camps.push({ id: `mule-${muleCampIdCounter++}`, x, y, strength: BALANCE.map.muleCampStrengthBase + Math.floor(RNG.next() * BALANCE.map.muleCampStrengthRandRange), status: 'hostile', safeUntilMonth: null, needsIncineration: false });
       }
       return camps;
     }
 
 export function isNearHostileMuleCamp(x, y) {
-      return (game.muleCamps || []).some(c => c.status === 'hostile' && Math.hypot(c.x - x, c.y - y) <= 1.3);
+      return (game.muleCamps || []).some(c => c.status === 'hostile' && Math.hypot(c.x - x, c.y - y) <= BALANCE.map.hostileCampProximityRadius);
     }
 
 export function isBTZone(x, y) {
@@ -174,7 +174,7 @@ export function isBTZone(x, y) {
       // Shelter neutralise BT zone dans radius 2 autour HQ
       if (inZone && game.structures.shelter) {
         const dist = Math.hypot(x - HQ.x, y - HQ.y);
-        if (dist <= 2 * (game.structures.shelter)) return false;
+        if (dist <= BALANCE.map.shelterBtNeutralizeRadiusMult * (game.structures.shelter)) return false;
       }
       return inZone;
     }
@@ -187,15 +187,15 @@ export function generateMainKnots() {
       const knots = [];
       const usedNames = [];
       let tries = 0;
-      while (knots.length < 4 && tries < 300) {
+      while (knots.length < BALANCE.map.mainKnotCount && tries < BALANCE.map.mainKnotMaxTries) {
         tries++;
-        const x = Math.floor(Math.random() * MAP_WIDTH);
-        const y = Math.floor(Math.random() * MAP_HEIGHT);
-        if (Math.hypot(x - HQ.x, y - HQ.y) < 2.5) continue;
-        if (knots.some(k => Math.hypot(k.x - x, k.y - y) < 2.5)) continue;
+        const x = Math.floor(RNG.next() * MAP_WIDTH);
+        const y = Math.floor(RNG.next() * MAP_HEIGHT);
+        if (Math.hypot(x - HQ.x, y - HQ.y) < BALANCE.map.mainKnotMinDistanceFromHQ) continue;
+        if (knots.some(k => Math.hypot(k.x - x, k.y - y) < BALANCE.map.mainKnotMinDistanceBetween)) continue;
         const avail = KNOT_CITY_NAMES.filter(n => !usedNames.includes(n));
         const pool = avail.length ? avail : KNOT_CITY_NAMES;
-        const name = pool[Math.floor(Math.random() * pool.length)];
+        const name = pool[Math.floor(RNG.next() * pool.length)];
         usedNames.push(name);
         knotCityMap[`${game.currentMap}:${cellKey(x, y)}`] = name; // fige le nom (cohérent avec knotCityName())
         knots.push(makePrepper(x, y, name));
@@ -230,7 +230,7 @@ export function findPathToKnot(goalX, goalY) {
           if (nx < 0 || nx >= MAP_WIDTH || ny < 0 || ny >= MAP_HEIGHT) continue;
           const nkey = cellKey(nx, ny);
           if (game.craters.has(nkey)) continue; // infranchissable
-          const stepCost = isBTZone(nx, ny) ? 2.5 : 1; // évitée si possible, jamais bloquante
+          const stepCost = isBTZone(nx, ny) ? BALANCE.map.pathfindingBtZoneCostMult : 1; // évitée si possible, jamais bloquante
           const nd = dist.get(cur) + stepCost;
           if (!dist.has(nkey) || nd < dist.get(nkey)) {
             dist.set(nkey, nd);

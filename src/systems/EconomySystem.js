@@ -3,30 +3,29 @@
 
 import { eventBus } from '../core/EventBus.js';
 import { currentRankIndex, game, logEvent } from '../core/GameState.js';
-import { DIFFICULTIES, EQUIP_MIN_RANK, RANKS, STRUCTURE_MIN_RANK, VEHICLE_MAINTENANCE_COST, VEHICLE_MIN_RANK } from '../data/Balance.js';
+import { BALANCE, DIFFICULTIES, EQUIP_MIN_RANK, RANKS, STRUCTURE_MIN_RANK, VEHICLE_MAINTENANCE_COST, VEHICLE_MIN_RANK } from '../data/Balance.js';
 import { SPONSORS, STRUCTURES } from '../data/Constants.js';
 import { festivalValue } from '../engine/DeliveryEngine.js';
 import { dominantStructure } from '../engine/MapEngine.js';
 import { equipSlots, equippedCount, targetPorter } from './PorterSystem.js';
 import { prepperPerkBonus } from './PrepperSystem.js';
-import { render } from '../ui/HUD.js';
 
 export function shopDiscountMult() {
-      return (1 - (dominantStructure() === 'depot' ? 0.03 : 0)) * (1 - festivalValue('shopDiscount')) * DIFFICULTIES[game.difficulty || 'normal'].costMult;
+      return (1 - (dominantStructure() === 'depot' ? BALANCE.economy.depotDominantDiscount : 0)) * (1 - festivalValue('shopDiscount')) * DIFFICULTIES[game.difficulty || 'normal'].costMult;
     }
 
 export function buyEquip(type) {
-      const base = { boots: 200, exo: 400, scanner: 300, cryptobiote: 150, bolagun: 350, cryobox: 250, harness: 350, climbing_anchor: 300 };
+      const base = BALANCE.economy.equipBaseCosts;
       const target = targetPorter();
       if (!target) { logEvent('❌ Aucun porteur actif'); return; }
-      if (target.equipment[type] >= 2) { logEvent(`❌ ${target.name} déjà au max (${type})`); return; }
+      if (target.equipment[type] >= BALANCE.economy.equipMaxPerType) { logEvent(`❌ ${target.name} déjà au max (${type})`); return; }
       if ((EQUIP_MIN_RANK[type] || 0) > currentRankIndex()) { logEvent('❌ Rang Bridges insuffisant'); return; }
       // Harness AUGMENTE les slots, il n'en consomme pas — tout le reste doit tenir dans equipSlots()
       if (type !== 'harness' && equippedCount(target) >= equipSlots(target)) {
         logEvent(`❌ ${target.name}: slots pleins (${equippedCount(target)}/${equipSlots(target)}) — achetez un Sac de portage`);
         return;
       }
-      const cost = Math.ceil(base[type] * (1 + game.equipBought[type] * 0.2) * (1 - (game.structures.depot || 0) * 0.05) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
+      const cost = Math.ceil(base[type] * (1 + game.equipBought[type] * BALANCE.economy.equipCostScalingPerBought) * (1 - (game.structures.depot || 0) * BALANCE.economy.depotStructureDiscountPerLevel) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
       if (game.money < cost) { logEvent(`❌ Budget ($${cost})`); return; }
       game.money -= cost;
       game.equipBought[type]++;
@@ -36,12 +35,12 @@ export function buyEquip(type) {
     }
 
 export function buyVehicle(type) {
-      const base = { truck: 2000, bike: 1500, trike: 1800 };
+      const base = BALANCE.economy.vehicleBaseCosts;
       const target = targetPorter();
       if (!target) { logEvent('❌ Aucun porteur actif'); return; }
       if (target.equipment.vehicle) { logEvent(`❌ ${target.name} a déjà un véhicule`); return; }
       if ((VEHICLE_MIN_RANK[type] || 0) > currentRankIndex()) { logEvent('❌ Rang Bridges insuffisant'); return; }
-      const cost = Math.ceil(base[type] * (1 + game.equipBought[type] * 0.25) * (1 - (game.structures.depot || 0) * 0.05) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
+      const cost = Math.ceil(base[type] * (1 + game.equipBought[type] * BALANCE.economy.vehicleCostScalingPerBought) * (1 - (game.structures.depot || 0) * BALANCE.economy.depotStructureDiscountPerLevel) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
       if (game.money < cost) { logEvent(`❌ Budget ($${cost})`); return; }
       game.money -= cost;
       game.equipBought[type]++;
@@ -50,10 +49,10 @@ export function buyVehicle(type) {
       eventBus.emit('render:request');
     }
 
-export function infraCost() { return Math.ceil(50000 * Math.pow(1.18, game.infraInvestments)); }
+export function infraCost() { return Math.ceil(BALANCE.economy.infraCostBase * Math.pow(BALANCE.economy.infraCostGrowth, game.infraInvestments)); }
 
 export function investInfrastructure() {
-      if (currentRankIndex() < 3) { logEvent('❌ Rang Porteur d\'Élite requis'); return; }
+      if (currentRankIndex() < BALANCE.economy.infraMinRankIndex) { logEvent('❌ Rang Porteur d\'Élite requis'); return; }
       const cost = infraCost();
       if (game.money < cost) { logEvent(`❌ Budget insuffisant ($${cost})`); return; }
       game.money -= cost;
@@ -65,7 +64,7 @@ export function investInfrastructure() {
 export function checkSubsidiaries() {
       for (const sub of (game.subsidiaries || [])) {
         const monthsSince = game.month - sub.foundedMonth;
-        const subsidy = Math.max(0, Math.round(500 - monthsSince * 15)); // décroît sur ~33 mois
+        const subsidy = Math.max(0, Math.round(BALANCE.economy.subsidyBase - monthsSince * BALANCE.economy.subsidyDecayPerMonth)); // décroît sur ~33 mois
         if (subsidy > 0) game.money += subsidy;
       }
     }
@@ -96,7 +95,7 @@ export function buildStructure(type) {
       const level = game.structures[type] || 0;
       if (level >= s.maxLevel) { logEvent('❌ Niveau max atteint'); return; }
       if ((STRUCTURE_MIN_RANK[type] || 0) > currentRankIndex()) { logEvent('❌ Rang Bridges insuffisant'); return; }
-      const cost = Math.ceil(s.cost * (1 + level * 0.8) * RANKS[currentRankIndex()].costMult * shopDiscountMult() * (1 - prepperPerkBonus('structureDiscount'))); // paliers de plus en plus chers + perk prepper Ingénieur
+      const cost = Math.ceil(s.cost * (1 + level * BALANCE.economy.structureCostGrowthPerLevel) * RANKS[currentRankIndex()].costMult * shopDiscountMult() * (1 - prepperPerkBonus('structureDiscount'))); // paliers de plus en plus chers + perk prepper Ingénieur
       if (game.money < cost) { logEvent("❌ Budget"); return; }
       game.money -= cost;
       game.structures[type] = level + 1;
@@ -111,11 +110,11 @@ export function computeLogisticsDashboard() {
       let relayIncome = 0, generatorIncome = 0;
       for (const key in game.mapsData) {
         const d = game.mapsData[key];
-        relayIncome += (d.muleCamps || []).filter(c => c.status === 'relay').reduce((s, c) => s + c.strength * 40, 0);
-        generatorIncome += (d.pccInstalls || []).filter(p => p.type === 'generator').length * 60;
+        relayIncome += (d.muleCamps || []).filter(c => c.status === 'relay').reduce((s, c) => s + c.strength * BALANCE.combat.relayIncomePerStrength, 0);
+        generatorIncome += (d.pccInstalls || []).filter(p => p.type === 'generator').length * BALANCE.combat.generatorIncomePerUnit;
       }
       const sponsorIncome = game.sponsor ? game.sponsor.monthlyIncome : 0;
-      const subsidyIncome = (game.subsidiaries || []).reduce((s, sub) => s + Math.max(0, Math.round(500 - (game.month - sub.foundedMonth) * 15)), 0);
+      const subsidyIncome = (game.subsidiaries || []).reduce((s, sub) => s + Math.max(0, Math.round(BALANCE.economy.subsidyBase - (game.month - sub.foundedMonth) * BALANCE.economy.subsidyDecayPerMonth)), 0);
       const passiveIncome = relayIncome + generatorIncome + sponsorIncome + subsidyIncome;
       const fixedCosts = salaries + vehicleCost;
       return { salaries, vehicleCost, relayIncome, generatorIncome, sponsorIncome, subsidyIncome, passiveIncome, fixedCosts, netEstimate: passiveIncome - fixedCosts };

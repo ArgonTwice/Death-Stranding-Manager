@@ -3,9 +3,9 @@
 
 import { eventBus } from '../core/EventBus.js';
 import { currentRankIndex, game, logEvent, runtime } from '../core/GameState.js';
-import { GRID_SIZE, HQ, MAP_HEIGHT, MAP_WIDTH } from '../data/Balance.js';
+import { RNG } from '../core/RNG.js';
+import { BALANCE, GRID_SIZE, HQ, MAP_HEIGHT, MAP_WIDTH } from '../data/Balance.js';
 import { GHOST_NAMES, PCC_TYPES } from '../data/Constants.js';
-import { render } from '../ui/HUD.js';
 import { markMapDirty } from '../ui/MapRenderer.js';
 
 export function startPlacingPCC(type) {
@@ -37,10 +37,10 @@ export function placePCCAt(x, y) {
       if (!d.pccInstalls) d.pccInstalls = [];
       if (x === HQ.x && y === HQ.y) { logEvent('❌ Case du QG occupée'); return; }
       if (d.pccInstalls.some(p => p.x === x && p.y === y)) { logEvent('❌ Case déjà occupée par un PCC'); return; }
-      const nearRoute = Array.from(game.routes).some(k => { const [rx, ry] = k.split(',').map(Number); return Math.hypot(rx - x, ry - y) <= 1.5; });
+      const nearRoute = Array.from(game.routes).some(k => { const [rx, ry] = k.split(',').map(Number); return Math.hypot(rx - x, ry - y) <= BALANCE.network.pccProximityRadius; });
       if (!nearRoute) { logEvent('❌ Doit être posé sur ou près d\'une route existante'); return; }
       const count = d.pccInstalls.filter(p => p.type === type).length;
-      const cost = Math.ceil(PCC_TYPES[type].cost * (1 + count * 0.4));
+      const cost = Math.ceil(PCC_TYPES[type].cost * (1 + count * BALANCE.network.pccCostScalingPerExisting));
       if (game.money < cost) { logEvent(`❌ Budget PCC ($${cost})`); return; }
       game.money -= cost;
       d.pccInstalls.push({ type, x, y, durability: 100 });
@@ -57,7 +57,7 @@ export function repairPCC(x, y) {
       if (!pcc) return;
       const missing = 100 - pcc.durability;
       if (missing <= 0) { logEvent('❌ PCC déjà en parfait état'); return; }
-      const cost = Math.ceil(missing * 4);
+      const cost = Math.ceil(missing * BALANCE.network.pccRepairCostPerDurabilityPoint);
       if (game.money < cost) { logEvent(`❌ Budget réparation PCC ($${cost})`); return; }
       game.money -= cost;
       pcc.durability = 100;
@@ -81,7 +81,7 @@ export function degradePCCOnMap(mapKey, amount) {
     }
 
 export function isNearPCC(x, y, type) {
-      return (game.pccInstalls || []).some(p => p.type === type && Math.hypot(p.x - x, p.y - y) <= 1.5);
+      return (game.pccInstalls || []).some(p => p.type === type && Math.hypot(p.x - x, p.y - y) <= BALANCE.network.pccProximityRadius);
     }
 
 export function checkAsyncNetwork() {
@@ -91,16 +91,16 @@ export function checkAsyncNetwork() {
       let mapChanged = false;
 
       // Structure fantôme: un autre porteur a laissé un pont/tyrolienne — un seul fantôme actif à la fois
-      if (currentRankIndex() >= 1 && !d.pccInstalls.some(p => p.ghost) && Math.random() < 0.1) {
+      if (currentRankIndex() >= BALANCE.network.ghostSpawnMinRank && !d.pccInstalls.some(p => p.ghost) && RNG.next() < BALANCE.network.ghostSpawnChance) {
         const routeArr = Array.from(game.routes);
         if (routeArr.length) {
-          const [rx, ry] = routeArr[Math.floor(Math.random() * routeArr.length)].split(',').map(Number);
-          const dx = Math.max(0, Math.min(MAP_WIDTH - 1, rx + (Math.random() < 0.5 ? -1 : 1)));
-          const dy = Math.max(0, Math.min(MAP_HEIGHT - 1, ry + (Math.random() < 0.5 ? -1 : 1)));
+          const [rx, ry] = routeArr[Math.floor(RNG.next() * routeArr.length)].split(',').map(Number);
+          const dx = Math.max(0, Math.min(MAP_WIDTH - 1, rx + (RNG.next() < 0.5 ? -1 : 1)));
+          const dy = Math.max(0, Math.min(MAP_HEIGHT - 1, ry + (RNG.next() < 0.5 ? -1 : 1)));
           if (!d.pccInstalls.some(p => p.x === dx && p.y === dy) && !(dx === HQ.x && dy === HQ.y)) {
-            const ghostType = Math.random() < 0.5 ? 'bridge' : 'zipline';
-            const name = GHOST_NAMES[Math.floor(Math.random() * GHOST_NAMES.length)];
-            d.pccInstalls.push({ type: ghostType, x: dx, y: dy, durability: 100, ghost: true, ghostName: name, expiresMonth: game.month + 2 + Math.floor(Math.random() * 3) });
+            const ghostType = RNG.next() < BALANCE.network.ghostTypeBridgeChance ? 'bridge' : 'zipline';
+            const name = GHOST_NAMES[Math.floor(RNG.next() * GHOST_NAMES.length)];
+            d.pccInstalls.push({ type: ghostType, x: dx, y: dy, durability: 100, ghost: true, ghostName: name, expiresMonth: game.month + BALANCE.network.ghostExpiryBaseMonths + Math.floor(RNG.next() * BALANCE.network.ghostExpiryRandRangeMonths) });
             mapChanged = true;
             logEvent(`👻 ${PCC_TYPES[ghostType].name} fantôme repéré (${dx},${dy}) — laissé par ${name}`, 'good');
           }
@@ -112,10 +112,10 @@ export function checkAsyncNetwork() {
       if (d.pccInstalls.length !== beforeCount) mapChanged = true;
 
       // Cargaison perdue: à récupérer lors d'un prochain trajet passant à proximité
-      if (!d.lostCargo.length && Math.random() < 0.12) {
-        const x = Math.floor(Math.random() * MAP_WIDTH), y = Math.floor(Math.random() * MAP_HEIGHT);
+      if (!d.lostCargo.length && RNG.next() < BALANCE.network.lostCargoSpawnChance) {
+        const x = Math.floor(RNG.next() * MAP_WIDTH), y = Math.floor(RNG.next() * MAP_HEIGHT);
         if (!(x === HQ.x && y === HQ.y)) {
-          d.lostCargo.push({ x, y, reward: 150 + Math.floor(Math.random() * 250), expiresMonth: game.month + 3 });
+          d.lostCargo.push({ x, y, reward: BALANCE.network.lostCargoRewardBase + Math.floor(RNG.next() * BALANCE.network.lostCargoRewardRandRange), expiresMonth: game.month + BALANCE.network.lostCargoExpiryMonths });
           mapChanged = true;
           logEvent(`📦 Cargaison perdue signalée (${x},${y}) — récupérable lors d'un trajet à proximité`, 'good');
         }
@@ -132,20 +132,20 @@ export function checkAsyncNetwork() {
 
       // Dons communautaires: le réseau alimente les relais logistiques du joueur
       const relays = (d.muleCamps || []).filter(c => c.status === 'relay').length;
-      if (relays > 0 && Math.random() < 0.25) {
+      if (relays > 0 && RNG.next() < BALANCE.network.communityDonationChance) {
         game.materials.chiral_crystal += relays;
         logEvent(`🤝 Le réseau a fait don de ${relays} cristal(aux) chiral(aux) à vos relais`, 'good');
       }
 
       // Likes asynchrones: un porteur inconnu a emprunté une de vos PCC
       const ownPCC = d.pccInstalls.filter(p => !p.ghost);
-      if (ownPCC.length > 0 && Math.random() < 0.3) {
+      if (ownPCC.length > 0 && RNG.next() < BALANCE.network.asyncLikesChance) {
         const active = game.porters.filter(p => p.status !== 'dead' && p.status !== 'left');
         if (active.length) {
-          const beneficiary = active[Math.floor(Math.random() * active.length)];
-          const likesGain = 3 + Math.floor(Math.random() * 8);
+          const beneficiary = active[Math.floor(RNG.next() * active.length)];
+          const likesGain = BALANCE.network.asyncLikesBase + Math.floor(RNG.next() * BALANCE.network.asyncLikesRandRange);
           beneficiary.likes += likesGain;
-          game.reputation = Math.min(100, game.reputation + 1);
+          game.reputation = Math.min(100, game.reputation + BALANCE.network.asyncReputationGain);
           logEvent(`🌐 Un porteur inconnu a emprunté votre ${PCC_TYPES[ownPCC[0].type].name} — +${likesGain}❤️ pour ${beneficiary.name}`, 'good');
         }
       }
@@ -154,7 +154,7 @@ export function checkAsyncNetwork() {
 export function collectNearbyLostCargo(x, y) {
       const d = game.mapsData[game.currentMap];
       if (!d.lostCargo || !d.lostCargo.length) return 0;
-      const idx = d.lostCargo.findIndex(c => Math.hypot(c.x - x, c.y - y) <= 1.5);
+      const idx = d.lostCargo.findIndex(c => Math.hypot(c.x - x, c.y - y) <= BALANCE.network.pccProximityRadius);
       if (idx === -1) return 0;
       const cargo = d.lostCargo.splice(idx, 1)[0];
       game.lostCargo = d.lostCargo;

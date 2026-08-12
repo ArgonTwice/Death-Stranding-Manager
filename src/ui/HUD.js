@@ -3,7 +3,9 @@
 
 import { setGameSpeed } from '../core/GameLoop.js';
 import { eventBus } from '../core/EventBus.js';
+import { DEBUG } from '../core/Debug.js';
 import { checkRankUp, currentRankIndex, game, logEvent, runtime } from '../core/GameState.js';
+import { RNG } from '../core/RNG.js';
 import { DAYS_PER_MONTH, GAME_LENGTH_MONTHS, MAP_HEIGHT, MAP_WIDTH, RANKS, STRUCTURE_MIN_RANK } from '../data/Balance.js';
 import { CAMP_TRAIT_LABELS, COUNTRIES, GRADES, PCC_TYPES, PREPPER_ARCHETYPES, RECIPES, RELICS, ROUTE_TYPES, SKILLS, SPONSORS, STRUCTURES, TITLES, TRAITS, cellKey, countryInfo, gradeLevel } from '../data/Constants.js';
 import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, sendToIncinerator } from '../engine/CombatEngine.js';
@@ -59,7 +61,22 @@ export function render() {
       renderAutomationPanel();
       renderLogisticsDashboard();
       refreshInspectorIfOpen();
+      renderDebugHud();
       // drawMap tourne en boucle continue (rAF) depuis l'init, pas besoin de la relancer ici
+    }
+
+// HUD DE DEBUG — overlay discret (coin bas-droit), actif uniquement avec ?debug=1 dans l'URL.
+// Affiche la seed RNG courante pour pouvoir reproduire une partie/un bug exactement.
+let debugHudEl = null;
+export function renderDebugHud() {
+      if (!DEBUG) return;
+      if (!debugHudEl) {
+        debugHudEl = document.createElement('div');
+        debugHudEl.id = 'debugHud';
+        debugHudEl.style.cssText = 'position:fixed; right:6px; bottom:64px; z-index:900; background:rgba(10,9,7,0.85); border:1px solid rgba(255,140,43,0.3); color:#ff8c2b; font-family:"Share Tech Mono",monospace; font-size:9px; padding:4px 8px; letter-spacing:0.5px; pointer-events:none;';
+        document.body.appendChild(debugHudEl);
+      }
+      debugHudEl.textContent = `RNG seed: ${RNG.getSeed()} · mois ${game.month} j${game.dayInMonth}`;
     }
 
 let lastBarMoney = null;

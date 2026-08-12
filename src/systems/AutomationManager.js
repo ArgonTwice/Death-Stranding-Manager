@@ -3,7 +3,7 @@
 
 import { eventBus } from '../core/EventBus.js';
 import { game, logEvent } from '../core/GameState.js';
-import { render } from '../ui/HUD.js';
+import { BALANCE } from '../data/Balance.js';
 
 export function toggleAutomation(key) {
       if (!game.automation) game.automation = {};
@@ -24,12 +24,12 @@ export function runAutomation() {
       for (const p of game.porters) {
         if (p.status !== 'idle' || p.health <= 0) continue;
         if (auto.autoRepair && (p.gearWear || 0) >= auto.autoRepairThreshold) {
-          const cost = Math.ceil((p.gearWear || 0) * 5);
+          const cost = Math.ceil((p.gearWear || 0) * BALANCE.porter.repairCostPerWearPoint);
           if (game.money >= cost) { game.money -= cost; p.gearWear = 0; repaired++; }
         }
         if (auto.autoRest && p.stress >= auto.autoRestThreshold) {
           const cost = Math.ceil((p.salary / 2) * (1 + p.stress / 100));
-          if (game.money >= cost) { game.money -= cost; p.stress = 0; p.health = Math.min(100, p.health + 25); rested++; }
+          if (game.money >= cost) { game.money -= cost; p.stress = 0; p.health = Math.min(100, p.health + BALANCE.porter.forceRestHealthRestore); rested++; }
         }
         if (auto.autoReturn) {
           const d = game.mapsData[p.map];

@@ -3,7 +3,8 @@
 
 import { eventBus } from '../core/EventBus.js';
 import { currentRankIndex, game, logEvent, runtime } from '../core/GameState.js';
-import { DAYS_PER_MONTH, DIFFICULTIES, HQ, MAP_HEIGHT, MAP_WIDTH, RANKS } from '../data/Balance.js';
+import { RNG } from '../core/RNG.js';
+import { BALANCE, DAYS_PER_MONTH, DIFFICULTIES, HQ, MAP_HEIGHT, MAP_WIDTH, RANKS, VEHICLE_MAINTENANCE_COST } from '../data/Balance.js';
 import { CARGO_TYPES, CRISIS_FLAVORS, EVENTS, ORDER_ACTIONS, ORDER_CONTEXTS, ORDER_SUBJECTS, QUEST_OBJECTS, QUEST_REASONS, QUEST_SUBJECTS, QUEST_VERBS, RECIPES, ROUTE_TYPES, SKILLS, SQUAD_SYNERGIES, TITLES, TRAITS, VEHICLE_SPEED, cellKey, gradeLevel, pickCargoType } from '../data/Constants.js';
 import { checkMuleCamps, generateCatcherEncounter } from './CombatEngine.js';
 import { dominantStructure, isBTZone, isNearHostileMuleCamp, isOnRoute, loadMapData } from './MapEngine.js';
@@ -14,7 +15,6 @@ import { checkSponsor, checkSubsidiaries } from '../systems/EconomySystem.js';
 import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems/NetworkSystem.js';
 import { gearEffectiveness, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
-import { render } from '../ui/HUD.js';
 import { markMapDirty } from '../ui/MapRenderer.js';
 
 export function overloadRatio(p, cargo) {
@@ -22,10 +22,11 @@ export function overloadRatio(p, cargo) {
     }
 
 export function deliveryRating(condition) {
-      if (condition >= 90) return { grade: 'S', likes: 25 };
-      if (condition >= 70) return { grade: 'A', likes: 15 };
-      if (condition >= 40) return { grade: 'B', likes: 8 };
-      return { grade: 'C', likes: 3 };
+      const B = BALANCE.delivery;
+      if (condition >= B.ratingSGradeThreshold) return { grade: 'S', likes: B.ratingSLikes };
+      if (condition >= B.ratingAGradeThreshold) return { grade: 'A', likes: B.ratingALikes };
+      if (condition >= B.ratingBGradeThreshold) return { grade: 'B', likes: B.ratingBLikes };
+      return { grade: 'C', likes: B.ratingCLikes };
     }
 
 export function triggerVoidout(x, y) {
@@ -47,7 +48,7 @@ export function triggerVoidout(x, y) {
       if (!game.btZones.includes(key)) game.btZones.push(key);
 
       // Canon: chiralium libéré par la néantisation cristallise sur site — récupérable
-      const crystalBonus = 200 + Math.floor(game.reputation * 3);
+      const crystalBonus = BALANCE.delivery.voidoutCrystalBonusBase + Math.floor(game.reputation * BALANCE.delivery.voidoutCrystalBonusRepMult);
       game.money += crystalBonus;
       logEvent(`💎 Chiral Crystals récupérés sur site: +$${crystalBonus}`);
 
@@ -67,7 +68,7 @@ export function sampleBTExposure(x0, y0, x1, y1) {
     }
 
 export function buildRoute() {
-      const cost = Math.ceil(600 * (1 + game.routes.size * 0.15)); // scale avec taille réseau
+      const cost = Math.ceil(BALANCE.delivery.buildRouteBaseCost * (1 + game.routes.size * BALANCE.delivery.buildRouteCostPerRouteCell)); // scale avec taille réseau
       if (game.money < cost) { logEvent(`❌ Budget ($${cost})`); return; }
       // Étend depuis une cellule déjà connectée vers une voisine non connectée
       // Les cratères sont infranchissables: le réseau doit les contourner
@@ -90,43 +91,45 @@ export function buildRoute() {
         return;
       }
       game.money -= cost;
-      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      const pick = candidates[Math.floor(RNG.next() * candidates.length)];
       game.routes.add(pick);
       logEvent(`🛣️ Route → (${pick}) (-$${cost})`);
       eventBus.emit('render:request');
     }
 
 export function generateQuestFlavor() {
-      const subj = QUEST_SUBJECTS[Math.floor(Math.random() * QUEST_SUBJECTS.length)];
-      const verb = QUEST_VERBS[Math.floor(Math.random() * QUEST_VERBS.length)];
-      const obj = QUEST_OBJECTS[Math.floor(Math.random() * QUEST_OBJECTS.length)];
-      const reason = QUEST_REASONS[Math.floor(Math.random() * QUEST_REASONS.length)];
+      const subj = QUEST_SUBJECTS[Math.floor(RNG.next() * QUEST_SUBJECTS.length)];
+      const verb = QUEST_VERBS[Math.floor(RNG.next() * QUEST_VERBS.length)];
+      const obj = QUEST_OBJECTS[Math.floor(RNG.next() * QUEST_OBJECTS.length)];
+      const reason = QUEST_REASONS[Math.floor(RNG.next() * QUEST_REASONS.length)];
       return `${subj} ${verb} ${obj}${reason ? ' ' + reason : ''}`;
     }
 
 export function generateSpecialOrderFlavor() {
-      const subj = ORDER_SUBJECTS[Math.floor(Math.random() * ORDER_SUBJECTS.length)];
-      const action = ORDER_ACTIONS[Math.floor(Math.random() * ORDER_ACTIONS.length)];
-      const ctx = ORDER_CONTEXTS[Math.floor(Math.random() * ORDER_CONTEXTS.length)];
+      const subj = ORDER_SUBJECTS[Math.floor(RNG.next() * ORDER_SUBJECTS.length)];
+      const action = ORDER_ACTIONS[Math.floor(RNG.next() * ORDER_ACTIONS.length)];
+      const ctx = ORDER_CONTEXTS[Math.floor(RNG.next() * ORDER_CONTEXTS.length)];
       return `${subj} ${action} ${ctx}`;
     }
 
 export function generateSpecialOrder() {
+      const B = BALANCE.delivery;
       const d = game.mapsData[game.currentMap];
       if (!d.sideQuests) d.sideQuests = [];
       if (d.sideQuests.some(q => q.special)) return; // un seul ordre spécial actif à la fois
-      if (currentRankIndex() < 2 || Math.random() > 0.08) return;
-      const x = Math.floor(Math.random() * MAP_WIDTH), y = Math.floor(Math.random() * MAP_HEIGHT);
-      const reward = Math.ceil((1200 + Math.random() * 800) * RANKS[currentRankIndex()].questMult * (festivalValue('questMult') || 1));
+      if (currentRankIndex() < B.specialOrderMinRank || RNG.next() > B.specialOrderSpawnChance) return;
+      const x = Math.floor(RNG.next() * MAP_WIDTH), y = Math.floor(RNG.next() * MAP_HEIGHT);
+      const reward = Math.ceil((B.specialOrderRewardBase + RNG.next() * B.specialOrderRewardRandRange) * RANKS[currentRankIndex()].questMult * (festivalValue('questMult') || 1));
       d.sideQuests.push({
-        id: 'special-' + game.month + '-' + Math.floor(Math.random() * 9999),
+        id: 'special-' + game.month + '-' + Math.floor(RNG.next() * 9999),
         flavor: generateSpecialOrderFlavor(),
-        x, y, reward, expiresMonth: game.month + 2, special: true, minSquad: 2
+        x, y, reward, expiresMonth: game.month + B.specialOrderExpiryMonths, special: true, minSquad: B.specialOrderMinSquad
       });
-      logEvent(`⭐ ORDRE SPÉCIAL disponible (min. 2 porteurs, expire mois ${game.month + 2})`, 'good');
+      logEvent(`⭐ ORDRE SPÉCIAL disponible (min. ${B.specialOrderMinSquad} porteurs, expire mois ${game.month + B.specialOrderExpiryMonths})`, 'good');
     }
 
 export function generateSideQuests() {
+      const B = BALANCE.delivery;
       for (const key in game.mapsData) {
         const d = game.mapsData[key];
         if (!d.sideQuests) d.sideQuests = [];
@@ -137,15 +140,15 @@ export function generateSideQuests() {
           }
           return true;
         });
-        const maxQuests = 2 + Math.floor(currentRankIndex() / 2); // Élite+: 3 quêtes simultanées possibles
-        if (d.sideQuests.length < maxQuests && Math.random() < 0.35) {
-          const x = Math.floor(Math.random() * MAP_WIDTH);
-          const y = Math.floor(Math.random() * MAP_HEIGHT);
-          const reward = Math.ceil((300 + Math.random() * 300) * (1 + game.reputation / 150) * RANKS[currentRankIndex()].questMult * (festivalValue('questMult') || 1));
+        const maxQuests = B.sideQuestBaseMaxQuests + Math.floor(currentRankIndex() / B.sideQuestMaxQuestsRankDivisor); // Élite+: 3 quêtes simultanées possibles
+        if (d.sideQuests.length < maxQuests && RNG.next() < B.sideQuestSpawnChance) {
+          const x = Math.floor(RNG.next() * MAP_WIDTH);
+          const y = Math.floor(RNG.next() * MAP_HEIGHT);
+          const reward = Math.ceil((B.sideQuestRewardBase + RNG.next() * B.sideQuestRewardRandRange) * (1 + game.reputation / B.sideQuestReputationDivisor) * RANKS[currentRankIndex()].questMult * (festivalValue('questMult') || 1));
           const flavor = generateQuestFlavor();
           d.sideQuests.push({
-            id: `sq-${key}-${game.month}-${Math.floor(Math.random() * 9999)}`,
-            x, y, reward, flavor, expiresMonth: game.month + 3 + Math.floor(Math.random() * 3)
+            id: `sq-${key}-${game.month}-${Math.floor(RNG.next() * 9999)}`,
+            x, y, reward, flavor, expiresMonth: game.month + B.sideQuestExpiryBaseMonths + Math.floor(RNG.next() * B.sideQuestExpiryRandRangeMonths)
           });
         }
       }
@@ -159,6 +162,7 @@ export function launchQuestFromUI(questId) {
     }
 
 export function assignQuest(questId, route, manualSquad) {
+      const B = BALANCE.delivery;
       const d = game.mapsData[game.currentMap];
       const qIdx = (d.sideQuests || []).findIndex(q => q.id === questId);
       if (qIdx === -1) return;
@@ -190,8 +194,8 @@ export function assignQuest(questId, route, manualSquad) {
       const synergyReward = synergies.reduce((s, syn) => s + (syn.rewardMult || 0), 0);
       const synergyRisk = synergies.reduce((s, syn) => s + (syn.riskCut || 0), 0);
       const synergyTime = synergies.reduce((s, syn) => s * (syn.timeMult || 1), 1);
-      const squadBonus = 1 + (squad.length - 1) * 0.2 + bondBonus + duo.reward + synergyReward;
-      const riskCut = Math.min(0.3, (squad.length - 1) * 0.1) + duo.riskCut + synergyRisk; // sécurité en nombre + partenariat + synergie
+      const squadBonus = 1 + (squad.length - 1) * B.squadBonusPerMember + bondBonus + duo.reward + synergyReward;
+      const riskCut = Math.min(B.squadRiskCutCap, (squad.length - 1) * B.squadRiskCutPerMember) + duo.riskCut + synergyRisk; // sécurité en nombre + partenariat + synergie
       const raidId = `raid-${game.month}-${quest.id}`;
       const perPorterReward = Math.ceil((quest.reward * squadBonus) / squad.length);
       for (const pid of squad) {
@@ -220,19 +224,20 @@ export function generateNarrativeSummary(d, p, rating) {
     }
 
 export function generateCrisisContract() {
+      const B = BALANCE.delivery;
       const d = game.mapsData[game.currentMap];
       if (!d.sideQuests) d.sideQuests = [];
       if (d.sideQuests.some(q => q.crisis)) return; // un seul contrat de crise actif à la fois
-      if (currentRankIndex() < 3 || Math.random() > 0.05) return;
-      const x = Math.floor(Math.random() * MAP_WIDTH), y = Math.floor(Math.random() * MAP_HEIGHT);
-      const reward = Math.ceil((2500 + Math.random() * 1500) * RANKS[currentRankIndex()].questMult * (festivalValue('questMult') || 1));
-      const chiralBonus = 15 + Math.floor(Math.random() * 20);
+      if (currentRankIndex() < B.crisisMinRank || RNG.next() > B.crisisSpawnChance) return;
+      const x = Math.floor(RNG.next() * MAP_WIDTH), y = Math.floor(RNG.next() * MAP_HEIGHT);
+      const reward = Math.ceil((B.crisisRewardBase + RNG.next() * B.crisisRewardRandRange) * RANKS[currentRankIndex()].questMult * (festivalValue('questMult') || 1));
+      const chiralBonus = B.crisisChiralBonusBase + Math.floor(RNG.next() * B.crisisChiralBonusRandRange);
       d.sideQuests.push({
-        id: 'crisis-' + game.month + '-' + Math.floor(Math.random() * 9999),
-        flavor: CRISIS_FLAVORS[Math.floor(Math.random() * CRISIS_FLAVORS.length)],
-        x, y, reward, expiresMonth: game.month + 1, crisis: true, minSquad: 3, chiralBonus
+        id: 'crisis-' + game.month + '-' + Math.floor(RNG.next() * 9999),
+        flavor: CRISIS_FLAVORS[Math.floor(RNG.next() * CRISIS_FLAVORS.length)],
+        x, y, reward, expiresMonth: game.month + B.crisisExpiryMonths, crisis: true, minSquad: B.crisisMinSquad, chiralBonus
       });
-      logEvent(`🌌 CONTRAT HAUTE MENACE disponible — fenêtre 1 mois, min. 3 porteurs, +${chiralBonus} cristaux à l'engagement`, 'warn');
+      logEvent(`🌌 CONTRAT HAUTE MENACE disponible — fenêtre 1 mois, min. ${B.crisisMinSquad} porteurs, +${chiralBonus} cristaux à l'engagement`, 'warn');
     }
 
 export function craft(recipeId) {
@@ -269,13 +274,14 @@ export function checkQuarterlyReport() {
     }
 
 export function checkFestival() {
+      const B = BALANCE.delivery;
       if (game.activeFestival && game.month > game.activeFestival.endMonth) {
         logEvent(`🎊 Fin: ${game.activeFestival.name}`);
         game.activeFestival = null;
       }
-      if (!game.activeFestival && game.month % 4 === 0 && Math.random() < 0.5) {
-        const f = runtime.activeFestivalsPool[Math.floor(Math.random() * runtime.activeFestivalsPool.length)];
-        const duration = 2 + Math.floor(Math.random() * 2);
+      if (!game.activeFestival && game.month % B.festivalMonthInterval === 0 && RNG.next() < B.festivalSpawnChance) {
+        const f = runtime.activeFestivalsPool[Math.floor(RNG.next() * runtime.activeFestivalsPool.length)];
+        const duration = B.festivalDurationBase + Math.floor(RNG.next() * B.festivalDurationRandRange);
         game.activeFestival = { ...f, endMonth: game.month + duration };
         logEvent(`🎉 ${f.name} démarre ! ${f.desc} (${duration} mois)`, 'good');
         if (f.effect === 'repBoost') game.reputation = Math.min(100, game.reputation + f.value);
@@ -287,13 +293,14 @@ export function festivalValue(effect) {
     }
 
 export function checkVisitor() {
+      const B = BALANCE.delivery;
       if (game.visitor && game.month > game.visitor.expiresMonth) {
         logEvent(`🚶 ${game.visitor.name} est reparti (offre expirée)`);
         game.visitor = null;
       }
-      if (!game.visitor && Math.random() < 0.2) {
-        const o = runtime.activeVisitorOffers[Math.floor(Math.random() * runtime.activeVisitorOffers.length)];
-        game.visitor = { ...o, expiresMonth: game.month + 2 };
+      if (!game.visitor && RNG.next() < B.visitorSpawnChance) {
+        const o = runtime.activeVisitorOffers[Math.floor(RNG.next() * runtime.activeVisitorOffers.length)];
+        game.visitor = { ...o, expiresMonth: game.month + B.visitorExpiryMonths };
         logEvent(`🧳 Un visiteur arrive au camp: ${o.name} — ${o.desc}`, 'good');
       }
     }
@@ -317,7 +324,7 @@ export function squadBondBonus(squad) {
       if (squad.length < 2) return 0;
       let total = 0, pairs = 0;
       for (let i = 0; i < squad.length; i++) for (let j = i + 1; j < squad.length; j++) {
-        total += Math.min(game.bonds[bondKey(squad[i], squad[j])] || 0, 10) * 0.02; // +2%/raid ensemble, plafond 10
+        total += Math.min(game.bonds[bondKey(squad[i], squad[j])] || 0, BALANCE.delivery.bondBonusCap) * BALANCE.delivery.bondPerRaidBonus; // +2%/raid ensemble, plafond 10
         pairs++;
       }
       return pairs ? total / pairs : 0;
@@ -334,7 +341,7 @@ export function isDuo(a, b) { return game.duos.includes(bondKey(a, b)); }
 
 export function squadDuoBonus(squad) {
       for (let i = 0; i < squad.length; i++) for (let j = i + 1; j < squad.length; j++) {
-        if (isDuo(squad[i], squad[j])) return { reward: 0.1, riskCut: 0.05 };
+        if (isDuo(squad[i], squad[j])) return { reward: BALANCE.delivery.duoRewardBonus, riskCut: BALANCE.delivery.duoRiskCutBonus };
       }
       return { reward: 0, riskCut: 0 };
     }
@@ -342,7 +349,7 @@ export function squadDuoBonus(squad) {
 export function checkDuoFormation(squad) {
       for (let i = 0; i < squad.length; i++) for (let j = i + 1; j < squad.length; j++) {
         const key = bondKey(squad[i], squad[j]);
-        if (game.bonds[key] === 8 && !game.duos.includes(key)) {
+        if (game.bonds[key] === BALANCE.delivery.duoFormationThreshold && !game.duos.includes(key)) {
           game.duos.push(key);
           const pa = game.porters.find(p => p.id === squad[i]), pb = game.porters.find(p => p.id === squad[j]);
           logEvent(`💞 Partenariat officiel formé: ${pa ? pa.name : '?'} & ${pb ? pb.name : '?'} (+10% reward, -5% risque en duo)`, 'good');
@@ -356,56 +363,58 @@ export function activeSynergies(squad) {
     }
 
 export function checkCampEvent() {
-      if (Math.random() < 0.15) {
-        const e = runtime.activeCampEvents[Math.floor(Math.random() * runtime.activeCampEvents.length)];
+      if (RNG.next() < BALANCE.delivery.campEventSpawnChance) {
+        const e = runtime.activeCampEvents[Math.floor(RNG.next() * runtime.activeCampEvents.length)];
         e.effect();
         logEvent(e.name, 'event');
       }
     }
 
 export function generateEvent(porter, distance, destX, destY, riskMod = 0) {
-      let risk = 0.24 + (distance / 15) * 0.32 + riskMod; // distance + cargo augmentent risque
-      
+      const B = BALANCE.delivery;
+      let risk = B.riskBase + (distance / B.riskDistanceDivisor) * B.riskDistanceMult + riskMod; // distance + cargo augmentent risque
+
       // Équipement réduit risque
-      risk -= porter.equipment.scanner * 0.15 * gearEffectiveness(porter);
-      risk -= porter.equipment.exo * 0.1;
-      risk -= gradeLevel(porter, 'discretion') * 0.04; // Porter Grade Discrétion
-      
+      risk -= porter.equipment.scanner * B.scannerRiskMult * gearEffectiveness(porter);
+      risk -= porter.equipment.exo * B.exoRiskMult;
+      risk -= gradeLevel(porter, 'discretion') * B.discretionGradeRiskMult; // Porter Grade Discrétion
+
       // Compétence réduit risque
-      risk -= (SKILLS[porter.skill].dmg || 0) * 0.1;
+      risk -= (SKILLS[porter.skill].dmg || 0) * B.skillDmgRiskMult;
       risk -= (SKILLS[porter.skill].sense || 0); // DOOMS: sensibilité BT, gros bonus
-      risk -= porter.equipment.cryptobiote * 0.05;
-      
+      risk -= porter.equipment.cryptobiote * B.cryptobioteRiskMult;
+
       // Bâtiments
-      risk -= (game.structures.shelter || 0) * 0.15; // par niveau (paliers 1-3)
+      risk -= (game.structures.shelter || 0) * B.shelterRiskMultPerLevel; // par niveau (paliers 1-3)
 
       // Zone BT double le risque, route réduit -15%
-      if (isBTZone(destX, destY)) risk += 0.35;
-      if (isNearHostileMuleCamp(destX, destY)) risk += 0.15; // interception par un camp MULE actif
-      if (isOnRoute(destX, destY)) risk -= 0.15;
+      if (isBTZone(destX, destY)) risk += B.btZoneRiskAdd;
+      if (isNearHostileMuleCamp(destX, destY)) risk += B.muleCampRiskAdd; // interception par un camp MULE actif
+      if (isOnRoute(destX, destY)) risk -= B.onRouteRiskCut;
       risk += weatherRiskMod(); // Timefall/Duststorm persistants: visibilité réduite (#Phase5)
 
       risk *= DIFFICULTIES[game.difficulty || 'normal'].riskMult;
-      risk = Math.max(0.08, Math.min(1, risk)); // plancher 8%: jamais 100% safe
+      risk = Math.max(B.riskFloor, Math.min(B.riskCeil, risk)); // plancher 8%: jamais 100% safe
 
       // Tirage événement: `risk` détermine DIRECTEMENT la probabilité d'un événement négatif
       // (avant: un simple seuil à 0.3 plafonnait à 50% de bad event même au plancher — toute réduction
       // de risque au-delà de ce seuil était gaspillée. Corrigé pour que le risque compte vraiment.)
       const badEvents = EVENTS.filter(e => e.risk >= 0);
       const goodEvents = EVENTS.filter(e => e.risk < 0);
-      const pool = Math.random() < risk ? badEvents : goodEvents;
-      const event = pool[Math.floor(Math.random() * pool.length)];
+      const pool = RNG.next() < risk ? badEvents : goodEvents;
+      const event = pool[Math.floor(RNG.next() * pool.length)];
 
       return event;
     }
 
 export function sendDelivery(porterIdx) {
-      const destX = Math.floor(Math.random() * MAP_WIDTH);
-      const destY = Math.floor(Math.random() * MAP_HEIGHT);
+      const destX = Math.floor(RNG.next() * MAP_WIDTH);
+      const destY = Math.floor(RNG.next() * MAP_HEIGHT);
       createDelivery(porterIdx, destX, destY);
     }
 
 export function createDelivery(porterIdx, destX, destY, questOpts) {
+      const B = BALANCE.delivery;
       const porter = game.porters[porterIdx];
       if (porter.status !== "idle" || porter.health <= 0) return;
 
@@ -415,36 +424,36 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       const cargo = CARGO_TYPES[cargoType];
 
       // Calcul récompense (fixée par la quête si applicable — le cargo influence le risque/temps, pas le montant)
-      let reward = questOpts ? Math.ceil(questOpts.reward * (1 + gradeLevel(porter, 'service') * 0.05)) : Math.ceil(distance * 100 * (1 + game.reputation / 100) * cargo.rewardMult);
-      if (porter.equipment.vehicle) reward *= 1.5;
-      reward = Math.ceil(reward * (1 + (game.infraInvestments || 0) * 0.002)); // investissements infrastructure, permanent
-      
+      let reward = questOpts ? Math.ceil(questOpts.reward * (1 + gradeLevel(porter, 'service') * B.serviceGradeRewardMult)) : Math.ceil(distance * B.rewardDistanceMult * (1 + game.reputation / B.reputationRewardDivisor) * cargo.rewardMult);
+      if (porter.equipment.vehicle) reward *= B.vehicleRewardMult;
+      reward = Math.ceil(reward * (1 + (game.infraInvestments || 0) * B.infraRewardMultPerInvestment)); // investissements infrastructure, permanent
+
       // Surcharge: ratio masse cargo / capacité porteur — au-delà de 0.9 ça pénalise risque + vitesse (canon: balance/stamina DS)
       const overload = overloadRatio(porter, cargo);
-      const overloadRiskMod = overload > 0.9 ? (overload - 0.9) * 0.6 : 0;
+      const overloadRiskMod = overload > B.overloadThreshold ? (overload - B.overloadThreshold) * B.overloadRiskMult : 0;
 
       const onRoute = isOnRoute(destX, destY);
-      const campRiskCut = dominantStructure() === 'shelter' ? 0.03 : 0;
+      const campRiskCut = dominantStructure() === 'shelter' ? B.shelterDominantRiskCut : 0;
       const route = ROUTE_TYPES[(questOpts && questOpts.route)] || null;
       const event = generateEvent(porter, distance, destX, destY, cargo.riskMod + overloadRiskMod - (questOpts && questOpts.riskCut || 0) - festivalValue('riskCut') - campRiskCut + (route ? route.riskMod : 0)); // riskCut: raid + festival + spécialité camp + itinéraire
       let timeMultiplier = (porter.equipment.vehicle ? VEHICLE_SPEED[porter.equipment.vehicle] : 1) * cargo.timeMult * (route ? route.timeMult : 1) * ((questOpts && questOpts.extraTimeMult) || 1);
-      if (onRoute) timeMultiplier *= Math.max(0.4, 0.7 - gradeLevel(porter, 'reseau') * 0.03) * (1 - (game.structures.zipline || 0) * 0.08) * (dominantStructure() === 'zipline' ? 0.97 : 1) * (isNearPCC(destX, destY, 'zipline') ? 0.8 : 1); // -30% temps + Porter Grade Réseau + zipline + spécialité camp + tyrolienne PCC
+      if (onRoute) timeMultiplier *= Math.max(B.onRouteTimeFloor, B.onRouteTimeBase - gradeLevel(porter, 'reseau') * B.onRouteReseauGradeMult) * (1 - (game.structures.zipline || 0) * B.ziplineStructureTimeMultPerLevel) * (dominantStructure() === 'zipline' ? B.ziplineDominantTimeMult : 1) * (isNearPCC(destX, destY, 'zipline') ? B.ziplinePccTimeMult : 1); // -30% temps + Porter Grade Réseau + zipline + spécialité camp + tyrolienne PCC
       // Cargo lourd sans véhicule: pénalité de temps supplémentaire
-      if (cargoType === 'heavy' && !porter.equipment.vehicle) timeMultiplier *= 1.15;
-      if (overload > 0.9) timeMultiplier *= 1 + (overload - 0.9) * 0.5; // surcharge ralentit
+      if (cargoType === 'heavy' && !porter.equipment.vehicle) timeMultiplier *= B.heavyCargoNoVehicleTimeMult;
+      if (overload > B.overloadThreshold) timeMultiplier *= 1 + (overload - B.overloadThreshold) * B.overloadTimeMult; // surcharge ralentit
       timeMultiplier *= TRAITS[porter.trait].time_mult || 1; // trait Lève-tôt etc.
 
       // Terrain canon: relief accidenté ralentit (véhicule inefficace en montagne/rivière)
       const destTerrain = game.terrain[cellKey(destX, destY)];
       // Ancre chirale (rang 2): atténue de moitié la pénalité de relief accidenté
-      const terrainMit = porter.equipment.climbing_anchor ? 0.5 : 1;
-      if (destTerrain === 'mountain') timeMultiplier *= 1 + 0.35 * terrainMit;
-      if (destTerrain === 'river' && !isNearPCC(destX, destY, 'bridge')) timeMultiplier *= 1 + 0.2 * terrainMit;
+      const terrainMit = porter.equipment.climbing_anchor ? B.terrainAnchorMitigation : 1;
+      if (destTerrain === 'mountain') timeMultiplier *= 1 + B.mountainTimeMult * terrainMit;
+      if (destTerrain === 'river' && !isNearPCC(destX, destY, 'bridge')) timeMultiplier *= 1 + B.riverTimeMult * terrainMit;
 
       // Réseau asynchrone: cargaison perdue récupérée au passage + structure fantôme empruntée (pour le récit)
       const lostCargoBonus = collectNearbyLostCargo(destX, destY);
       reward += lostCargoBonus;
-      const ghostPCC = (game.pccInstalls || []).find(p => p.ghost && Math.hypot(p.x - destX, p.y - destY) <= 1.5);
+      const ghostPCC = (game.pccInstalls || []).find(p => p.ghost && Math.hypot(p.x - destX, p.y - destY) <= B.ghostPccProximityRadius);
 
       const delivery = {
         porter: porterIdx,
@@ -459,9 +468,9 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
         quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need } : null,
         raidId: (questOpts && questOpts.raidId) || null,
         destTerrain, lostCargoBonus, ghostName: ghostPCC ? ghostPCC.ghostName : null, // contexte pour le récit émergent
-        maxSteps: Math.ceil(distance * 2 * timeMultiplier),
+        maxSteps: Math.ceil(distance * B.maxStepsDistanceMult * timeMultiplier),
         reward,
-        timeRemaining: Math.max(1, Math.ceil(distance * 2 * timeMultiplier)),
+        timeRemaining: Math.max(1, Math.ceil(distance * B.maxStepsDistanceMult * timeMultiplier)),
         event,
         started: false
       };
@@ -477,6 +486,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
     }
 
 export function tick() {
+      const B = BALANCE.delivery;
       for (let d of game.deliveries) {
         // Assure que les mutations (cratères, routes) touchent la carte de CETTE livraison
         if (d.map && game.currentMap !== d.map) loadMapData(d.map);
@@ -492,45 +502,45 @@ export function tick() {
 
           // Appliquer dégâts
           if (evt.dmg) {
-            const dmg = typeof evt.dmg === 'object' 
-              ? evt.dmg[0] + Math.random() * (evt.dmg[1] - evt.dmg[0])
+            const dmg = typeof evt.dmg === 'object'
+              ? evt.dmg[0] + RNG.next() * (evt.dmg[1] - evt.dmg[0])
               : evt.dmg;
             const resistTotal = porterResist(p);
             let actualDmg = dmg * (1 - resistTotal);
             if (p.equipment.exo) actualDmg *= 1 - 0.3 * gearEffectiveness(p);
-            p.gearWear = Math.min(100, (p.gearWear || 0) + 1 + Math.floor(Math.random() * 2)); // usure normale par livraison
+            p.gearWear = Math.min(100, (p.gearWear || 0) + B.tickGearWearBase + Math.floor(RNG.next() * B.tickGearWearRandRange)); // usure normale par livraison
             // Bola gun: arme canon anti-BT/MULEs, inefficace contre tempête/corrosion
-            if (p.equipment.bolagun && (evt.id === 'bt' || evt.id === 'ambush')) actualDmg *= 0.5;
+            if (p.equipment.bolagun && (evt.id === 'bt' || evt.id === 'ambush')) actualDmg *= B.bolagunDmgMult;
             // Cargo lourd: surcharge, dégâts amplifiés sans exo
-            if (d.cargoType === 'heavy' && !p.equipment.exo) actualDmg *= 1.2;
+            if (d.cargoType === 'heavy' && !p.equipment.exo) actualDmg *= B.heavyCargoDmgMult;
             p.health -= actualDmg;
             if (verbose) logEvent(`  💔 -${Math.ceil(actualDmg)} HP (${Math.ceil(p.health)}/100)`);
 
             // Condition du cargo dégradée par l'événement (base de la note de livraison, #1)
-            d.condition = Math.max(0, d.condition - Math.ceil(actualDmg * 0.8));
+            d.condition = Math.max(0, d.condition - Math.ceil(actualDmg * B.conditionDmgMult));
 
             // Butin pour le Chaudron: survivre à un BT/MULE a une chance de laisser du matériau récupérable
             if (p.health > 0) {
               const lootBonus = (dominantStructure() === 'cauldron' ? 1.1 : 1) * (1 + prepperPerkBonus('materialBonus'));
-              if (evt.id === 'bt' && Math.random() < 0.4 * lootBonus) { game.materials.chiral_crystal++; if (verbose) logEvent('  🔮 +1 Cristal chiral récupéré'); }
-              if (evt.id === 'ambush' && Math.random() < 0.35 * lootBonus) { game.materials.mule_scrap++; if (verbose) logEvent('  🔧 +1 Ferraille MULE récupérée'); }
+              if (evt.id === 'bt' && RNG.next() < B.btLootChance * lootBonus) { game.materials.chiral_crystal++; if (verbose) logEvent('  🔮 +1 Cristal chiral récupéré'); }
+              if (evt.id === 'ambush' && RNG.next() < B.ambushLootChance * lootBonus) { game.materials.mule_scrap++; if (verbose) logEvent('  🔧 +1 Ferraille MULE récupérée'); }
               if (evt.id === 'bt' || evt.id === 'ambush') rollRelic(); // toujours loggée si trouvée, même en vie de camp
             }
 
             // Cargo fragile: casse partielle sur mauvais événement (caisse réfrigérée + assurance protègent)
             if (d.cargoType === 'fragile') {
-              const insuranceMit = 1 - (game.structures.insurance || 0) * 0.15; // -15%/niveau de casse en plus
-              const shield = (p.equipment.cryobox ? 0.1 : 1) * insuranceMit;
-              const loss = Math.ceil(d.reward * 0.4 * shield);
+              const insuranceMit = 1 - (game.structures.insurance || 0) * B.fragileInsuranceMitPerLevel; // -15%/niveau de casse en plus
+              const shield = (p.equipment.cryobox ? B.fragileCryoboxShield : 1) * insuranceMit;
+              const loss = Math.ceil(d.reward * B.fragileLossMult * shield);
               d.reward -= loss;
-              d.condition = Math.max(0, d.condition - Math.ceil(30 * shield));
+              d.condition = Math.max(0, d.condition - Math.ceil(B.fragileConditionLoss * shield));
               if (verbose) logEvent(p.equipment.cryobox
                 ? `  🧊❄️ caisse réfrigérée a limité la casse (-$${loss})`
                 : `  🧊💥 cargo fragile endommagé (-$${loss} sur la prime)`);
             }
             // Cargo urgent: deadline dure — sans assurance, prime annulée; avec, une partie est sauvée (25/50/75%/niveau)
             if (d.cargoType === 'urgent') {
-              d.reward = Math.ceil(d.reward * (game.structures.insurance || 0) * 0.25);
+              d.reward = Math.ceil(d.reward * (game.structures.insurance || 0) * B.urgentInsuranceRewardMult);
               d.cargoFailed = true;
               d.condition = 0;
               if (verbose) logEvent(game.structures.insurance
@@ -540,7 +550,7 @@ export function tick() {
           }
 
           // Stress (Cryptobiotes canon: atténuent les effets de la Frappe Temporelle; trait Nerveux amplifie)
-          p.stress += Math.max(0, evt.stress - p.equipment.cryptobiote * 8) * (TRAITS[p.trait].stress_mult || 1);
+          p.stress += Math.max(0, evt.stress - p.equipment.cryptobiote * B.cryptobioteStressMitPerUnit) * (TRAITS[p.trait].stress_mult || 1);
           if (evt.reward) d.reward += evt.reward;
           d.reward = Math.max(0, d.reward);
 
@@ -558,25 +568,25 @@ export function tick() {
         if (d.btExposure > 0 && !d.spotted && d.timeRemaining > 0) {
           const p2 = game.porters[d.porter];
           const scannerLvl = p2.equipment.scanner || 0;
-          const detectRate = d.btExposure * 8 * (1 - scannerLvl * 0.3 - gradeLevel(p2, 'discretion') * 0.1);
+          const detectRate = d.btExposure * B.detectionRatePerExposure * (1 - scannerLvl * B.detectionScannerMult - gradeLevel(p2, 'discretion') * B.detectionDiscretionGradeMult);
           d.detection += Math.max(1, detectRate);
-          if (d.detection >= 100 && p2.health > 0) {
+          if (d.detection >= B.detectionThreshold && p2.health > 0) {
             d.spotted = true;
-            const dmg2 = 10 + Math.random() * 15;
-            const actualDmg2 = dmg2 * (1 - porterResist(p2)) * (p2.equipment.exo ? 0.7 : 1);
+            const dmg2 = B.detectionDmgBase + RNG.next() * B.detectionDmgRandRange;
+            const actualDmg2 = dmg2 * (1 - porterResist(p2)) * (p2.equipment.exo ? B.detectionExoMult : 1);
             p2.health -= actualDmg2;
-            d.condition = Math.max(0, d.condition - Math.ceil(actualDmg2 * 0.6));
+            d.condition = Math.max(0, d.condition - Math.ceil(actualDmg2 * B.detectionConditionMult));
             if (d.quest) logEvent(`  👁️ ${p2.name} repéré par un BT en approche ! -${Math.ceil(actualDmg2)} HP (${Math.ceil(p2.health)}/100)`, 'warn');
           }
         }
 
         if (d.timeRemaining <= 0) {
           const p = game.porters[d.porter];
-          
+
           // Mort check
           if (p.health <= 0) {
             game.deaths++;
-            game.reputation = Math.max(0, game.reputation - 15);
+            game.reputation = Math.max(0, game.reputation - B.deathReputationLoss);
             logEvent(`💀 NÉANTISATION — ${p.name} a rejoint le rivage`, 'death');
             triggerVoidout(p.x, p.y);
             recordHallOfFame(p, 'néantisé');
@@ -588,25 +598,25 @@ export function tick() {
           // Succès
           p.x = d.destX;
           p.y = d.destY;
-          p.stress = Math.max(0, p.stress - 20);
-          p.health = Math.min(100, p.health + 10);
+          p.stress = Math.max(0, p.stress - B.successStressRecover);
+          p.health = Math.min(100, p.health + B.successHealthRecover);
 
           if (d.cargoFailed) {
             // Livraison urgente ratée: le porteur arrive mais rien n'est payé
-            p.xp += 5;
-            game.reputation = Math.max(0, game.reputation - 3);
+            p.xp += B.cargoFailedXpGain;
+            game.reputation = Math.max(0, game.reputation - B.cargoFailedReputationLoss);
             if (d.quest) logEvent(`❌ ${p.name} arrive — cargo urgent invalidé, aucune prime`, 'warn');
             applyPrepperDeliveryOutcome(d.quest, false, null);
             p.status = "idle";
             continue;
           }
 
-          let xpGain = 15 + Math.floor(Math.random() * 10);
-          if (game.structures.training) xpGain *= 1 + (game.structures.training || 0) * 0.15; // par niveau (paliers 1-3)
-          if (dominantStructure() === 'training') xpGain *= 1.05; // spécialité du camp
+          let xpGain = B.xpGainBase + Math.floor(RNG.next() * B.xpGainRandRange);
+          if (game.structures.training) xpGain *= 1 + (game.structures.training || 0) * B.trainingXpMultPerLevel; // par niveau (paliers 1-3)
+          if (dominantStructure() === 'training') xpGain *= B.trainingDominantXpMult; // spécialité du camp
           xpGain *= 1 + (game.legacyBonus || 0); // héritage des porteurs retraités
-          if (d.onRoute) xpGain *= 1.5;
-          if (p.stress > 80) xpGain *= 0.8; // stress élevé = -20% XP
+          if (d.onRoute) xpGain *= B.onRouteXpMult;
+          if (p.stress > B.highStressThreshold) xpGain *= B.highStressXpMult; // stress élevé = -20% XP
           xpGain *= TRAITS[p.trait].xp_mult || 1;
           p.xp += xpGain;
 
@@ -614,7 +624,7 @@ export function tick() {
           const rating = deliveryRating(d.condition);
           applyPrepperDeliveryOutcome(d.quest, true, rating);
           p.likes += rating.likes;
-          if (rating.grade === 'S') game.reputation = Math.min(100, game.reputation + 2); // bonus S-rank
+          if (rating.grade === 'S') game.reputation = Math.min(100, game.reputation + B.sRankReputationGain); // bonus S-rank
 
           // Porter Grade: catégorie déterminée par le contexte de la livraison (canon DS2, 5 catégories)
           let category = 'portage';
@@ -626,21 +636,21 @@ export function tick() {
 
           game.money += d.reward;
           game.completed++;
-          game.reputation = Math.min(100, game.reputation + 3);
-          
+          game.reputation = Math.min(100, game.reputation + B.deliveryReputationGain);
+
           if (d.quest) {
             if (rating.grade === 'S') eventBus.emit('sfx:brass', 0.5);
             logEvent(`🗒️✅ ${d.quest.flavor} [${rating.grade}] — ${generateNarrativeSummary(d, p, rating)} (+$${d.reward} +${rating.likes}❤️)`, 'good');
           }
           else if (rating.grade === 'S') logEvent(`✅ ${p.name} livraison exemplaire [S]! +$${d.reward} +${rating.likes}❤️`, 'good');
           // sinon: livraison routinière — vie de camp en arrière-plan, pas de log (évite le spam)
-          
-          if (p.xp >= p.level * 50) {
+
+          if (p.xp >= p.level * B.levelUpXpPerLevel) {
             p.level++;
-            p.salary += 70;
+            p.salary += B.levelUpSalaryIncrease;
             logEvent(`⭐ ${p.name} → Level ${p.level}`);
           }
-          
+
           p.status = "idle";
         }
       }
@@ -648,6 +658,7 @@ export function tick() {
     }
 
 export function startMonthBookkeeping() {
+      const B = BALANCE.delivery;
       eventBus.emit('sfx:drum', 'impact'); // marque le passage du mois, façon Woodkid
       game.monthState.viewMap = game.currentMap;
       game.monthState.moneyBeforeOps = game.money;
@@ -661,7 +672,7 @@ export function startMonthBookkeeping() {
         const fired = active.shift();
         fired.status = "left";
         recordHallOfFame(fired, 'licencié (budget)');
-        game.reputation = Math.max(0, game.reputation - 10);
+        game.reputation = Math.max(0, game.reputation - B.firingReputationLoss);
         logEvent(`📉 ${fired.name} licencié (budget insuffisant)`);
         salary_cost = active.reduce((s, p) => s + p.salary, 0);
       }
@@ -670,10 +681,9 @@ export function startMonthBookkeeping() {
       game.monthState.salaryCost = salary_cost;
 
       // Maintenance véhicules: coût mensuel selon le type possédé (puits économique tardif)
-      const VEHICLE_MAINTENANCE = { truck: 80, bike: 40, trike: 60 };
       const vehicleCost = game.porters.reduce((s, p) => {
         if (p.status === 'dead' || p.status === 'left' || !p.equipment.vehicle) return s;
-        return s + (VEHICLE_MAINTENANCE[p.equipment.vehicle] || 0);
+        return s + (VEHICLE_MAINTENANCE_COST[p.equipment.vehicle] || 0);
       }, 0);
       if (vehicleCost > 0) {
         game.money = Math.max(0, game.money - vehicleCost);
@@ -689,6 +699,7 @@ export function startMonthBookkeeping() {
     }
 
 export function endMonthBookkeeping() {
+      const B = BALANCE.delivery;
       checkQuarterlyReport();
       checkFestival();
       checkVisitor();
@@ -704,13 +715,13 @@ export function endMonthBookkeeping() {
 
       // Récupération santé (réduite: repos forcé devient un vrai outil, pas juste attendre)
       for (let p of game.porters) {
-        if (p.status === "idle" && p.health < 100) p.health = Math.min(100, p.health + 6 + prepperPerkBonus('fastHeal'));
+        if (p.status === "idle" && p.health < 100) p.health = Math.min(100, p.health + B.idleHealRate + prepperPerkBonus('fastHeal'));
       }
 
       // Frappe Temporelle ou Duststorm: ambiance visuelle, pas d'impact mécanique
-      const weatherRoll = Math.random();
-      if (weatherRoll < 0.2) triggerTimefall();
-      else if (weatherRoll < 0.32) triggerDuststorm();
+      const weatherRoll = RNG.next();
+      if (weatherRoll < B.timefallChance) triggerTimefall();
+      else if (weatherRoll < B.duststormChanceUpper) triggerDuststorm();
 
       // Bilan de mois: feedback net clair (revenus livraisons vs salaires)
       const netChange = game.money - game.monthState.moneyBeforeOps;
