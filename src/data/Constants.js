@@ -285,6 +285,62 @@ export const LEAGUE_TIERS = [
       { name: 'Élite Chirale', icon: '💠' }
     ];
 
+// V0.6.0 — contenu narratif. Toujours pioché via RNG.next()/RNG.deriveGenerator, jamais Math.random(),
+// pour rester bit-à-bit déterministe comme le reste de la simulation.
+export const NARRATIVE_LOG_LINES = [
+      'Pluie. Je mets la capuche.',
+      'Le silence du réseau chiral, ici, est presque supportable.',
+      'Une odeur de tempête. J\'accélère le pas.',
+      'Le poids sur mes épaules me rappelle pourquoi je fais ce métier.',
+      'Personne à l\'horizon. Juste le sentier et moi.',
+      'Le BB s\'agite légèrement — rien d\'alarmant, pour l\'instant.',
+      'Une pierre chirale scintille au bord du chemin. Je ne m\'arrête pas.',
+      'Le vent efface mes traces derrière moi.',
+      'Je pense aux porteurs qui ne reviendront pas de ce trajet.',
+      'Encore un kilomètre. Encore un.'
+    ];
+
+export const ABSENCE_JOURNAL_TEMPLATES = [
+      p => `Tu n'étais pas là quand ${p} est arrivé au relais. Le réseau a continué sans toi, mais il t'a attendu.`,
+      p => `${p} a livré seul, sous la pluie. Il a repensé à toi en chemin.`,
+      p => `Le camp a bourdonné d'activité en ton absence. ${p} a tenu bon.`,
+      p => `Personne n'a rien dit, mais tout le monde a remarqué ton absence — surtout ${p}.`
+    ];
+
+export const PCC_LOGBOOK_LINES = [
+      'Un porteur inconnu est passé ici. Il a laissé un mot: "merci d\'avoir tenu ce relais".',
+      'Fantôme du réseau détecté — quelqu\'un, quelque part, a utilisé cet abri hors-ligne.',
+      'La pluie a rouillé un coin du toit. Le relais tient encore.',
+      'Un carnet abandonné ici raconte un trajet vers le nord, jamais achevé.',
+      'Le générateur bourdonne doucement. Quelqu\'un l\'a réparé récemment.'
+    ];
+
+export const BEACH_RELIC_OBJECTS = [
+      'La chaussure usée', 'Le gant déchiré', 'La gourde vide', 'Le badge Bridges cabossé',
+      'La carte froissée', 'Le bracelet chiral terni', 'Le carnet de bord détrempé', 'La boucle de ceinturon rouillée'
+    ];
+
+export const BEACH_SEQUENCE_LINES = [
+      'Le sable est froid sous tes pieds. La marée n\'apporte que du silence.',
+      'Une silhouette au loin, à peine visible entre deux vagues.',
+      'Le rivage n\'a pas de direction. Il n\'a que des souvenirs échoués.',
+      'Quelque chose flotte, presque à portée de main.',
+      'Le temps ne s\'écoule pas ici comme ailleurs.'
+    ];
+
+export const MUSEUM_DREAM_TEMPLATES = [
+      relic => `Le Terminal rêve encore de ${relic}. Il en parle parfois, la nuit.`,
+      relic => `${relic} occupe une place vide qui ne se remplira plus jamais tout à fait.`,
+      relic => `Dans le silence du musée, ${relic} continue d'exister, quelque part.`
+    ];
+
+export const TERMINAL_MOOD_LINES = {
+      calm: ['Le réseau est stable. Tout va bien.', 'Rien à signaler. Le silence me va.'],
+      tired: ['Tu devrais dormir...', 'Je commence à fatiguer, moi aussi, à ma manière.'],
+      welcoming_short: ['Te revoilà. Le réseau a continué de tourner.'],
+      welcoming_long: ['Tu es revenu. J\'ai gardé le réseau allumé.']
+    };
+
 // Stratégies de Convoi Lourd (V0.4.0) — flavor + icônes; les coefficients numériques vivent dans
 // BALANCE.convoy.strategies (même clé).
 export const CONVOY_STRATEGIES = {

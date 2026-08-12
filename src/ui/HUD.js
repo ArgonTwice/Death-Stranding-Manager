@@ -21,6 +21,8 @@ import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperSt
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
 import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
+import { renderBBPodOverlay, showBBPodAlert } from './BBPodOverlay.js';
+import { renderTerminalConsole } from './TerminalConsole.js';
 import { refreshInspectorIfOpen } from './CanvasInspector.js';
 import { renderConvoyPanel } from './ConvoyPanel.js';
 import { renderHallOfFamePanel } from './HallOfFamePanel.js';
@@ -74,6 +76,8 @@ export function render() {
       renderConvoyPanel();
       renderTelemetryReport();
       renderHallOfFamePanel();
+      renderBBPodOverlay();
+      renderTerminalConsole();
       refreshPorterDrawerIfOpen();
       refreshInspectorIfOpen();
       renderDebugHud();
@@ -680,3 +684,5 @@ eventBus.on('porter:joyTriggered', ({ porterId }) => refreshPorterDrawerIfOpen(p
 eventBus.on('porter:milestoneReached', ({ porterId }) => refreshPorterDrawerIfOpen(porterId));
 eventBus.on('porter:traitAcquired', ({ porterId }) => refreshPorterDrawerIfOpen(porterId));
 eventBus.on('legacy:legendRecorded', () => renderHallOfFamePanel());
+eventBus.on('bbpod:btDetected', (payload) => showBBPodAlert(payload));
+eventBus.on('bbpod:stageChanged', () => renderBBPodOverlay());

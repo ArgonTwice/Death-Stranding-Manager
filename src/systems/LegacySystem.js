@@ -32,7 +32,7 @@ export function recordLegendIfEligible(porter, cause) {
           cause, month: game.month, date: new Date().toISOString().slice(0, 10)
         });
         await saveLegends(legends.slice(0, B.hallOfFameCap));
-        eventBus.emit('legacy:legendRecorded', { name: porter.name, cause });
+        eventBus.emit('legacy:legendRecorded', { name: porter.name, cause, porterId: porter.id });
       })();
     }
 

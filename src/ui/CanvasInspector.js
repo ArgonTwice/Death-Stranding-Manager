@@ -7,6 +7,7 @@ import { PCC_TYPES, SKILLS, TRAITS, cellKey } from '../data/Constants.js';
 import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, sendToIncinerator } from '../engine/CombatEngine.js';
 import { sendDelivery } from '../engine/DeliveryEngine.js';
 import { isBTZone, isOnRoute, setActiveBranch } from '../engine/MapEngine.js';
+import { pccLogbookLines } from '../systems/NarrativeLogEngine.js';
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { equipSlots, equippedCount, forceRest, porterTitle, repairGear } from '../systems/PorterSystem.js';
 import { prepperCardHtml } from './HUD.js';
@@ -60,7 +61,8 @@ export function inspectorPccHtml(pcc) {
         <div style="font-size:11px;">Position (${pcc.x},${pcc.y})${pcc.ghost ? `<br>👻 Structure fantôme laissée par ${pcc.ghostName}` : ''}</div>
         ${!pcc.ghost ? `<div class="gauge" style="margin-top:8px;"><div class="gauge-label"><span>Durabilité</span><span>${dur}%</span></div><div class="gauge-track"><div class="gauge-fill hp" style="width:${dur}%;"></div></div></div>
           <button style="margin-top:8px;" onclick="repairPCC(${pcc.x},${pcc.y}); refreshInspectorIfOpen();" ${dur >= 100 ? 'disabled' : ''}>🔧 Réparation rapide ($${Math.ceil((100 - dur) * 4)})</button>`
-          : '<div style="font-size:9px; color:var(--text-dim); margin-top:6px;">Structure laissée par un autre porteur — non réparable.</div>'}`;
+          : '<div style="font-size:9px; color:var(--text-dim); margin-top:6px;">Structure laissée par un autre porteur — non réparable.</div>'}
+        ${(pcc.type === 'timefallShelter' || pcc.type === 'advancedChiralShelter') ? `<div style="margin-top:10px;"><h3 style="margin-top:0;">📓 Carnet de bord</h3>${pccLogbookLines(pcc).map(l => `<div style="font-size:9px; color:var(--text-dim); font-style:italic; margin:3px 0;">"${l}"</div>`).join('')}</div>` : ''}`;
     }
 
 export function inspectorCampHtml(camp) {

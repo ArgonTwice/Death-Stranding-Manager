@@ -271,6 +271,31 @@
     </div>
   </div>
 
+  <!-- La Plage (V0.6.0) — séquence immersive plein écran (.left), déclenchée automatiquement à la
+       mort d'un porteur. Ne ramène jamais le porteur — dernier geste poétique seulement. -->
+  <div class="left beach-modal" id="beachModal">
+    <div class="panel beach-panel-inner">
+      <h2>◆ LE RIVAGE</h2>
+      <div id="beachModalBody" class="beach-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Console du Terminal (V0.6.0) — tiroir glissant rétro, dialogue avec le Terminal (TerminalSoul.js).
+       Boutons de commande ≥48x48px: jouable sans clavier au tactile. -->
+  <div class="quest-drawer terminal-drawer" id="terminalDrawer">
+    <div class="quest-drawer-panel terminal-panel">
+      <button class="modal-close" onclick="closeTerminalConsole()">✕</button>
+      <h2>◆ TERMINAL</h2>
+      <div id="terminalStats" class="terminal-stats"></div>
+      <div id="terminalHistory" class="terminal-history"></div>
+      <div id="terminalButtons" class="terminal-buttons"></div>
+      <div class="terminal-input-row">
+        <input id="terminalInput" class="terminal-input" type="text" placeholder="SING / LISTEN / REMEMBER / FORGET" onkeydown="if(event.key==='Enter') sendTerminalInputUI();" />
+        <button class="qp-action-btn" onclick="sendTerminalInputUI()">➤</button>
+      </div>
+    </div>
+  </div>
+
   <div class="main">
     <div class="map-container">
       <div class="map-status-strip">
@@ -286,6 +311,11 @@
         <div class="title">NÉANTISATION</div>
         <div class="subtitle">— une âme rejoint le rivage —</div>
       </div>
+
+      <!-- BB Pod (V0.6.0) — overlay léger toujours visible + bannière d'alerte transitoire, jamais
+           un tiroir plein écran (règle 5: overlays légers, pas de surcharge du Canvas). -->
+      <div id="bbPodOverlay" class="bbpod-overlay"></div>
+      <div id="bbPodAlert" class="bbpod-alert"></div>
 
       <!-- MiniMap (V0.3.0): vue synthétique du réseau, incrustée sur le coin de la carte, jamais
            bloquante — le bouton ⛶ ouvre une version plein écran (.left, même langage visuel que
@@ -308,6 +338,11 @@
       <!-- Hall of Fame (V0.5.0): légendes entre les parties -->
       <button id="hallOfFameDrawerToggle" class="quest-drawer-toggle halloffame-drawer-toggle" onclick="toggleHallOfFamePanel()" aria-label="Hall of Fame">
         🏆
+      </button>
+
+      <!-- Terminal (V0.6.0): dialogue avec le Terminal, souvenirs majeurs, Mémoire Chirale -->
+      <button id="terminalDrawerToggle" class="quest-drawer-toggle terminal-drawer-toggle" onclick="toggleTerminalConsole()" aria-label="Terminal">
+        💬
       </button>
     </div>
     

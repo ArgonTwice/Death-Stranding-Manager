@@ -476,5 +476,66 @@ export const BALANCE = {
     legendMinLevel: 3, // seuil pour qu'un porteur du Hall of Fame devienne une "légende" persistée entre parties
     legendMinLikes: 20,
     hallOfFameCap: 25
+  },
+  // V0.6.0 — The Ultimate Memory Engine & Legacy Update
+  memory: {
+    significanceThreshold: 70, // en-dessous: l'événement reste un simple log, jamais un "souvenir majeur"
+    scoreSRank: 40,
+    scoreRaidSurvived: 30,
+    scoreConvoyFullSuccess: 45,
+    scorePorterDeath: 85,
+    scoreLoyaltyUnlock: 35,
+    scoreLegendRecorded: 90,
+    scoreTraitAcquired: 30,
+    chiralMemoryGainMajor: 5, // gagné à chaque souvenir majeur (score >= threshold)
+    chiralMemoryGainMinor: 1, // petites contributions (ex: gratitude fantômes, cf. ChiralTraceSystem)
+    connectionGainMajor: 8, // "Lien" du porteur concerné
+    connectionGainMinor: 2,
+    connectionCap: 100,
+    majorMemoryHistoryCap: 20
+  },
+  terminal: {
+    slowdownAfterMs: 10800000, // 3h de session continue -> ralentissement poétique ("Tu devrais dormir...")
+    slowdownSpeedCap: 1, // vitesse de jeu plafonnée pendant le ralentissement
+    longAbsenceMs: 21600000 // 6h d'absence réelle -> message d'accueil dédié
+  },
+  bbpod: {
+    stressGainPerBtExposure: 10,
+    stressDecayPerDayCalm: 4,
+    connectionGainPerDelivery: 1,
+    connectionGainPerMajorMemory: 6,
+    louStageConnectionThreshold: 65, // au-delà: le BB Pod "devient" Lou (évolution narrative)
+    detectionWarningExposureThreshold: 2, // btExposure à partir duquel bbpod:btDetected s'émet
+    cautionDmgMult: 0.7, // choix "Prudence" sur l'alerte BB Pod: -30% dégâts si l'event se déclenche, +stress
+    cautionStressCost: 5
+  },
+  museum: {
+    slotCount: 5, // EXACTEMENT 5 — scellé pour toujours, jamais configurable en jeu
+    reputationBonusPerRelic: 0.4 // impact mécanique volontairement minime (~90% narratif/émotionnel, cf. règle 3)
+  },
+  beach: {
+    memoryConnectionBonus: 10, // choix "souvenir": Lien du porteur perdu figé dans la mémoire du réseau
+    sequenceLineIntervalMs: 1800 // rythme d'apparition des lignes poétiques (cosmétique, jamais lu par la simulation)
+  },
+  worldAging: {
+    pccDecayPerMonth: 3, // usure passive supplémentaire des PCC, indépendante des intempéries
+    routeHistoricThreshold: 15, // livraisons cumulées sur une case pour devenir "Route Historique"
+    historicRewardMult: 1.12,
+    historicMuleAttentionAdd: 0.06
+  },
+  chiralTrace: {
+    offlineLikesPerShelterPerDay: 1, // fantômes du réseau "utilisant" un abri hors-ligne
+    gratitudeToChiralMemoryDivisor: 5,
+    pilgrimGratitudeThreshold: 40,
+    pilgrimRewardMult: 2.5,
+    pilgrimSpawnChance: 0.15
+  },
+  memoryStorm: {
+    cycleDays: 12,
+    warningDaysBefore: 3,
+    durabilityDamageBase: 25 // dégâts de durabilité PCC au pic de la tempête, atténués par la protection (couverture + musée)
+  },
+  narrativeLog: {
+    telemetryChancePerTick: 0.06 // par tick de livraison solo (hors raid/convoi/quête), chance d'une ligne poétique
   }
 };

@@ -17,6 +17,12 @@ import { gearEffectiveness, porterCapacity, porterResist, recordHallOfFame, roll
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
 import { applyUrgentQuestOutcome, clearExpiredUrgentQuests, tickUrgentQuestSpawns } from '../systems/QuestSystem.js';
 import { reportConvoyMemberOutcome } from '../systems/ConvoySystem.js';
+import { checkBBPodProximityWarning, tickBBPodDaily } from '../systems/BBPodSystem.js';
+import { maybeLogTelemetryLine } from '../systems/NarrativeLogEngine.js';
+import { triggerBeachSequence } from '../systems/TheBeachEngine.js';
+import { tickChiralTraceDaily } from '../systems/ChiralTraceSystem.js';
+import { historicRouteMuleAttentionAdd, historicRouteRewardMult, recordRouteUsage, tickWorldAgingMonthly } from '../systems/WorldAgingSystem.js';
+import { tickMemoryStormCycle } from '../systems/MemoryStormCycle.js';
 import { checkLeaguePromotion, generateVipContract } from '../systems/PorterLeague.js';
 import { acquiredTraitStressMult, applyPsychologyDailyEffects, doomsDetectionMult, recordJournalEntry } from '../systems/PorterStorySystem.js';
 import { regionalNetworkRewardMult, regionalNetworkRiskCut } from '../systems/RegionalNetwork.js';
@@ -399,6 +405,7 @@ export function generateEvent(porter, distance, destX, destY, riskMod = 0) {
       if (isBTZone(destX, destY)) risk += B.btZoneRiskAdd;
       if (isNearHostileMuleCamp(destX, destY)) risk += B.muleCampRiskAdd; // interception par un camp MULE actif
       if (isOnRoute(destX, destY)) risk -= B.onRouteRiskCut;
+      risk += historicRouteMuleAttentionAdd(porter.map, destX, destY); // V0.6.0: Route Historique — plus fréquentée, plus surveillée
       risk += weatherRiskMod(); // Timefall/Duststorm persistants: visibilité réduite (#Phase5)
 
       risk *= DIFFICULTIES[game.difficulty || 'normal'].riskMult;
@@ -436,6 +443,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       if (porter.equipment.vehicle) reward *= B.vehicleRewardMult;
       reward = Math.ceil(reward * (1 + (game.infraInvestments || 0) * B.infraRewardMultPerInvestment)); // investissements infrastructure, permanent
       reward = Math.ceil(reward * regionalNetworkRewardMult()); // V0.5.0: bonus permanent des Super-Relais régionaux
+      reward = Math.ceil(reward * historicRouteRewardMult(porter.map, destX, destY)); // V0.6.0: Route Historique (continuité du monde)
 
       // Surcharge: ratio masse cargo / capacité porteur — au-delà de 0.9 ça pénalise risque + vitesse (canon: balance/stamina DS)
       const overload = overloadRatio(porter, cargo);
@@ -504,6 +512,7 @@ export function tick() {
         // Assure que les mutations (cratères, routes) touchent la carte de CETTE livraison
         if (d.map && game.currentMap !== d.map) loadMapData(d.map);
         d.timeRemaining--;
+        if (d.timeRemaining > 0) maybeLogTelemetryLine(game.porters[d.porter], d); // V0.6.0: télémétrie littéraire
 
         // Événement au premier tick
         if (!d.started) {
@@ -579,6 +588,8 @@ export function tick() {
           }
         }
 
+        if (d.btExposure > 0 && d.timeRemaining > 0) checkBBPodProximityWarning(d); // V0.6.0: alerte proactive du BB Pod
+
         // Détection BT progressive: le scanner ralentit la montée, un repérage déclenche une 2e vague (indépendante de l'event initial)
         if (d.btExposure > 0 && !d.spotted && d.timeRemaining > 0) {
           const p2 = game.porters[d.porter];
@@ -606,10 +617,11 @@ export function tick() {
             logEvent(`💀 NÉANTISATION — ${p.name} a rejoint le rivage`, 'death');
             triggerVoidout(p.x, p.y);
             recordHallOfFame(p, 'néantisé');
+            triggerBeachSequence(p, 'néantisé'); // V0.6.0: séquence de la Plage, ne ramène jamais le porteur
             applyPrepperDeliveryOutcome(d.quest, false, null);
             applyUrgentQuestOutcome(d.quest, false, null);
             reportConvoyMemberOutcome(d.quest, false);
-            eventBus.emit('delivery:resolved', { reward: 0, onRoute: d.onRoute, routeType: d.routeType, success: false });
+            eventBus.emit('delivery:resolved', { reward: 0, onRoute: d.onRoute, routeType: d.routeType, success: false, porterId: p.id, cause: 'death' });
             if (d.btExposure > 0) recordJournalEntry(p, 'bt_encounter'); // V0.5.0
             p.status = "dead";
             continue;
@@ -629,7 +641,7 @@ export function tick() {
             applyPrepperDeliveryOutcome(d.quest, false, null);
             applyUrgentQuestOutcome(d.quest, false, null);
             reportConvoyMemberOutcome(d.quest, false);
-            eventBus.emit('delivery:resolved', { reward: 0, onRoute: d.onRoute, routeType: d.routeType, success: false });
+            eventBus.emit('delivery:resolved', { reward: 0, onRoute: d.onRoute, routeType: d.routeType, success: false, porterId: p.id, cause: 'cargoFailed' });
             p.status = "idle";
             continue;
           }
@@ -650,7 +662,8 @@ export function tick() {
           // même si la livraison en elle-même est un succès normal (prime/XP/likes inchangés).
           applyUrgentQuestOutcome(d.quest, !(d.quest && d.quest.zeroDamage && d.condition < 100), rating);
           reportConvoyMemberOutcome(d.quest, true);
-          eventBus.emit('delivery:resolved', { reward: d.reward, onRoute: d.onRoute, routeType: d.routeType, success: true });
+          eventBus.emit('delivery:resolved', { reward: d.reward, onRoute: d.onRoute, routeType: d.routeType, success: true, porterId: p.id, cause: 'success', grade: rating.grade, destX: d.destX, destY: d.destY, mapKey: d.map });
+          if (d.onRoute) recordRouteUsage(d.map, d.destX, d.destY); // V0.6.0: la mémoire du trajet grandit avec l'usage
           // V0.5.0 — Journal de bord: ne retient que les faits marquants (jamais les livraisons routinières)
           if (rating.grade === 'S') recordJournalEntry(p, 'perfect_delivery');
           if (d.raidId || (d.quest && d.quest.convoyId)) recordJournalEntry(p, 'raid_survived');
@@ -744,6 +757,7 @@ export function endMonthBookkeeping() {
       generatePrepperContracts();
       applyHermitGifts();
       runAutomation();
+      tickWorldAgingMonthly(); // V0.6.0: usure écosystémique progressive de toute l'infrastructure posée
 
       // Récupération santé (réduite: repos forcé devient un vrai outil, pas juste attendre)
       for (let p of game.porters) {
@@ -782,6 +796,8 @@ export function advanceDay() {
       clearExpiredUrgentQuests();
       applyAdvancedShelterRepairs(); // V0.4.0: réparation auto véhicules/convois près d'un Abri Chiral Avancé
       applyPsychologyDailyEffects(); // V0.5.0: phobie/joie procédurales (stress quotidien)
+      tickBBPodDaily(); // V0.6.0: repos quotidien du BB Pod
+      tickChiralTraceDaily(); // V0.6.0: Traces de Gratitude du réseau fantôme → Mémoire Chirale + Pèlerins
       checkLeaguePromotion(); // V0.5.0: promotion de Ligue Porteurs
       generateVipContract(); // V0.5.0: contrat VIP sponsor de prestige (Ligue Or+)
 
@@ -792,6 +808,7 @@ export function advanceDay() {
       }
 
       loadMapData(viewMap); // reviens à la carte que le joueur regardait
+      tickMemoryStormCycle(); // V0.6.0: cycle de 12 jours (avertissement J-3 + résolution), couverture réseau de la carte visualisée
       checkGameEnd();
       eventBus.emit('render:request');
     }

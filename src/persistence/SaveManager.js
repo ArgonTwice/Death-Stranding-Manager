@@ -11,6 +11,7 @@ import { generateBTZones, generateMainKnots, generateMuleCamps, generateTerrain,
 import { applyLegacyCarryOver } from '../systems/LegacySystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { ensurePorterIdentity } from '../systems/PorterStorySystem.js';
+import { greetOnLoad } from '../systems/TerminalSoul.js';
 import { render } from '../ui/HUD.js';
 
 export function computeScore() {
@@ -117,7 +118,7 @@ export function serializeGame() {
       const mapsOut = {};
       for (const k in game.mapsData) {
         const d = game.mapsData[k];
-        mapsOut[k] = { btZones: d.btZones, terrain: d.terrain, routes: Array.from(d.routes), craters: Array.from(d.craters), branches: d.branches, activeBranch: d.activeBranch, mainKnots: d.mainKnots || [], sideQuests: d.sideQuests || [], muleCamps: d.muleCamps || [], catchers: d.catchers || [], pccInstalls: d.pccInstalls || [], lostCargo: d.lostCargo || [], weather: d.weather || null, forecast: d.forecast || null };
+        mapsOut[k] = { btZones: d.btZones, terrain: d.terrain, routes: Array.from(d.routes), craters: Array.from(d.craters), branches: d.branches, activeBranch: d.activeBranch, mainKnots: d.mainKnots || [], sideQuests: d.sideQuests || [], muleCamps: d.muleCamps || [], catchers: d.catchers || [], pccInstalls: d.pccInstalls || [], lostCargo: d.lostCargo || [], weather: d.weather || null, forecast: d.forecast || null, routeUsage: d.routeUsage || {} };
       }
       return {
         v: 3, money: game.money, month: game.month, reputation: game.reputation,
@@ -130,7 +131,12 @@ export function serializeGame() {
         duos: game.duos, sponsor: game.sponsor, automation: game.automation, difficulty: game.difficulty, dayInMonth: game.dayInMonth, monthState: game.monthState, ngPlus: game.ngPlus, infraInvestments: game.infraInvestments, subsidiaries: game.subsidiaries || [],
         activeRelicIds: game.activeRelicIds, activeCampEventIds: runtime.activeCampEvents.map(e => e.id), activeVisitorOfferIds: runtime.activeVisitorOffers.map(o => o.id), activeFestivalIds: runtime.activeFestivalsPool.map(f => f.id),
         loyalty: game.loyalty, urgentQuests: game.urgentQuests || [], urgentQuestHistory: game.urgentQuestHistory || [],
-        telemetry: game.telemetry || null, hardcoreTimefall: !!game.hardcoreTimefall
+        telemetry: game.telemetry || null, hardcoreTimefall: !!game.hardcoreTimefall,
+        chiralMemory: game.chiralMemory || 0, majorMemories: game.majorMemories || [],
+        terminalLastSeen: Date.now(), // V0.6.0 — horodatage réel (pas déterministe, jamais lu par tests/run-once.mjs)
+        bbPod: game.bbPod || { connection: 0, stress: 0, stage: 'pod' },
+        absenceMuseum: game.absenceMuseum || [],
+        gratitudeTrace: game.gratitudeTrace || 0
       };
     }
 
@@ -154,7 +160,7 @@ export function deserializeGame(s) {
       game.mapsData = {};
       for (const k in s.mapsData) {
         const d = s.mapsData[k];
-        game.mapsData[k] = { btZones: d.btZones, terrain: d.terrain, routes: new Set(d.routes), craters: new Set(d.craters), branches: d.branches, activeBranch: d.activeBranch, mainKnots: d.mainKnots || [], sideQuests: d.sideQuests || [], muleCamps: d.muleCamps || [], catchers: d.catchers || [], pccInstalls: d.pccInstalls || [], lostCargo: d.lostCargo || [], weather: d.weather || null, forecast: d.forecast || null };
+        game.mapsData[k] = { btZones: d.btZones, terrain: d.terrain, routes: new Set(d.routes), craters: new Set(d.craters), branches: d.branches, activeBranch: d.activeBranch, mainKnots: d.mainKnots || [], sideQuests: d.sideQuests || [], muleCamps: d.muleCamps || [], catchers: d.catchers || [], pccInstalls: d.pccInstalls || [], lostCargo: d.lostCargo || [], weather: d.weather || null, forecast: d.forecast || null, routeUsage: d.routeUsage || {} };
       }
       loadMapData(s.currentMap);
       game.log = s.log || [];
@@ -184,6 +190,12 @@ export function deserializeGame(s) {
       game.urgentQuestHistory = s.urgentQuestHistory || [];
       game.telemetry = s.telemetry || { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } };
       game.hardcoreTimefall = !!s.hardcoreTimefall;
+      game.chiralMemory = s.chiralMemory || 0;
+      game.majorMemories = s.majorMemories || [];
+      game.terminalLastSeen = s.terminalLastSeen || null;
+      game.bbPod = s.bbPod || { connection: 0, stress: 0, stage: 'pod' };
+      game.absenceMuseum = s.absenceMuseum || [];
+      game.gratitudeTrace = s.gratitudeTrace || 0;
       runtime.activeCampEvents = s.activeCampEventIds ? CAMP_EVENTS.filter(e => s.activeCampEventIds.includes(e.id)) : CAMP_EVENTS;
       runtime.activeVisitorOffers = s.activeVisitorOfferIds ? VISITOR_OFFERS.filter(o => s.activeVisitorOfferIds.includes(o.id)) : VISITOR_OFFERS;
       runtime.activeFestivalsPool = s.activeFestivalIds ? FESTIVALS.filter(f => s.activeFestivalIds.includes(f.id)) : FESTIVALS;
@@ -209,7 +221,7 @@ export async function loadGame(slot) {
       let raw = await storageGet(saveKeyFor(runtime.currentSlot));
       if (!raw && runtime.currentSlot === 1) raw = await storageGet(SAVE_KEY_LEGACY); // migration douce
       if (!raw) return false;
-      try { deserializeGame(JSON.parse(raw)); return true; }
+      try { deserializeGame(JSON.parse(raw)); greetOnLoad(); return true; }
       catch (e) { logEvent('❌ Sauvegarde corrompue, nouvelle partie', 'warn'); return false; }
     }
 
@@ -229,7 +241,7 @@ export function newGame(confirmFirst, slot) {
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';
       const startMoney = DIFFICULTIES[difficulty].startMoney;
-      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false });
+      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null });
       Object.keys(game.equipBought).forEach(k => game.equipBought[k] = 0);
       game.gameEnded = false;
       runtime.announcedRank = 0;

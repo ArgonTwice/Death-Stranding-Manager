@@ -20,6 +20,8 @@ import { beachJump, forceRest, hire, repairGear, retirePorter, scoutCandidate } 
 import { assignPrepperContract, connectKnot, negotiatePrepperContract } from './systems/PrepperSystem.js';
 import { negotiateUrgentQuest, refuseUrgentQuest } from './systems/QuestSystem.js';
 import { closeInspector, inspectMapCell } from './ui/CanvasInspector.js';
+import { dismissBBPodAlert, respondToBBPodAlertUI } from './ui/BBPodOverlay.js';
+import { resolveBeachChoiceUI } from './ui/BeachPanel.js';
 import { closeConvoyPanel, launchConvoyFromUI, renderConvoyEscortList, toggleConvoyPanel, updateConvoyPreview } from './ui/ConvoyPanel.js';
 import { closeHallOfFamePanel, toggleHallOfFamePanel } from './ui/HallOfFamePanel.js';
 import { render, renderPorters, showEndScreen } from './ui/HUD.js';
@@ -28,6 +30,8 @@ import { closeMiniMapFullscreen, toggleMiniMapFullscreen } from './ui/MiniMap.js
 import { checkMobileMode, closeTabModal, setMobileTab } from './ui/Modals.js';
 import { closePorterDrawer, openPorterDrawer, setPorterDrawerTab } from './ui/PorterDrawer.js';
 import { acceptUrgentQuestFromUI, closeQuestPanel, setQuestPanelTab, toggleQuestPanel } from './ui/QuestPanel.js';
+import { closeTerminalConsole, sendTerminalCommandUI, sendTerminalInput, toggleTerminalConsole } from './ui/TerminalConsole.js';
+import { checkTerminalSlowdown } from './systems/TerminalSoul.js';
 
 // Câble l'horloge générique (core/GameLoop.js) sur la simulation réelle du jeu — GameLoop reste
 // agnostique du contenu, seul main.js (composition root) connaît advanceDay().
@@ -132,6 +136,10 @@ export async function chooseSlot(slot, mode) {
       startGameClock(); // 1 sec réelle = 1 jour, pause auto si onglet caché (#temps réel)
     }
 
+// V0.6.0 — vérifie périodiquement l'absence prolongée à l'écran (temps réel, jamais le temps simulé):
+// ne touche que runtime.gameSpeed/runtime.terminalSlowdownWarned, jamais game.* ni le déterminisme.
+setInterval(checkTerminalSlowdown, 60000);
+
 (async () => {
       checkMobileMode();
       initSplash();
@@ -168,6 +176,13 @@ window.closePorterDrawer = closePorterDrawer;
 window.setPorterDrawerTab = setPorterDrawerTab;
 window.toggleHallOfFamePanel = toggleHallOfFamePanel;
 window.closeHallOfFamePanel = closeHallOfFamePanel;
+window.respondToBBPodAlertUI = respondToBBPodAlertUI;
+window.dismissBBPodAlert = dismissBBPodAlert;
+window.resolveBeachChoiceUI = resolveBeachChoiceUI;
+window.toggleTerminalConsole = toggleTerminalConsole;
+window.closeTerminalConsole = closeTerminalConsole;
+window.sendTerminalCommandUI = sendTerminalCommandUI;
+window.sendTerminalInputUI = sendTerminalInput;
 window.acceptVisitorOffer = acceptVisitorOffer;
 window.advanceDay = advanceDay;
 window.assaultCamp = assaultCamp;

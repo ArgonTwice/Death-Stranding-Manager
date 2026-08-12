@@ -58,6 +58,13 @@ export const game = {
       convoys: [], // V0.4.0 — convois lourds en transit (ConvoySystem.js). Éphémère comme game.deliveries: jamais persisté.
       telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, // V0.4.0 — rapport de performance logistique cumulé (TelemetrySystem.js), persisté
       hardcoreTimefall: false, // V0.5.0 — modificateur NG+ (LegacySystem.js): météo Timefall/Tempête Chirale plus fréquente
+      chiralMemory: 0, // V0.6.0 — Mémoire Chirale cumulée (MemoryEngine.js + ChiralTraceSystem.js)
+      majorMemories: [], // V0.6.0 — souvenirs majeurs (score >= significanceThreshold), bornés
+      terminalLastSeen: null, // V0.6.0 — horodatage réel de la dernière sauvegarde (TerminalSoul.js), jamais utilisé par la simulation déterministe
+      bbPod: { connection: 0, stress: 0, stage: 'pod' }, // V0.6.0 — copilote (BBPodSystem.js)
+      absenceMuseum: [], // V0.6.0 — EXACTEMENT 5 emplacements max, scellés pour toujours (AbsenceMuseum.js)
+      gratitudeTrace: 0, // V0.6.0 — Likes cumulés du réseau fantôme (ChiralTraceSystem.js), déclenche les Pèlerins
+      beachSession: null, // V0.6.0 — séquence de la Plage en cours (TheBeachEngine.js). Éphémère, jamais persisté, comme game.deliveries.
       // --- Propriétés repliées depuis d'anciennes variables top-level module-scope (refacto ES Modules) ---
       gameEnded: false,
       quarterSnapshot: { completed: 0, deaths: 0, money: 10000 },

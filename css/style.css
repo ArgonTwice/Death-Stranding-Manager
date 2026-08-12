@@ -456,6 +456,59 @@
     }
     .porter-drawer-advice-ok { background: rgba(74,217,224,0.08); border-color: rgba(74,217,224,0.3); color: var(--chiral); }
 
+    /* BB Pod (V0.6.0) — overlay léger, jamais un tiroir plein écran */
+    .bbpod-overlay { position: absolute; left: 8px; top: 8px; z-index: 40; }
+    .bbpod-badge {
+      display: flex; gap: 8px; align-items: center;
+      background: rgba(6,5,4,0.85); border: 1px solid rgba(255,140,43,0.25);
+      padding: 4px 8px; font-size: 10px;
+    }
+    .bbpod-stat { color: var(--text-dim); }
+    .bbpod-stat-warn { color: var(--blood); font-weight: bold; }
+    .bbpod-alert {
+      position: absolute; left: 8px; top: 44px; z-index: 45; width: min(280px, 60%);
+      background: rgba(10,9,7,0.95); border: 1px solid rgba(201,56,56,0.5);
+      padding: 8px; display: none;
+    }
+    .bbpod-alert.open { display: block; }
+    .bbpod-alert-text { font-size: 10px; color: #ff9f9f; margin-bottom: 6px; }
+    .bbpod-alert-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+
+    /* Le Rivage (V0.6.0) — séquence immersive plein écran, texte révélé ligne par ligne */
+    .beach-modal .panel.beach-panel-inner {
+      background: rgba(6,8,10,0.96); border-color: rgba(74,217,224,0.25);
+      min-height: 240px;
+    }
+    .beach-modal-body { padding: 4px 0; min-height: 160px; }
+    .beach-caption { color: var(--chiral); font-size: 11px; letter-spacing: 0.08em; margin-bottom: 10px; text-transform: uppercase; }
+    .beach-line {
+      font-size: 13px; line-height: 1.7; color: var(--text-dim);
+      opacity: 0; animation: beachLineIn 0.9s ease forwards;
+      margin-bottom: 6px;
+    }
+    @keyframes beachLineIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .beach-relic-hint { font-size: 10px; color: var(--amber-dim); margin: 12px 0 8px; font-style: italic; }
+    .beach-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+
+    /* Terminal (V0.6.0) — console de texte rétro, tiroir glissant comme les autres */
+    .terminal-drawer-toggle { top: 308px; } /* sous halloffame-drawer-toggle, jamais superposés */
+    .terminal-panel { font-family: 'Courier New', monospace; }
+    .terminal-stats { font-size: 10px; color: var(--chiral); margin: 6px 0 8px; }
+    .terminal-history {
+      background: rgba(0,0,0,0.4); border: 1px solid #221f18; padding: 8px;
+      height: 180px; overflow-y: auto; font-size: 11px; line-height: 1.5; margin-bottom: 8px;
+    }
+    .term-line { margin-bottom: 4px; }
+    .term-line-you { color: var(--amber-dim); }
+    .term-line-terminal { color: var(--chiral); }
+    .terminal-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .term-cmd-btn { min-height: 48px; font-family: 'Courier New', monospace; letter-spacing: 0.05em; }
+    .terminal-input-row { display: flex; gap: 6px; }
+    .terminal-input {
+      flex: 1; min-height: 48px; background: rgba(0,0,0,0.4); border: 1px solid #221f18;
+      color: var(--text-dim); font-family: 'Courier New', monospace; padding: 0 8px; font-size: 11px;
+    }
+
     /* ============================================================
        MOBILE — placé en TOUT DERNIER dans la feuille de style pour
        gagner la cascade à coup sûr (une règle body{} plus haut dans
