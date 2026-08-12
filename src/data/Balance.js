@@ -377,5 +377,44 @@ export const BALANCE = {
     ratingALikes: 15,
     ratingBLikes: 8,
     ratingCLikes: 3
+  },
+  // V0.3.0 — Survival & Narrative Loop Update
+  weatherSystem: {
+    forecastDays: 3, // jours de prévision Chiral affichés au joueur, toujours exacts (canon DS)
+    calmWeight: 55,
+    timefallWeight: 30,
+    chiralStormWeight: 15 // "Tempête Chirale" ⛈️ — habillage de la Duststorm existante
+  },
+  timefall: {
+    speedPenaltyUnsheltered: 0.35, // +35% temps de trajet si arrivée non protégée pendant un Timefall actif
+    medicalDemandMult: 1.8, // +80% demande médicale prepper Médecin pendant le Timefall
+    botanistDemandMult: 1.4 // +40% demande botaniste (graines/culture fragilisées par la corrosion)
+  },
+  shelter: {
+    protectionRadius: 1.5 // rayon (cases) dans lequel un Abri Anti-Timefall protège porteurs/PCC
+  },
+  quest: {
+    maxActiveUrgent: 3,
+    weatherSpawnChance: 0.35, // chance qu'une quête urgente apparaisse à l'arrivée d'un Timefall/Tempête Chirale
+    reputationSpawnChanceBase: 0.05, // chance quotidienne indépendante de la météo
+    reputationSpawnThreshold: 60, // au-delà de cette réputation, la chance de base augmente
+    reputationSpawnBonusChance: 0.06,
+    expiryDaysBase: 4,
+    expiryDaysRandRange: 4,
+    rewardBase: 400,
+    rewardRandRange: 500,
+    rewardReputationDivisor: 150,
+    negotiateRewardBonusBase: 0.2,
+    negotiateRewardBonusRandRange: 0.25,
+    negotiateTimeCutBase: 0.12,
+    negotiateTimeCutRandRange: 0.13,
+    negotiateRiskAddBase: 0.06,
+    negotiateRiskAddRandRange: 0.08,
+    acceptLoyaltyGain: 2,
+    successLoyaltyGain: 6,
+    failLoyaltyLoss: 8,
+    refuseLoyaltyLoss: 4,
+    refuseUrgentMedicalLoyaltyLoss: 12,
+    loyaltySchemaUnlockThreshold: 70
   }
 };

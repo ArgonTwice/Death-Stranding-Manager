@@ -11,6 +11,7 @@ import { findPathToKnot } from '../engine/MapEngine.js';
 import { prepperWeatherNeedMult } from '../engine/WeatherEngine.js';
 import { migratePrepperKnot } from '../persistence/SaveMigrations.js';
 import { markMapDirty } from '../ui/MapRenderer.js';
+import { timefallPrepperDemandMult } from './TimefallSystem.js';
 
 export function pickPrepperArchetype() {
       const keys = Object.keys(PREPPER_ARCHETYPES);
@@ -37,7 +38,7 @@ export function updatePrepperNeeds() {
         for (const k of (d.mainKnots || [])) {
           migratePrepperKnot(k);
           for (const need of ['medical', 'food', 'tech']) {
-            const mult = prepperWeatherNeedMult(d.weather, need);
+            const mult = prepperWeatherNeedMult(d.weather, need) * timefallPrepperDemandMult(key, k.archetype, need); // V0.3.0: pic médecin/botaniste additionnel pendant le Timefall
             k.needs[need] = Math.min(100, k.needs[need] + (BALANCE.prepper.needsGrowthBase + RNG.next() * BALANCE.prepper.needsGrowthRandRange) * mult);
           }
           if (k.needs.medical >= BALANCE.prepper.needsCriticalThreshold || k.needs.food >= BALANCE.prepper.needsCriticalThreshold || k.needs.tech >= BALANCE.prepper.needsCriticalThreshold) {

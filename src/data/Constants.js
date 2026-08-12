@@ -237,7 +237,26 @@ export const ROUTE_TYPES = {
 export const PCC_TYPES = {
       generator: { name: 'Générateur Chiral', icon: '⚡', cost: 800, desc: '+revenu passif mensuel' },
       bridge:    { name: 'Pont PCC', icon: '🌉', cost: 700, desc: 'annule la pénalité rivière à proximité' },
-      zipline:   { name: 'Tyrolienne PCC', icon: '🔗', cost: 900, desc: '-20% temps à proximité' }
+      zipline:   { name: 'Tyrolienne PCC', icon: '🔗', cost: 900, desc: '-20% temps à proximité' },
+      timefallShelter: { name: 'Abri Anti-Timefall', icon: '⛺', cost: 950, desc: 'protège porteurs proches de l\'usure et du ralenti Timefall' }
+    };
+
+// Météo par territoire (V0.3.0) — la Duststorm australienne canon est présentée au joueur comme
+// une "Tempête Chirale" au niveau du forecast/UI (même type interne 'duststorm', ne change rien
+// à WeatherEngine.js, juste l'habillage narratif demandé par la mission).
+export const WEATHER_LABELS = {
+      calm:      { name: 'Accalmie', icon: '☀️' },
+      timefall:  { name: 'Timefall', icon: '🌧️' },
+      duststorm: { name: 'Tempête Chirale', icon: '⛈️' }
+    };
+
+// Quêtes narratives par archétype prepper (V0.3.0) — flavor + comportement spécial (ex: le
+// Médecin exige une livraison zéro-dommage).
+export const QUEST_ARCHETYPE_TEMPLATES = {
+      engineer: { icon: '🔧', object: 'des pièces techniques rares pour un prototype', zeroDamage: false },
+      medic:    { icon: '⚕️', object: 'une livraison zéro-dommage de matériel médical', zeroDamage: true },
+      botanist: { icon: '🌱', object: 'des graines fragiles pour une serre chirale', zeroDamage: false },
+      hermit:   { icon: '🥾', object: 'un artefact rare retrouvé sur le Rivage', zeroDamage: false }
     };
 
 export const GHOST_NAMES = ['Sam-99', 'Fragile-Express', 'Deadman-Relay', 'Heartman-Loop', 'Higgs-Ghost', 'Mama-Line', 'Lou-Carrier'];

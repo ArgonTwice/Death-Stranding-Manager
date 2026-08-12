@@ -5,6 +5,7 @@ import { game, logEvent, runtime } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
 import { BALANCE } from '../data/Balance.js';
 import { degradePCCOnMap } from '../systems/NetworkSystem.js';
+import { isPorterSheltered } from '../systems/ShelterSystem.js';
 
 export function setMapWeather(mapKey, type) {
       const d = game.mapsData[mapKey];
@@ -41,12 +42,14 @@ export function triggerTimefall() {
         });
       }
       // Corrosion: la Frappe Temporelle use l'équipement de tous les porteurs actifs sur la carte
-      let corroded = 0;
+      let corroded = 0, sheltered = 0;
       for (const p of game.porters) {
         if (p.status === 'dead' || p.status === 'left') continue;
+        if (isPorterSheltered(p)) { sheltered++; continue; } // V0.3.0: Abri Anti-Timefall protège de l'usure
         p.gearWear = Math.min(100, (p.gearWear || 0) + BALANCE.weather.timefallGearWearBase + Math.floor(RNG.next() * BALANCE.weather.timefallGearWearRandRange));
         if (p.gearWear >= 100) corroded++;
       }
+      if (sheltered > 0) logEvent(`⛺ ${sheltered} porteur(s) protégé(s) de la corrosion par un Abri Anti-Timefall`, 'good');
       if (corroded > 0) logEvent(`⚠️ Corrosion timefall: ${corroded} porteur(s) avec équipement critique — réparation recommandée`, 'warn');
       degradePCCOnMap(game.currentMap, BALANCE.weather.timefallPccDegradeBase + Math.floor(RNG.next() * BALANCE.weather.timefallPccDegradeRandRange));
       emboldenMuleCamps();

@@ -8,13 +8,15 @@ import { BALANCE, DAYS_PER_MONTH, DIFFICULTIES, HQ, MAP_HEIGHT, MAP_WIDTH, RANKS
 import { CARGO_TYPES, CRISIS_FLAVORS, EVENTS, ORDER_ACTIONS, ORDER_CONTEXTS, ORDER_SUBJECTS, QUEST_OBJECTS, QUEST_REASONS, QUEST_SUBJECTS, QUEST_VERBS, RECIPES, ROUTE_TYPES, SKILLS, SQUAD_SYNERGIES, TITLES, TRAITS, VEHICLE_SPEED, cellKey, gradeLevel, pickCargoType } from '../data/Constants.js';
 import { checkMuleCamps, generateCatcherEncounter } from './CombatEngine.js';
 import { dominantStructure, isBTZone, isNearHostileMuleCamp, isOnRoute, loadMapData } from './MapEngine.js';
-import { clearExpiredWeather, triggerDuststorm, triggerTimefall, weatherRiskMod } from './WeatherEngine.js';
+import { weatherRiskMod } from './WeatherEngine.js';
 import { checkGameEnd, saveGame } from '../persistence/SaveManager.js';
 import { runAutomation } from '../systems/AutomationManager.js';
 import { checkSponsor, checkSubsidiaries } from '../systems/EconomySystem.js';
 import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems/NetworkSystem.js';
 import { gearEffectiveness, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
+import { timefallSpeedMult } from '../systems/TimefallSystem.js';
+import { tickWeatherSystem } from '../systems/WeatherSystem.js';
 import { markMapDirty } from '../ui/MapRenderer.js';
 
 export function overloadRatio(p, cargo) {
@@ -449,6 +451,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       const terrainMit = porter.equipment.climbing_anchor ? B.terrainAnchorMitigation : 1;
       if (destTerrain === 'mountain') timeMultiplier *= 1 + B.mountainTimeMult * terrainMit;
       if (destTerrain === 'river' && !isNearPCC(destX, destY, 'bridge')) timeMultiplier *= 1 + B.riverTimeMult * terrainMit;
+      timeMultiplier *= timefallSpeedMult(porter.map, destX, destY); // V0.3.0: Timefall ralentit les porteurs non abrités
 
       // Réseau asynchrone: cargaison perdue récupérée au passage + structure fantôme empruntée (pour le récit)
       const lostCargoBonus = collectNearbyLostCargo(destX, destY);
@@ -572,6 +575,7 @@ export function tick() {
           d.detection += Math.max(1, detectRate);
           if (d.detection >= B.detectionThreshold && p2.health > 0) {
             d.spotted = true;
+            eventBus.emit('combat:btDetected', { porterId: p2.id }); // V0.3.0: SoundEngine bascule en alerte
             const dmg2 = B.detectionDmgBase + RNG.next() * B.detectionDmgRandRange;
             const actualDmg2 = dmg2 * (1 - porterResist(p2)) * (p2.equipment.exo ? B.detectionExoMult : 1);
             p2.health -= actualDmg2;
@@ -707,7 +711,6 @@ export function endMonthBookkeeping() {
       checkSponsor();
       checkMuleCamps();
       checkSubsidiaries();
-      clearExpiredWeather();
       updatePrepperNeeds();
       generatePrepperContracts();
       applyHermitGifts();
@@ -718,10 +721,8 @@ export function endMonthBookkeeping() {
         if (p.status === "idle" && p.health < 100) p.health = Math.min(100, p.health + B.idleHealRate + prepperPerkBonus('fastHeal'));
       }
 
-      // Frappe Temporelle ou Duststorm: ambiance visuelle, pas d'impact mécanique
-      const weatherRoll = RNG.next();
-      if (weatherRoll < B.timefallChance) triggerTimefall();
-      else if (weatherRoll < B.duststormChanceUpper) triggerDuststorm();
+      // V0.3.0: la météo est désormais gérée quotidiennement par territoire (WeatherSystem.tickWeatherSystem(),
+      // appelée depuis advanceDay()) — remplace l'ancien tirage mensuel unique ci-dessus.
 
       // Bilan de mois: feedback net clair (revenus livraisons vs salaires)
       const netChange = game.money - game.monthState.moneyBeforeOps;
@@ -747,6 +748,7 @@ export function advanceDay() {
         }
       }
       tick();
+      tickWeatherSystem(); // V0.3.0: météo dynamique par territoire + avance du Chiral Forecast, tous les jours
 
       game.dayInMonth++;
       if (game.dayInMonth >= DAYS_PER_MONTH) {
