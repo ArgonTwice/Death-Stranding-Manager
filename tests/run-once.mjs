@@ -72,7 +72,13 @@ const result = {
   porters: game.porters.map(p => ({ name: p.name, health: p.health, stress: p.stress, level: p.level, xp: p.xp, status: p.status })),
   mainKnots: (d.mainKnots || []).map(k => ({ name: k.name, archetype: k.archetype, relation: k.relation, needs: k.needs })),
   routeCount: game.routes.size,
-  logTail: game.log.slice(0, 5).map(e => e.text)
+  logTail: game.log.slice(0, 5).map(e => e.text),
+  // V0.3.0 — couvre explicitement le déterminisme des nouveaux systèmes (météo/quêtes/loyauté)
+  loyalty: game.loyalty,
+  urgentQuestsActive: (game.urgentQuests || []).length,
+  urgentQuestHistoryCount: (game.urgentQuestHistory || []).length,
+  currentWeather: (d.weather && d.weather.type) || 'calm',
+  forecast: d.forecast || []
 };
 
 process.stdout.write(JSON.stringify(result));
