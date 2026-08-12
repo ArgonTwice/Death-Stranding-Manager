@@ -546,9 +546,9 @@
       <div style="font-size: 9px; color: var(--text-dim); margin-top: 2px;">-30% temps / +50% XP sur trajets connectés au réseau.</div>
 
       <div id="unlock-knots" style="display:none;">
-        <h3>VILLES PRINCIPALES</h3>
+        <h3>PREPPERS — VILLES PRINCIPALES</h3>
         <div id="mainKnots"></div>
-        <div style="font-size: 9px; color: var(--text-dim); margin: 2px 0 6px;">Raccordez-les toutes pour ouvrir la Plate Gate.</div>
+        <div style="font-size: 9px; color: var(--text-dim); margin: 2px 0 6px;">Raccordez-les toutes pour ouvrir la Plate Gate. Livrez leurs requêtes pour faire monter la relation et débloquer leurs perks.</div>
 
         <h3 id="questsHeader">QUÊTES ANNEXES</h3>
         <div id="sideQuests"></div>
@@ -563,6 +563,12 @@
       <button id="pauseBtn" onclick="togglePause()">⏸️ Pause</button>
       <div id="speedControls" style="display:flex; gap:4px; margin-top:4px;"></div>
       <button class="danger" style="margin-top: 6px;" onclick="advanceDay()">⏩ +1 jour (manuel)</button>
+
+      <h3>ORDRES PERMANENTS — AUTOMATISATION</h3>
+      <div id="automationPanel"></div>
+
+      <h3>TABLEAU DE BORD LOGISTIQUE</h3>
+      <div id="logisticsDashboard"></div>
 
       <h3>AMBIANCE</h3>
       <button onclick="testAudioBeep()">🔊 Tester le son (bip direct)</button>
@@ -599,6 +605,15 @@
       </div>
       <div id="porters"></div>
     </div>
+    </div>
+  </div>
+
+  <!-- INSPECTEUR TACTIQUE — panneau contextuel ouvert au clic sur une case de la carte (#Phase3). Réutilise
+       le langage visuel de la modale d'onglets (.left) : plein écran mobile, panneau centré desktop. -->
+  <div class="left" id="inspectorModal" onclick="if (event.target === this) closeInspector()">
+    <div class="panel">
+      <button class="modal-close" onclick="closeInspector()">✕</button>
+      <div id="inspectorContent"></div>
     </div>
   </div>
 
@@ -812,7 +827,16 @@
       { id: 'rep_elixir',    name: '⚗️ Élixir de Réputation', cost: { chiral_crystal: 8 }, needsPorter: false,
         effect: () => { game.reputation = Math.min(100, game.reputation + 15); }, desc: '+15 réputation Bridges' },
       { id: 'scrap_cash',    name: '⚗️ Prime Chirale', cost: { mule_scrap: 6 }, needsPorter: false,
-        effect: () => { game.money += 2000; }, desc: '+$2000' }
+        effect: () => { game.money += 2000; }, desc: '+$2000' },
+      // #Phase5 — 3 nouvelles recettes
+      { id: 'chiral_battery', name: '🔋 Batterie Chirale', cost: { chiral_crystal: 4 }, needsPorter: false,
+        effect: () => { const d = game.mapsData[game.currentMap]; (d.pccInstalls || []).forEach(p => { if (!p.ghost) p.durability = Math.min(100, (p.durability ?? 100) + 30); }); },
+        desc: '+30% durabilité de toutes les PCC de la carte affichée' },
+      { id: 'mule_decoy',     name: '🎭 Leurre MULE', cost: { mule_scrap: 4 }, needsPorter: false,
+        effect: () => { const d = game.mapsData[game.currentMap]; (d.muleCamps || []).forEach(c => { if (c.status === 'hostile') c.strength = Math.max(1, c.strength - 1); }); },
+        desc: '-1 force à tous les camps MULE hostiles de la carte (min. 1)' },
+      { id: 'stamina_elixir', name: '💊 Élixir de Stamina', cost: { chiral_crystal: 2, mule_scrap: 2 }, needsPorter: true,
+        effect: p => { p.health = 100; p.stress = 0; }, desc: 'Soigne complètement et réinitialise le stress du porteur ciblé' }
     ];
     // Déblocages progressifs par palier (canon DS: nouveau matos en avançant / DV2: shop s'étoffe avec le rang)
     const EQUIP_MIN_RANK = { cryptobiote: 1, bolagun: 1, cryobox: 1, climbing_anchor: 2 };
@@ -1042,6 +1066,7 @@
       collection: [], // ids des reliques rares trouvées (musée)
       duos: [], // paires "id1-id2" formellement partenaires (bond >= 8 raids ensemble)
       sponsor: null, // sponsor actuel (nom, revenu mensuel, condition)
+      automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, // ordres permanents (#Phase4)
       ngPlus: false, // Nouvelle Partie+ active — seul mode où x2 est disponible
       infraInvestments: 0 // nb d'investissements infrastructure Bridges (sink économique répétable, coût géométrique)
     };
@@ -1061,6 +1086,8 @@
       game.pccInstalls = d.pccInstalls;
       if (!d.lostCargo) d.lostCargo = [];
       game.lostCargo = d.lostCargo;
+      game.weather = d.weather || null;
+      if (d.mainKnots) d.mainKnots.forEach(migratePrepperKnot); // migration douce des vieilles saves (v<3)
       game.currentMap = mapKey;
     }
 
@@ -1189,8 +1216,33 @@
       banner.classList.add('flash');
     }
 
+    // Météo persistante par territoire (contrairement à l'anim visuelle de 4s): dure jusqu'à la fin du mois
+    // suivant, affecte le risque des trajets et la croissance des besoins des preppers (#Phase5)
+    function setMapWeather(mapKey, type) {
+      const d = game.mapsData[mapKey];
+      if (!d) return;
+      d.weather = { type, untilMonth: game.month + 1 };
+      if (mapKey === game.currentMap) game.weather = d.weather;
+    }
+    function clearExpiredWeather() {
+      for (const key in game.mapsData) {
+        const d = game.mapsData[key];
+        if (d.weather && game.month > d.weather.untilMonth) {
+          d.weather = null;
+          if (key === game.currentMap) game.weather = null;
+        }
+      }
+    }
+    // Risque additionnel tant qu'une météo persistante est active sur la carte affichée (visibilité réduite)
+    function weatherRiskMod() {
+      const w = (game.mapsData[game.currentMap] || {}).weather;
+      if (!w) return 0;
+      return w.type === 'timefall' ? 0.12 : 0.08;
+    }
+
     function triggerTimefall() {
       timefallUntil = performance.now() + 4000;
+      setMapWeather(game.currentMap, 'timefall');
       const dropCount = 120;
       rainDrops = [];
       for (let i = 0; i < dropCount; i++) {
@@ -1215,6 +1267,7 @@
     function triggerDuststorm() {
       // Canon DS2: Duststorm, tempête de poussière du désert australien
       duststormUntil = performance.now() + 4000;
+      setMapWeather(game.currentMap, 'duststorm');
       dustParticles = [];
       for (let i = 0; i < 90; i++) {
         dustParticles.push({
@@ -1344,7 +1397,44 @@
       render();
     }
 
-    // VILLES PRINCIPALES — points fixes à raccorder pour ouvrir la Plate Gate
+    // PREPPERS — les villes principales sont incarnées par un prepper à archétype fixe, avec une relation
+    // persistante (0-100) qui monte/descend selon la qualité des livraisons qui leur sont adressées.
+    const PREPPER_ARCHETYPES = {
+      engineer: { name: 'Ingénieur', icon: '🔧', likesCargo: ['standard', 'heavy'], perk: 'structureDiscount', perkValue: 0.1,
+        perkDesc: '-10% coût installations (relation ≥60⭐)' },
+      medic:    { name: 'Médecin', icon: '⚕️', likesCargo: ['urgent'], perk: 'fastHeal', perkValue: 4,
+        perkDesc: '+4 HP/mois pour les porteurs au repos (relation ≥60⭐)' },
+      botanist: { name: 'Botaniste', icon: '🌱', likesCargo: ['fragile', 'standard'], perk: 'materialBonus', perkValue: 0.12,
+        perkDesc: '+12% chance de butin (relation ≥60⭐)' },
+      hermit:   { name: 'Ermite', icon: '🥾', likesCargo: [], perk: 'rareTech', perkValue: 1,
+        perkDesc: 'Don mensuel de cristal chiral rare (relation ≥80⭐)' }
+    };
+    function pickPrepperArchetype() {
+      const keys = Object.keys(PREPPER_ARCHETYPES);
+      return keys[Math.floor(Math.random() * keys.length)];
+    }
+    // Étoiles 1-5 façon Kairosoft, dérivées de la relation 0-100
+    function prepperStars(relation) { return Math.max(1, Math.min(5, Math.ceil((relation || 0) / 20))); }
+    function prepperStarsLabel(relation) { return '⭐'.repeat(prepperStars(relation)) + '☆'.repeat(5 - prepperStars(relation)); }
+    // Multiplicateur de croissance des besoins selon la météo active sur la carte (canon: Timefall intense = demande médicale +150%)
+    function prepperWeatherNeedMult(weather, need) {
+      if (!weather) return 1;
+      if (weather.type === 'timefall' && need === 'medical') return 2.5;
+      if (weather.type === 'timefall') return 1.3;
+      if (weather.type === 'duststorm' && need === 'tech') return 1.8;
+      if (weather.type === 'duststorm') return 1.2;
+      return 1;
+    }
+    function makePrepper(x, y, name) {
+      const archetype = pickPrepperArchetype();
+      return {
+        x, y, name, archetype,
+        relation: 25 + Math.floor(Math.random() * 15), // 25-40 au départ, façon relation naissante
+        needs: { medical: 20 + Math.floor(Math.random() * 30), food: 20 + Math.floor(Math.random() * 30), tech: 20 + Math.floor(Math.random() * 30) },
+        contracts: []
+      };
+    }
+    // VILLES PRINCIPALES — points fixes à raccorder pour ouvrir la Plate Gate, chacune incarnée par un prepper
     function generateMainKnots() {
       const knots = [];
       const usedNames = [];
@@ -1360,9 +1450,156 @@
         const name = pool[Math.floor(Math.random() * pool.length)];
         usedNames.push(name);
         knotCityMap[`${game.currentMap}:${cellKey(x, y)}`] = name; // fige le nom (cohérent avec knotCityName())
-        knots.push({ x, y, name });
+        knots.push(makePrepper(x, y, name));
       }
       return knots;
+    }
+    // Migration douce: anciennes saves (v<3) où mainKnots n'a que {x,y,name}
+    function migratePrepperKnot(k) {
+      if (k.archetype) return k; // déjà migré
+      Object.assign(k, makePrepper(k.x, k.y, k.name));
+      return k;
+    }
+    const NEED_LABELS = { medical: 'matériel médical', food: 'vivres', tech: 'pièces technologiques' };
+
+    // Croissance mensuelle des besoins de chaque prepper, modulée par la météo persistante de sa carte.
+    // Un besoin resté critique (≥90) trop longtemps entame la relation (canon: confiance qui s'érode).
+    function updatePrepperNeeds() {
+      for (const key in game.mapsData) {
+        const d = game.mapsData[key];
+        for (const k of (d.mainKnots || [])) {
+          migratePrepperKnot(k);
+          for (const need of ['medical', 'food', 'tech']) {
+            const mult = prepperWeatherNeedMult(d.weather, need);
+            k.needs[need] = Math.min(100, k.needs[need] + (3 + Math.random() * 4) * mult);
+          }
+          if (k.needs.medical >= 90 || k.needs.food >= 90 || k.needs.tech >= 90) {
+            k.relation = Math.max(0, k.relation - 2);
+          }
+        }
+      }
+    }
+
+    // Requêtes spontanées ("Requests Kairosoft"): un prepper propose un contrat ciblant son besoin le plus
+    // critique, parfois négociable une fois. Reward scale avec le rang et la relation actuelle.
+    function generatePrepperContracts() {
+      for (const key in game.mapsData) {
+        const d = game.mapsData[key];
+        for (let i = 0; i < (d.mainKnots || []).length; i++) {
+          const k = d.mainKnots[i];
+          migratePrepperKnot(k);
+          if (!k.contracts) k.contracts = [];
+          k.contracts = k.contracts.filter(c => {
+            if (game.month > c.expiresMonth) {
+              if (key === game.currentMap) logEvent(`⌛ Requête de ${k.name} expirée: ${c.flavor}`, 'warn');
+              return false;
+            }
+            return true;
+          });
+          if (k.contracts.length >= 2) continue; // max 2 requêtes simultanées par prepper
+          const chance = 0.2 + (k.relation >= 60 ? 0.1 : 0); // relation forte = préppers plus loquaces
+          if (Math.random() > chance) continue;
+          const arch = PREPPER_ARCHETYPES[k.archetype];
+          const needKeys = Object.keys(k.needs).sort((a, b) => k.needs[b] - k.needs[a]);
+          const urgentNeed = needKeys[0];
+          const baseReward = Math.ceil((250 + Math.random() * 350) * (1 + k.relation / 150) * RANKS[currentRankIndex()].questMult);
+          k.contracts.push({
+            id: `pc-${key}-${i}-${game.month}-${Math.floor(Math.random() * 9999)}`,
+            prepperIdx: i, mapKey: key, need: urgentNeed,
+            flavor: `${k.name} réclame ${NEED_LABELS[urgentNeed]} d'urgence`,
+            reward: baseReward, expiresMonth: game.month + 2 + Math.floor(Math.random() * 2),
+            negotiable: Math.random() < 0.4, negotiated: false
+          });
+          if (key === game.currentMap) logEvent(`🗣️ ${arch.icon} ${k.name} (${arch.name}) a une requête — relation ${prepperStarsLabel(k.relation)}`, 'good');
+        }
+      }
+    }
+
+    // Don mensuel de l'Ermite: perk archétype #Phase1, exige une relation ≥80 ET le prepper raccordé au réseau
+    function applyHermitGifts() {
+      for (const key in game.mapsData) {
+        const d = game.mapsData[key];
+        for (const k of (d.mainKnots || [])) {
+          if (k.archetype === 'hermit' && k.relation >= 80 && d.routes.has(cellKey(k.x, k.y))) {
+            game.materials.chiral_crystal += PREPPER_ARCHETYPES.hermit.perkValue;
+            if (key === game.currentMap) logEvent(`🥾 ${k.name} (Ermite) fait don d'un cristal chiral rare`, 'good');
+          }
+        }
+      }
+    }
+
+    // Bonus agrégé des preppers alliés (archétype + relation ≥60), raccordés au réseau sur la carte active
+    function prepperPerkBonus(perkType) {
+      const d = game.mapsData[game.currentMap];
+      if (!d) return 0;
+      let total = 0;
+      for (const k of (d.mainKnots || [])) {
+        if (!d.routes.has(cellKey(k.x, k.y))) continue;
+        const arch = PREPPER_ARCHETYPES[k.archetype];
+        if (arch.perk === perkType && k.relation >= 60) total += arch.perkValue;
+      }
+      return total;
+    }
+
+    // Impact d'une livraison (raid ou requête prepper) sur la relation — appelé depuis tick() à la résolution
+    function applyPrepperDeliveryOutcome(quest, success, rating) {
+      if (!quest || quest.prepperIdx == null) return;
+      const d = game.mapsData[quest.mapKey];
+      if (!d) return;
+      const k = d.mainKnots && d.mainKnots[quest.prepperIdx];
+      if (!k) return;
+      const isCurrent = quest.mapKey === game.currentMap;
+      if (success) {
+        const gain = rating ? Math.max(2, Math.round(rating.likes * 0.6)) : 4;
+        k.relation = Math.min(100, k.relation + gain);
+        if (quest.contractId && quest.need) {
+          k.needs[quest.need] = Math.max(0, k.needs[quest.need] - (50 + Math.random() * 20));
+          k.contracts = (k.contracts || []).filter(c => c.id !== quest.contractId);
+          if (isCurrent) logEvent(`🤝 ${k.name}: relation +${gain} (${prepperStarsLabel(k.relation)}), besoin comblé`, 'good');
+        } else if (isCurrent) {
+          logEvent(`🤝 ${k.name}: relation +${gain} (${prepperStarsLabel(k.relation)})`, 'good');
+        }
+      } else {
+        k.relation = Math.max(0, k.relation - 8);
+        if (isCurrent) logEvent(`📉 ${k.name}: relation -8 (${prepperStarsLabel(k.relation)}) — livraison ratée`, 'warn');
+      }
+    }
+
+    // Assigne UN porteur choisi par le joueur à une requête prepper (#Phase2: choix ciblé, pas d'auto-squad aléatoire)
+    function assignPrepperContract(knotIdx, contractId, porterId, route) {
+      const d = game.mapsData[game.currentMap];
+      const k = d.mainKnots && d.mainKnots[knotIdx];
+      if (!k) return;
+      const contract = (k.contracts || []).find(c => c.id === contractId);
+      if (!contract) { logEvent('❌ Requête expirée ou déjà traitée'); return; }
+      const p = game.porters.find(x => x.id === porterId);
+      if (!p || p.map !== game.currentMap || p.status !== 'idle' || p.health <= 0) { logEvent('❌ Porteur indisponible'); return; }
+      createDelivery(p.id, k.x, k.y, {
+        reward: contract.reward, flavor: contract.flavor, riskCut: 0.05, route,
+        prepperIdx: knotIdx, mapKey: game.currentMap, contractId: contract.id, need: contract.need
+      });
+      logEvent(`🚚 ${p.name} part livrer ${k.name} — ${contract.flavor}`, 'good');
+      render();
+    }
+
+    // Négociation ponctuelle (une fois par requête): relation forte augmente la chance de succès
+    function negotiatePrepperContract(knotIdx, contractId) {
+      const d = game.mapsData[game.currentMap];
+      const k = d.mainKnots && d.mainKnots[knotIdx];
+      if (!k) return;
+      const c = (k.contracts || []).find(x => x.id === contractId);
+      if (!c || !c.negotiable || c.negotiated) return;
+      c.negotiated = true;
+      const successChance = 0.4 + k.relation / 200;
+      if (Math.random() < successChance) {
+        const bonus = Math.ceil(c.reward * (0.15 + Math.random() * 0.15));
+        c.reward += bonus;
+        logEvent(`🗣️ Négociation réussie avec ${k.name}: +$${bonus} sur la requête`, 'good');
+      } else {
+        k.relation = Math.max(0, k.relation - 3);
+        logEvent(`🗣️ ${k.name} n'apprécie pas la négociation (relation -3)`, 'warn');
+      }
+      render();
     }
 
     function nearestRouteInfo(x, y) {
@@ -1592,15 +1829,31 @@
       render();
     }
 
-    function assignQuest(questId, route) {
+    // Lit la sélection manuelle d'escouade (cases cochées) + l'itinéraire choisi dans le DOM, puis lance le raid.
+    // Si rien n'est coché, assignQuest() retombe sur l'auto-sélection historique (compat).
+    function launchQuestFromUI(questId) {
+      const routeEl = document.getElementById(`route-${questId}`);
+      const route = routeEl ? routeEl.value : null;
+      const checked = Array.from(document.querySelectorAll(`input[data-quest-squad="${questId}"]:checked`)).map(el => parseInt(el.value));
+      assignQuest(questId, route, checked);
+    }
+
+    function assignQuest(questId, route, manualSquad) {
       const d = game.mapsData[game.currentMap];
       const qIdx = (d.sideQuests || []).findIndex(q => q.id === questId);
       if (qIdx === -1) return;
       const quest = d.sideQuests[qIdx];
-      const squad = game.porters
-        .filter(p => p.map === game.currentMap && p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100)
-        .slice(0, 3)
-        .map(p => p.id);
+      const validIdle = p => p.map === game.currentMap && p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100;
+      let squad;
+      if (Array.isArray(manualSquad) && manualSquad.length) {
+        squad = manualSquad
+          .map(id => game.porters.find(p => p.id === id))
+          .filter(p => p && validIdle(p))
+          .map(p => p.id);
+      }
+      if (!squad || !squad.length) {
+        squad = game.porters.filter(validIdle).slice(0, 3).map(p => p.id);
+      }
       if (squad.length === 0) { logEvent('❌ Aucun porteur disponible ici'); return; }
       if ((quest.special || quest.crisis) && squad.length < (quest.minSquad || 2)) {
         logEvent(`❌ Ordre spécial: minimum ${quest.minSquad || 2} porteurs requis`);
@@ -1613,17 +1866,22 @@
       }
       const bondBonus = squadBondBonus(squad); // basé sur l'historique de raids AVANT celui-ci
       const duo = squadDuoBonus(squad);
-      const squadBonus = 1 + (squad.length - 1) * 0.2 + bondBonus + duo.reward;
-      const riskCut = Math.min(0.3, (squad.length - 1) * 0.1) + duo.riskCut; // sécurité en nombre + partenariat
+      const synergies = activeSynergies(squad); // synergies émergentes de la composition de CETTE escouade (#Phase2)
+      const synergyReward = synergies.reduce((s, syn) => s + (syn.rewardMult || 0), 0);
+      const synergyRisk = synergies.reduce((s, syn) => s + (syn.riskCut || 0), 0);
+      const synergyTime = synergies.reduce((s, syn) => s * (syn.timeMult || 1), 1);
+      const squadBonus = 1 + (squad.length - 1) * 0.2 + bondBonus + duo.reward + synergyReward;
+      const riskCut = Math.min(0.3, (squad.length - 1) * 0.1) + duo.riskCut + synergyRisk; // sécurité en nombre + partenariat + synergie
       const raidId = `raid-${game.month}-${quest.id}`;
       const perPorterReward = Math.ceil((quest.reward * squadBonus) / squad.length);
       for (const pid of squad) {
-        createDelivery(pid, quest.x, quest.y, { reward: perPorterReward, flavor: quest.flavor, riskCut, raidId, route });
+        createDelivery(pid, quest.x, quest.y, { reward: perPorterReward, flavor: quest.flavor, riskCut, raidId, route, extraTimeMult: synergyTime });
       }
       recordBonds(squad);
       checkDuoFormation(squad);
       const routeTag = route && ROUTE_TYPES[route] ? ` via ${ROUTE_TYPES[route].icon} ${ROUTE_TYPES[route].name}` : '';
-      logEvent(`🚛 ${quest.special ? 'ORDRE SPÉCIAL' : 'RAID'} lancé (${squad.length} porteur${squad.length > 1 ? 's' : ''}${bondBonus > 0 ? `, synergie +${Math.round(bondBonus * 100)}%` : ''}${duo.reward > 0 ? ', 💞 duo actif' : ''})${routeTag} → ${quest.flavor}`, 'good');
+      const synergyTag = synergies.length ? ` — ${synergies.map(s => s.name).join(', ')}` : '';
+      logEvent(`🚛 ${quest.special ? 'ORDRE SPÉCIAL' : 'RAID'} lancé (${squad.length} porteur${squad.length > 1 ? 's' : ''}${bondBonus > 0 ? `, synergie bond +${Math.round(bondBonus * 100)}%` : ''}${duo.reward > 0 ? ', 💞 duo actif' : ''})${synergyTag}${routeTag} → ${quest.flavor}`, 'good');
     }
 
     function forceRest(porterIdx) {
@@ -1751,17 +2009,17 @@
       const mapsOut = {};
       for (const k in game.mapsData) {
         const d = game.mapsData[k];
-        mapsOut[k] = { btZones: d.btZones, terrain: d.terrain, routes: Array.from(d.routes), craters: Array.from(d.craters), branches: d.branches, activeBranch: d.activeBranch, mainKnots: d.mainKnots || [], sideQuests: d.sideQuests || [], muleCamps: d.muleCamps || [], catchers: d.catchers || [], pccInstalls: d.pccInstalls || [], lostCargo: d.lostCargo || [] };
+        mapsOut[k] = { btZones: d.btZones, terrain: d.terrain, routes: Array.from(d.routes), craters: Array.from(d.craters), branches: d.branches, activeBranch: d.activeBranch, mainKnots: d.mainKnots || [], sideQuests: d.sideQuests || [], muleCamps: d.muleCamps || [], catchers: d.catchers || [], pccInstalls: d.pccInstalls || [], lostCargo: d.lostCargo || [], weather: d.weather || null };
       }
       return {
-        v: 2, money: game.money, month: game.month, reputation: game.reputation,
+        v: 3, money: game.money, month: game.month, reputation: game.reputation,
         completed: game.completed, deaths: game.deaths, porters: game.porters,
         structures: game.structures, currentMap: game.currentMap, mapsData: mapsOut,
         log: game.log.slice(0, 30), equipBought, gameEnded,
         materials: game.materials, titles: game.titles, quarterSnapshot,
         activeFestival: game.activeFestival, hallOfFame: game.hallOfFame, visitor: game.visitor,
         bonds: game.bonds, legacyBonus: game.legacyBonus, collection: game.collection,
-        duos: game.duos, sponsor: game.sponsor, difficulty: game.difficulty, dayInMonth, monthState, ngPlus: game.ngPlus, infraInvestments: game.infraInvestments, subsidiaries: game.subsidiaries || [],
+        duos: game.duos, sponsor: game.sponsor, automation: game.automation, difficulty: game.difficulty, dayInMonth, monthState, ngPlus: game.ngPlus, infraInvestments: game.infraInvestments, subsidiaries: game.subsidiaries || [],
         activeRelicIds, activeCampEventIds: activeCampEvents.map(e => e.id), activeVisitorOfferIds: activeVisitorOffers.map(o => o.id), activeFestivalIds: activeFestivalsPool.map(f => f.id)
       };
     }
@@ -1784,7 +2042,7 @@
       game.mapsData = {};
       for (const k in s.mapsData) {
         const d = s.mapsData[k];
-        game.mapsData[k] = { btZones: d.btZones, terrain: d.terrain, routes: new Set(d.routes), craters: new Set(d.craters), branches: d.branches, activeBranch: d.activeBranch, mainKnots: d.mainKnots || [], sideQuests: d.sideQuests || [], muleCamps: d.muleCamps || [], catchers: d.catchers || [], pccInstalls: d.pccInstalls || [], lostCargo: d.lostCargo || [] };
+        game.mapsData[k] = { btZones: d.btZones, terrain: d.terrain, routes: new Set(d.routes), craters: new Set(d.craters), branches: d.branches, activeBranch: d.activeBranch, mainKnots: d.mainKnots || [], sideQuests: d.sideQuests || [], muleCamps: d.muleCamps || [], catchers: d.catchers || [], pccInstalls: d.pccInstalls || [], lostCargo: d.lostCargo || [], weather: d.weather || null };
       }
       loadMapData(s.currentMap);
       game.log = s.log || [];
@@ -1801,6 +2059,7 @@
       game.collection = s.collection || [];
       game.duos = s.duos || [];
       game.sponsor = s.sponsor || null;
+      game.automation = s.automation || { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false };
       game.difficulty = s.difficulty || 'normal';
       dayInMonth = s.dayInMonth || 0;
       monthState = s.monthState || { viewMap: game.currentMap, moneyBeforeOps: game.money, salaryCost: 0 };
@@ -1848,7 +2107,7 @@
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';
       const startMoney = DIFFICULTIES[difficulty].startMoney;
-      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [] });
+      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [] });
       Object.keys(equipBought).forEach(k => equipBought[k] = 0);
       gameEnded = false;
       announcedRank = 0;
@@ -2130,6 +2389,165 @@
       const py = (evt.clientY - rect.top) * scaleY;
       return { x: Math.floor(px / GRID_SIZE), y: Math.floor(py / GRID_SIZE) };
     }
+    // INSPECTEUR TACTIQUE — panneau contextuel au clic sur une case (#Phase3). N'interfère jamais avec le
+    // mode de placement PCC: le listener du canvas court-circuite vers placePCCAt() tant que placingPCC est actif.
+    let inspectorRefresh = null; // fonction qui rafraîchit le contenu affiché sans le fermer, appelée depuis render()
+    function openInspector(html, refreshFn) {
+      const content = document.getElementById('inspectorContent');
+      const modal = document.getElementById('inspectorModal');
+      if (!content || !modal) return;
+      content.innerHTML = html;
+      modal.classList.add('open');
+      inspectorRefresh = refreshFn || null;
+    }
+    function closeInspector() {
+      const modal = document.getElementById('inspectorModal');
+      if (modal) modal.classList.remove('open');
+      inspectorRefresh = null;
+    }
+    function refreshInspectorIfOpen() {
+      const modal = document.getElementById('inspectorModal');
+      if (modal && modal.classList.contains('open') && inspectorRefresh) inspectorRefresh();
+    }
+
+    function inspectorPorterHtml(p) {
+      const statusLabel = { idle: '🟢 Disponible', 'en route': '🟠 En mission', dead: '💀 Décédé', left: '👋 Parti' }[p.status] || p.status;
+      const title = porterTitle(p);
+      return `<h2>◆ ${p.name}</h2>
+        <div style="font-size:11px;">
+          Lv${p.level} · ${SKILLS[p.skill].name} · ${TRAITS[p.trait].name}<br>
+          Statut: ${statusLabel}${title ? ` · "${title}"` : ''}<br>
+          ❤️ ${p.likes} likes · 🎒 ${equippedCount(p)}/${equipSlots(p)}
+        </div>
+        <div class="gauge-row" style="margin-top:8px;">
+          <div class="gauge"><div class="gauge-label"><span>HP</span><span>${Math.ceil(p.health)}/100</span></div><div class="gauge-track"><div class="gauge-fill hp" style="width:${p.health}%;"></div></div></div>
+          <div class="gauge"><div class="gauge-label"><span>Stress</span><span>${p.stress}</span></div><div class="gauge-track"><div class="gauge-fill stress" style="width:${p.stress}%;"></div></div></div>
+        </div>
+        ${(p.gearWear || 0) > 0 ? `<div style="font-size:10px; margin-top:6px; color:${p.gearWear >= 50 ? 'var(--blood)' : 'var(--amber-dim)'};">🔧 Usure équip. ${p.gearWear}%</div>` : ''}
+        <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button onclick="forceRest(${p.id}); refreshInspectorIfOpen();" ${p.status !== 'idle' || p.health <= 0 ? 'disabled' : ''}>😴 Repos forcé</button>
+          <button onclick="sendDelivery(${p.id}); closeInspector();" ${p.status !== 'idle' || p.health <= 0 ? 'disabled' : ''}>🚚 Envoyer en livraison</button>
+          ${(p.gearWear || 0) > 0 ? `<button style="grid-column:1/-1;" onclick="repairGear(${p.id}); refreshInspectorIfOpen();">🔧 Réparer équipement ($${Math.ceil(p.gearWear * 5)})</button>` : ''}
+        </div>`;
+    }
+    function inspectorPccHtml(pcc) {
+      const dur = pcc.durability ?? 100;
+      return `<h2>◆ ${PCC_TYPES[pcc.type].icon} ${PCC_TYPES[pcc.type].name}</h2>
+        <div style="font-size:11px;">Position (${pcc.x},${pcc.y})${pcc.ghost ? `<br>👻 Structure fantôme laissée par ${pcc.ghostName}` : ''}</div>
+        ${!pcc.ghost ? `<div class="gauge" style="margin-top:8px;"><div class="gauge-label"><span>Durabilité</span><span>${dur}%</span></div><div class="gauge-track"><div class="gauge-fill hp" style="width:${dur}%;"></div></div></div>
+          <button style="margin-top:8px;" onclick="repairPCC(${pcc.x},${pcc.y}); refreshInspectorIfOpen();" ${dur >= 100 ? 'disabled' : ''}>🔧 Réparation rapide ($${Math.ceil((100 - dur) * 4)})</button>`
+          : '<div style="font-size:9px; color:var(--text-dim); margin-top:6px;">Structure laissée par un autre porteur — non réparable.</div>'}`;
+    }
+    function inspectorCampHtml(camp) {
+      const strengthTag = '⚠️'.repeat(camp.strength);
+      let body;
+      if (camp.status === 'hostile') {
+        body = `<button onclick="assaultCamp('${camp.id}','infiltration'); closeInspector();">🥷 Infiltration (discret)</button>
+          <button onclick="assaultCamp('${camp.id}','assault'); closeInspector();">💥 Assaut létal</button>`;
+      } else if (camp.status === 'pacified') {
+        body = camp.needsIncineration
+          ? `<button onclick="sendToIncinerator('${camp.id}'); refreshInspectorIfOpen();">🔥 Incinérer ($300)</button>`
+          : `<button onclick="convertCampToRelay('${camp.id}'); closeInspector();">🏭 Convertir en relais ($1500)</button>`;
+      } else if (camp.status === 'under_attack') {
+        body = `<button onclick="defendRelay('${camp.id}'); closeInspector();">🛡️ Défendre le relais</button>`;
+      } else {
+        body = camp.fortified
+          ? `<div style="font-size:10px; color:var(--chiral);">🏰 Fortifié — +$${camp.strength * 40}/mois</div>`
+          : `<button onclick="fortifyRelay('${camp.id}'); refreshInspectorIfOpen();">🏰 Fortifier ($600)</button>`;
+      }
+      return `<h2>◆ CAMP (${camp.x},${camp.y})</h2>
+        <div style="font-size:11px;">Statut: ${camp.status} ${strengthTag}</div>
+        <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">${body}</div>`;
+    }
+    function inspectorCatcherHtml(c) {
+      return `<h2>◆ 👹 CATCHER MAJEUR</h2>
+        <div style="font-size:11px;">Position (${c.x},${c.y})<br>Force ${'⚠️'.repeat(c.strength)}<br>Stock: 🩸${game.materials.blood_grenades || 0} 💉${game.materials.blood_bags || 0}</div>
+        <button style="margin-top:8px;" onclick="engageCatcher('${c.id}'); closeInspector();">⚔️ Engager le combat (2-4 porteurs)</button>`;
+    }
+    function inspectorBranchHtml(d, idx) {
+      const b = d.branches[idx];
+      return `<h2>◆ ${idx === 0 ? 'QG BRIDGES' : 'ANTENNE ' + (idx + 1)}</h2>
+        <div style="font-size:11px;">Position (${b.x},${b.y})${d.activeBranch === idx ? '<br>★ Antenne active' : ''}</div>
+        ${d.activeBranch !== idx ? `<button style="margin-top:8px;" onclick="setActiveBranch(${idx}); closeInspector();">Activer comme point de spawn</button>` : ''}`;
+    }
+    function inspectorEmptyCellHtml(x, y) {
+      const terrain = game.terrain[cellKey(x, y)];
+      const terrainLabel = terrain === 'mountain' ? '▲ Montagne (ralentit)' : terrain === 'river' ? '〜 Rivière (ralentit sans pont)' : '— Terrain dégagé';
+      const btFlag = isBTZone(x, y) ? '👹 Zone BT active' : '✅ Aucune activité BT détectée';
+      const routeFlag = isOnRoute(x, y) ? '🛣️ Sur le réseau chiral' : '— Hors réseau';
+      return `<h2>◆ CASE (${x},${y})</h2>
+        <div style="font-size:11px; line-height:2;">${terrainLabel}<br>${btFlag}<br>${routeFlag}</div>`;
+    }
+    function inspectMapCell(x, y) {
+      if (x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT) return;
+      const d = game.mapsData[game.currentMap];
+      if (!d) return;
+
+      const porter = game.porters.find(p => p.map === game.currentMap && p.status !== 'dead' && p.status !== 'left' && p.x === x && p.y === y);
+      if (porter) {
+        const pid = porter.id;
+        openInspector(inspectorPorterHtml(porter), () => {
+          const pp = game.porters.find(pt => pt.id === pid);
+          if (!pp || pp.status === 'dead') { closeInspector(); return; }
+          document.getElementById('inspectorContent').innerHTML = inspectorPorterHtml(pp);
+        });
+        return;
+      }
+
+      const pcc = (d.pccInstalls || []).find(p => p.x === x && p.y === y);
+      if (pcc) {
+        openInspector(inspectorPccHtml(pcc), () => {
+          const pp2 = (game.mapsData[game.currentMap].pccInstalls || []).find(p => p.x === x && p.y === y);
+          if (!pp2) { closeInspector(); return; }
+          document.getElementById('inspectorContent').innerHTML = inspectorPccHtml(pp2);
+        });
+        return;
+      }
+
+      const camp = (d.muleCamps || []).find(c => c.x === x && c.y === y);
+      if (camp) {
+        const cid = camp.id;
+        openInspector(inspectorCampHtml(camp), () => {
+          const cc = (game.mapsData[game.currentMap].muleCamps || []).find(c => c.id === cid);
+          if (!cc) { closeInspector(); return; }
+          document.getElementById('inspectorContent').innerHTML = inspectorCampHtml(cc);
+        });
+        return;
+      }
+
+      const catcher = (d.catchers || []).find(c => c.x === x && c.y === y);
+      if (catcher) {
+        const catId = catcher.id;
+        openInspector(inspectorCatcherHtml(catcher), () => {
+          const cc = (game.mapsData[game.currentMap].catchers || []).find(c => c.id === catId);
+          if (!cc) { closeInspector(); return; }
+          document.getElementById('inspectorContent').innerHTML = inspectorCatcherHtml(cc);
+        });
+        return;
+      }
+
+      const knotIdx = (d.mainKnots || []).findIndex(k => k.x === x && k.y === y);
+      if (knotIdx !== -1) {
+        const idlePorters = () => game.porters.filter(p => p.map === game.currentMap && p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100);
+        const renderKnot = () => `<h2>◆ PREPPER</h2>` + prepperCardHtml(game.mapsData[game.currentMap], game.mapsData[game.currentMap].mainKnots[knotIdx], knotIdx, idlePorters());
+        openInspector(renderKnot(), () => { document.getElementById('inspectorContent').innerHTML = renderKnot(); });
+        return;
+      }
+
+      const branchIdx = (d.branches || []).findIndex(b => b.x === x && b.y === y);
+      if (branchIdx !== -1) { openInspector(inspectorBranchHtml(d, branchIdx), null); return; }
+
+      const cargo = (d.lostCargo || []).find(c => c.x === x && c.y === y);
+      if (cargo) {
+        openInspector(`<h2>◆ CARGAISON PERDUE</h2>
+          <div style="font-size:11px;">Position (${x},${y})<br>Récompense: $${cargo.reward}<br>Expire mois ${cargo.expiresMonth}<br><br>
+          <span style="color:var(--text-dim); font-size:9px;">Récupérée automatiquement par le premier porteur qui livre à proximité.</span></div>`, null);
+        return;
+      }
+
+      openInspector(inspectorEmptyCellHtml(x, y), null);
+    }
+
     function placePCCAt(x, y) {
       if (x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT) return;
       const type = placingPCC;
@@ -2423,6 +2841,20 @@
           logEvent(`💞 Partenariat officiel formé: ${pa ? pa.name : '?'} & ${pb ? pb.name : '?'} (+10% reward, -5% risque en duo)`, 'good');
         }
       }
+    }
+
+    // SYNERGIES D'ESCOUADE — combinaisons de compétences émergentes lors d'un raid multi-porteurs (#Phase2).
+    // Contrairement aux bonds/duos (historique de raids), une synergie dépend uniquement de la composition
+    // de L'ESCOUADE ACTUELLE — elle peut se déclencher dès le premier raid ensemble.
+    const SQUAD_SYNERGIES = [
+      { id: 'fast_escort',    name: '🗺️💪 Escorte Rapide',        need: ['scout', 'hauler'], desc: '-15% temps de trajet',      timeMult: 0.85 },
+      { id: 'anti_bt_convoy', name: '👁️🚗 Convoi Anti-BT',        need: ['dooms', 'driver'], desc: '-20% risque BT',            riskCut: 0.2 },
+      { id: 'strike_team',    name: '💪👁️ Équipe de Choc',        need: ['hauler', 'dooms'], desc: '+15% reward de raid',       rewardMult: 0.15 },
+      { id: 'ghost_recon',    name: '🗺️🚗 Reconnaissance Fantôme', need: ['scout', 'driver'], desc: '-10% risque, trajet furtif', riskCut: 0.1 }
+    ];
+    function activeSynergies(squad) {
+      const skills = squad.map(id => { const p = game.porters.find(x => x.id === id); return p ? p.skill : null; }).filter(Boolean);
+      return SQUAD_SYNERGIES.filter(s => s.need.every(sk => skills.includes(sk)));
     }
 
     // RETRAITE — un porteur vétéran (Lv5+) peut se retirer contre un bonus permanent du camp (DV2: légende qui laisse un héritage)
@@ -2874,7 +3306,7 @@
       const level = game.structures[type] || 0;
       if (level >= s.maxLevel) { logEvent('❌ Niveau max atteint'); return; }
       if ((STRUCTURE_MIN_RANK[type] || 0) > currentRankIndex()) { logEvent('❌ Rang Bridges insuffisant'); return; }
-      const cost = Math.ceil(s.cost * (1 + level * 0.8) * RANKS[currentRankIndex()].costMult * shopDiscountMult()); // paliers de plus en plus chers
+      const cost = Math.ceil(s.cost * (1 + level * 0.8) * RANKS[currentRankIndex()].costMult * shopDiscountMult() * (1 - prepperPerkBonus('structureDiscount'))); // paliers de plus en plus chers + perk prepper Ingénieur
       if (game.money < cost) { logEvent("❌ Budget"); return; }
       game.money -= cost;
       game.structures[type] = level + 1;
@@ -2903,6 +3335,7 @@
       if (isBTZone(destX, destY)) risk += 0.35;
       if (isNearHostileMuleCamp(destX, destY)) risk += 0.15; // interception par un camp MULE actif
       if (isOnRoute(destX, destY)) risk -= 0.15;
+      risk += weatherRiskMod(); // Timefall/Duststorm persistants: visibilité réduite (#Phase5)
 
       risk *= DIFFICULTIES[game.difficulty || 'normal'].riskMult;
       risk = Math.max(0.08, Math.min(1, risk)); // plancher 8%: jamais 100% safe
@@ -2948,7 +3381,7 @@
       const campRiskCut = dominantStructure() === 'shelter' ? 0.03 : 0;
       const route = ROUTE_TYPES[(questOpts && questOpts.route)] || null;
       const event = generateEvent(porter, distance, destX, destY, cargo.riskMod + overloadRiskMod - (questOpts && questOpts.riskCut || 0) - festivalValue('riskCut') - campRiskCut + (route ? route.riskMod : 0)); // riskCut: raid + festival + spécialité camp + itinéraire
-      let timeMultiplier = (porter.equipment.vehicle ? VEHICLE_SPEED[porter.equipment.vehicle] : 1) * cargo.timeMult * (route ? route.timeMult : 1);
+      let timeMultiplier = (porter.equipment.vehicle ? VEHICLE_SPEED[porter.equipment.vehicle] : 1) * cargo.timeMult * (route ? route.timeMult : 1) * ((questOpts && questOpts.extraTimeMult) || 1);
       if (onRoute) timeMultiplier *= Math.max(0.4, 0.7 - gradeLevel(porter, 'reseau') * 0.03) * (1 - (game.structures.zipline || 0) * 0.08) * (dominantStructure() === 'zipline' ? 0.97 : 1) * (isNearPCC(destX, destY, 'zipline') ? 0.8 : 1); // -30% temps + Porter Grade Réseau + zipline + spécialité camp + tyrolienne PCC
       // Cargo lourd sans véhicule: pénalité de temps supplémentaire
       if (cargoType === 'heavy' && !porter.equipment.vehicle) timeMultiplier *= 1.15;
@@ -2977,7 +3410,7 @@
         condition: 100, // état du cargo à l'arrivée -> note S/A/B/C (#1)
         btExposure: sampleBTExposure(porter.x, porter.y, destX, destY), // 0-5 cellules BT sur le trajet
         detection: 0, spotted: false, // jauge de détection progressive (#B)
-        quest: questOpts ? { flavor: questOpts.flavor } : null,
+        quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need } : null,
         raidId: (questOpts && questOpts.raidId) || null,
         destTerrain, lostCargoBonus, ghostName: ghostPCC ? ghostPCC.ghostName : null, // contexte pour le récit émergent
         maxSteps: Math.ceil(distance * 2 * timeMultiplier),
@@ -3033,7 +3466,7 @@
 
             // Butin pour le Chaudron: survivre à un BT/MULE a une chance de laisser du matériau récupérable
             if (p.health > 0) {
-              const lootBonus = dominantStructure() === 'cauldron' ? 1.1 : 1;
+              const lootBonus = (dominantStructure() === 'cauldron' ? 1.1 : 1) * (1 + prepperPerkBonus('materialBonus'));
               if (evt.id === 'bt' && Math.random() < 0.4 * lootBonus) { game.materials.chiral_crystal++; if (verbose) logEvent('  🔮 +1 Cristal chiral récupéré'); }
               if (evt.id === 'ambush' && Math.random() < 0.35 * lootBonus) { game.materials.mule_scrap++; if (verbose) logEvent('  🔧 +1 Ferraille MULE récupérée'); }
               if (evt.id === 'bt' || evt.id === 'ambush') rollRelic(); // toujours loggée si trouvée, même en vie de camp
@@ -3102,6 +3535,7 @@
             logEvent(`💀 NÉANTISATION — ${p.name} a rejoint le rivage`, 'death');
             triggerVoidout(p.x, p.y);
             recordHallOfFame(p, 'néantisé');
+            applyPrepperDeliveryOutcome(d.quest, false, null);
             p.status = "dead";
             continue;
           }
@@ -3117,6 +3551,7 @@
             p.xp += 5;
             game.reputation = Math.max(0, game.reputation - 3);
             if (d.quest) logEvent(`❌ ${p.name} arrive — cargo urgent invalidé, aucune prime`, 'warn');
+            applyPrepperDeliveryOutcome(d.quest, false, null);
             p.status = "idle";
             continue;
           }
@@ -3132,6 +3567,7 @@
 
           // Note de livraison (condition cargo à l'arrivée) → likes, canon DS Porter Grade (#1)
           const rating = deliveryRating(d.condition);
+          applyPrepperDeliveryOutcome(d.quest, true, rating);
           p.likes += rating.likes;
           if (rating.grade === 'S') game.reputation = Math.min(100, game.reputation + 2); // bonus S-rank
 
@@ -3245,10 +3681,15 @@
       checkSponsor();
       checkMuleCamps();
       checkSubsidiaries();
+      clearExpiredWeather();
+      updatePrepperNeeds();
+      generatePrepperContracts();
+      applyHermitGifts();
+      runAutomation();
 
       // Récupération santé (réduite: repos forcé devient un vrai outil, pas juste attendre)
       for (let p of game.porters) {
-        if (p.status === "idle" && p.health < 100) p.health = Math.min(100, p.health + 6);
+        if (p.status === "idle" && p.health < 100) p.health = Math.min(100, p.health + 6 + prepperPerkBonus('fastHeal'));
       }
 
       // Frappe Temporelle ou Duststorm: ambiance visuelle, pas d'impact mécanique
@@ -3312,6 +3753,9 @@
       renderSponsor();
       renderInfra();
       renderPorterTarget();
+      renderAutomationPanel();
+      renderLogisticsDashboard();
+      refreshInspectorIfOpen();
       // drawMap tourne en boucle continue (rAF) depuis l'init, pas besoin de la relancer ici
     }
 
@@ -3414,6 +3858,93 @@
       const bonus = (game.infraInvestments * 0.2).toFixed(1);
       el.innerHTML = `💰 Investissement Bridges: ${game.infraInvestments}x (+${bonus}% reward permanent)<br>
         <button onclick="investInfrastructure()" ${game.money < cost ? 'disabled' : ''} style="font-size:8px;">Investir ($${cost})</button>`;
+    }
+
+    // ORDRES PERMANENTS — automatisation configurable (#Phase4). Appliqués en fin de mois (endMonthBookkeeping),
+    // paiement identique aux actions manuelles équivalentes (repairGear/forceRest), juste sans clic.
+    function toggleAutomation(key) {
+      if (!game.automation) game.automation = {};
+      game.automation[key] = !game.automation[key];
+      render();
+    }
+    function setAutomationThreshold(key, value) {
+      if (!game.automation) game.automation = {};
+      game.automation[key] = Math.max(0, Math.min(100, parseInt(value) || 0));
+      render();
+    }
+    function runAutomation() {
+      const auto = game.automation || (game.automation = { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false });
+      if (!auto.autoRest && !auto.autoRepair && !auto.autoReturn) return;
+      let rested = 0, repaired = 0, returned = 0;
+      for (const p of game.porters) {
+        if (p.status !== 'idle' || p.health <= 0) continue;
+        if (auto.autoRepair && (p.gearWear || 0) >= auto.autoRepairThreshold) {
+          const cost = Math.ceil((p.gearWear || 0) * 5);
+          if (game.money >= cost) { game.money -= cost; p.gearWear = 0; repaired++; }
+        }
+        if (auto.autoRest && p.stress >= auto.autoRestThreshold) {
+          const cost = Math.ceil((p.salary / 2) * (1 + p.stress / 100));
+          if (game.money >= cost) { game.money -= cost; p.stress = 0; p.health = Math.min(100, p.health + 25); rested++; }
+        }
+        if (auto.autoReturn) {
+          const d = game.mapsData[p.map];
+          const spawn = d && (d.branches[d.activeBranch] || d.branches[0]);
+          if (spawn && (p.x !== spawn.x || p.y !== spawn.y)) { p.x = spawn.x; p.y = spawn.y; returned++; }
+        }
+      }
+      // Un seul log groupé par catégorie: évite le spam qu'un log par porteur produirait
+      if (rested > 0) logEvent(`🤖 Ordres permanents: ${rested} porteur(s) mis au repos automatiquement`, 'good');
+      if (repaired > 0) logEvent(`🤖 Ordres permanents: ${repaired} équipement(s) réparé(s) automatiquement`, 'good');
+      if (returned > 0) logEvent(`🤖 Ordres permanents: ${returned} porteur(s) rappelé(s) au dépôt`, 'good');
+    }
+    function renderAutomationPanel() {
+      const el = document.getElementById('automationPanel');
+      if (!el) return;
+      const a = game.automation || (game.automation = { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false });
+      el.innerHTML = `
+        <label style="display:flex; align-items:center; gap:6px; font-size:9px; margin:4px 0;">
+          <input type="checkbox" style="width:auto;" ${a.autoRest ? 'checked' : ''} onchange="toggleAutomation('autoRest')"> Auto-Repos si stress ≥
+          <input type="number" min="0" max="100" value="${a.autoRestThreshold}" style="width:44px; padding:2px; margin:0;" onchange="setAutomationThreshold('autoRestThreshold', this.value)">%
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; font-size:9px; margin:4px 0;">
+          <input type="checkbox" style="width:auto;" ${a.autoRepair ? 'checked' : ''} onchange="toggleAutomation('autoRepair')"> Auto-Réparation si usure ≥
+          <input type="number" min="0" max="100" value="${a.autoRepairThreshold}" style="width:44px; padding:2px; margin:0;" onchange="setAutomationThreshold('autoRepairThreshold', this.value)">%
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; font-size:9px; margin:4px 0;">
+          <input type="checkbox" style="width:auto;" ${a.autoReturn ? 'checked' : ''} onchange="toggleAutomation('autoReturn')"> Auto-Retour au dépôt (porteurs disponibles)
+        </label>
+        <div style="font-size:8px; color:var(--text-dim); margin-top:2px;">Appliqués en fin de mois, coûts identiques aux actions manuelles.</div>`;
+    }
+
+    // TABLEAU DE BORD LOGISTIQUE — synthèse financière mensuelle: revenus passifs vs coûts fixes (#Phase4)
+    const VEHICLE_MAINTENANCE_COST = { truck: 80, bike: 40, trike: 60 };
+    function computeLogisticsDashboard() {
+      const active = game.porters.filter(p => p.status !== 'dead' && p.status !== 'left');
+      const salaries = active.reduce((s, p) => s + p.salary, 0);
+      const vehicleCost = active.reduce((s, p) => s + (p.equipment.vehicle ? (VEHICLE_MAINTENANCE_COST[p.equipment.vehicle] || 0) : 0), 0);
+      let relayIncome = 0, generatorIncome = 0;
+      for (const key in game.mapsData) {
+        const d = game.mapsData[key];
+        relayIncome += (d.muleCamps || []).filter(c => c.status === 'relay').reduce((s, c) => s + c.strength * 40, 0);
+        generatorIncome += (d.pccInstalls || []).filter(p => p.type === 'generator').length * 60;
+      }
+      const sponsorIncome = game.sponsor ? game.sponsor.monthlyIncome : 0;
+      const subsidyIncome = (game.subsidiaries || []).reduce((s, sub) => s + Math.max(0, Math.round(500 - (game.month - sub.foundedMonth) * 15)), 0);
+      const passiveIncome = relayIncome + generatorIncome + sponsorIncome + subsidyIncome;
+      const fixedCosts = salaries + vehicleCost;
+      return { salaries, vehicleCost, relayIncome, generatorIncome, sponsorIncome, subsidyIncome, passiveIncome, fixedCosts, netEstimate: passiveIncome - fixedCosts };
+    }
+    function renderLogisticsDashboard() {
+      const el = document.getElementById('logisticsDashboard');
+      if (!el) return;
+      const dash = computeLogisticsDashboard();
+      const netColor = dash.netEstimate >= 0 ? 'var(--chiral)' : 'var(--blood)';
+      el.innerHTML = `
+        <div class="stat-line"><span class="stat-label">Revenus passifs</span><span class="stat-val">+$${dash.passiveIncome}/mois</span></div>
+        <div style="font-size:8px; color:var(--text-dim); margin:-2px 0 4px;">Relais $${dash.relayIncome} · Générateurs $${dash.generatorIncome} · Sponsor $${dash.sponsorIncome} · Filiales $${dash.subsidyIncome}</div>
+        <div class="stat-line"><span class="stat-label">Coûts fixes</span><span class="stat-val" style="color:var(--blood);">-$${dash.fixedCosts}/mois</span></div>
+        <div style="font-size:8px; color:var(--text-dim); margin:-2px 0 4px;">Salaires $${dash.salaries} · Maintenance véhicules $${dash.vehicleCost}</div>
+        <div class="stat-line"><span class="stat-label">Bénéfice net estimé</span><span class="stat-val" style="color:${netColor};">${dash.netEstimate >= 0 ? '+' : ''}$${dash.netEstimate}/mois</span></div>`;
     }
 
     function renderSponsor() {
@@ -3605,18 +4136,67 @@
         ${d.branches.length > 1 ? `<div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;">${branchButtons}</div>` : ''}`;
     }
 
+    // Petite jauge de besoin prepper (Médical/Nourriture/Techno), couleur selon criticité
+    function needGaugeHtml(label, value) {
+      const color = value >= 80 ? 'var(--blood)' : value >= 50 ? 'var(--amber)' : 'var(--chiral)';
+      return `<div class="gauge" style="min-width:0;">
+        <div class="gauge-label"><span>${label}</span><span style="color:${color};">${Math.round(value)}%</span></div>
+        <div class="gauge-track"><div class="gauge-fill" style="width:${value}%; background:${color};"></div></div>
+      </div>`;
+    }
+    // Carte HTML d'un prepper — factorisée pour être partagée entre l'onglet Camp et l'Inspecteur Tactique (#Phase3)
+    function prepperCardHtml(d, k, i, idlePorters) {
+      migratePrepperKnot(k);
+      const connected = d.routes.has(cellKey(k.x, k.y));
+      const arch = PREPPER_ARCHETYPES[k.archetype];
+      if (!connected) {
+        return `<div class="item" style="margin-bottom:5px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🔒 ${k.name} <span style="color:var(--text-dim);">(${arch.icon} ${arch.name})</span></span>
+            <button style="font-size:8px; padding:2px 6px; margin:0; width:auto;" onclick="connectKnot(${i})">Raccorder</button>
+          </div>
+        </div>`;
+      }
+      const uid = `${game.currentMap}-${i}`;
+      const porterOptions = idlePorters.length
+        ? idlePorters.map(p => `<option value="${p.id}">${p.name} (${SKILLS[p.skill].name}, HP${Math.ceil(p.health)})</option>`).join('')
+        : '<option value="">Aucun porteur disponible</option>';
+      const routeOptions = Object.entries(ROUTE_TYPES).map(([k2, r]) => `<option value="${k2}">${r.icon} ${r.name}</option>`).join('');
+      const contracts = (k.contracts || []).map(c => `
+        <div style="border-left:2px solid ${c.negotiable && !c.negotiated ? 'var(--gold)' : 'var(--chiral-dim)'}; padding-left:5px; margin:4px 0;">
+          ${c.flavor}<br>→ +$${c.reward} · expire mois ${c.expiresMonth}
+          <div style="display:flex; gap:3px; margin-top:2px; flex-wrap:wrap;">
+            <select id="pcp-${uid}-${c.id}" style="flex:1; font-size:8px; background:#1a1712; color:var(--text); border:1px solid #332e24;">${porterOptions}</select>
+            <select id="pcr-${uid}-${c.id}" style="flex:1; font-size:8px; background:#1a1712; color:var(--text); border:1px solid #332e24;">${routeOptions}</select>
+          </div>
+          <div style="display:flex; gap:3px; margin-top:2px;">
+            <button style="font-size:8px; padding:2px 6px; margin:0; width:auto;" ${idlePorters.length ? '' : 'disabled'}
+              onclick="assignPrepperContract(${i}, '${c.id}', parseInt(document.getElementById('pcp-${uid}-${c.id}').value), document.getElementById('pcr-${uid}-${c.id}').value)">🚚 Assigner ce porteur</button>
+            ${c.negotiable && !c.negotiated ? `<button style="font-size:8px; padding:2px 6px; margin:0; width:auto;" onclick="negotiatePrepperContract(${i}, '${c.id}')">🗣️ Négocier</button>` : ''}
+          </div>
+        </div>`).join('');
+      return `<div class="item" style="margin-bottom:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <b>${arch.icon} ${k.name}</b>
+          <span style="font-size:9px; color:var(--gold);">${prepperStarsLabel(k.relation)}</span>
+        </div>
+        <div style="font-size:9px; color:var(--chiral);">${arch.name} — ${arch.perkDesc}</div>
+        <div class="gauge-row" style="margin-top:4px;">
+          ${needGaugeHtml('⚕️ Médical', k.needs.medical)}
+          ${needGaugeHtml('🍞 Nourriture', k.needs.food)}
+          ${needGaugeHtml('🔩 Techno', k.needs.tech)}
+        </div>
+        ${contracts || '<div style="font-size:9px; color:var(--text-dim); margin-top:3px;">Aucune requête active.</div>'}
+      </div>`;
+    }
+    // VILLES PRINCIPALES / PREPPERS — archétype, relation, besoins dynamiques et requêtes assignables (#Phase1/#Phase2)
     function renderMainKnots() {
       const el = document.getElementById('mainKnots');
       if (!el) return;
       const d = game.mapsData[game.currentMap];
       if (!d || !d.mainKnots || !d.mainKnots.length) { el.innerHTML = ''; return; }
-      el.innerHTML = d.mainKnots.map((k, i) => {
-        const connected = d.routes.has(cellKey(k.x, k.y));
-        return `<div style="font-size:9px; display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; gap:6px;">
-          <span>${connected ? '✅' : '🔒'} ${k.name}</span>
-          ${connected ? '' : `<button style="font-size:8px; padding:2px 6px; margin:0;" onclick="connectKnot(${i})">Raccorder</button>`}
-        </div>`;
-      }).join('');
+      const idlePorters = game.porters.filter(p => p.map === game.currentMap && p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100);
+      el.innerHTML = d.mainKnots.map((k, i) => prepperCardHtml(d, k, i, idlePorters)).join('');
     }
 
     function renderSideQuests() {
@@ -3630,15 +4210,24 @@
         headerEl.innerHTML = `QUÊTES ANNEXES${quests.length ? `<span class="notif-badge">${hasSpecial ? '⭐' : '🔔'}</span>` : ''}`;
       }
       if (!quests.length) { el.innerHTML = '<div style="font-size:9px; color:var(--text-dim);">Aucune quête active</div>'; return; }
-      const idleCount = game.porters.filter(p => p.map === game.currentMap && p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100).length;
+      const idlePorters = game.porters.filter(p => p.map === game.currentMap && p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100);
+      const idleCount = idlePorters.length;
       const squadSize = Math.min(idleCount, 3);
+      // Sélection manuelle d'escouade (#Phase2): cases à cocher, synergies calculées selon les compétences cochées.
+      // Si rien n'est coché au lancement, l'ancienne auto-sélection (les 3 premiers idle) prend le relais.
+      const squadPickerTemplate = idlePorters.length ? `<div style="max-height:64px; overflow-y:auto; margin:3px 0; border:1px solid #221f18; padding:2px;">
+        ${idlePorters.map(p => `<label style="display:flex; align-items:center; gap:3px; font-size:8px; cursor:pointer;">
+          <input type="checkbox" data-quest-squad="__QID__" value="${p.id}" style="width:auto; margin:0;"> ${p.name} (${SKILLS[p.skill].name})
+        </label>`).join('')}
+      </div><div style="font-size:8px; color:var(--text-dim);">Cochez pour choisir l'escouade — sinon auto-sélection. Synergies: 🗺️💪 Scout+Frappeur = Escorte Rapide, 👁️🚗 DOOMS+Chauffeur = Convoi Anti-BT.</div>` : '';
       el.innerHTML = quests.map(q => `
         <div class="${q.crisis ? 'alert-crisis' : ''}" style="font-size:9px; margin-bottom:5px; border-left:2px solid ${q.crisis ? 'var(--blood)' : q.special ? '#c76bff' : 'var(--amber)'}; padding-left:4px;">
           ${q.crisis ? '🌌 HAUTE MENACE — ' : q.special ? '⭐ ORDRE SPÉCIAL — ' : ''}${q.flavor}<br>→ (${q.x},${q.y}) +$${q.reward} · expire mois ${q.expiresMonth}<br>
           <select id="route-${q.id}" style="font-size:8px; margin-top:2px; background:#1a1712; color:var(--text); border:1px solid #332e24;">
             ${Object.entries(ROUTE_TYPES).map(([k, r]) => `<option value="${k}">${r.icon} ${r.name} — ${r.desc}</option>`).join('')}
-          </select><br>
-          <button style="font-size:8px; padding:2px 6px; margin-top:2px;" ${idleCount >= (q.minSquad || 1) ? '' : 'disabled'} onclick="assignQuest('${q.id}', document.getElementById('route-${q.id}').value)">🚛 Lancer ${(q.special || q.crisis) ? `${q.crisis ? 'le contrat' : "l'ordre"} (min. ${q.minSquad})` : `le raid (${squadSize} porteur${squadSize > 1 ? 's' : ''})`}</button>
+          </select>
+          ${squadPickerTemplate.split('__QID__').join(q.id)}
+          <button style="font-size:8px; padding:2px 6px; margin-top:2px;" ${idleCount >= (q.minSquad || 1) ? '' : 'disabled'} onclick="launchQuestFromUI('${q.id}')">🚛 Lancer ${(q.special || q.crisis) ? `${q.crisis ? 'le contrat' : "l'ordre"} (min. ${q.minSquad})` : `le raid (${squadSize} porteur${squadSize > 1 ? 's' : ''})`}</button>
         </div>`).join('');
     }
 
@@ -4345,8 +4934,8 @@
       initSplash();
       const mapCanvas = document.getElementById('gameMap');
       if (mapCanvas) mapCanvas.addEventListener('click', (evt) => {
-        if (!placingPCC) return;
         const cell = canvasClickToCell(evt);
+        if (!placingPCC) { inspectMapCell(cell.x, cell.y); return; }
         placePCCAt(cell.x, cell.y);
       });
       await renderSlotMenu();
