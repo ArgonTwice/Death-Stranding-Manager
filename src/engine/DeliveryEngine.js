@@ -15,6 +15,7 @@ import { checkSponsor, checkSubsidiaries } from '../systems/EconomySystem.js';
 import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems/NetworkSystem.js';
 import { gearEffectiveness, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
+import { applyUrgentQuestOutcome, clearExpiredUrgentQuests, tickUrgentQuestSpawns } from '../systems/QuestSystem.js';
 import { timefallSpeedMult } from '../systems/TimefallSystem.js';
 import { tickWeatherSystem } from '../systems/WeatherSystem.js';
 import { markMapDirty } from '../ui/MapRenderer.js';
@@ -468,7 +469,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
         condition: 100, // état du cargo à l'arrivée -> note S/A/B/C (#1)
         btExposure: sampleBTExposure(porter.x, porter.y, destX, destY), // 0-5 cellules BT sur le trajet
         detection: 0, spotted: false, // jauge de détection progressive (#B)
-        quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need } : null,
+        quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need, urgentQuestId: questOpts.urgentQuestId, zeroDamage: questOpts.zeroDamage } : null,
         raidId: (questOpts && questOpts.raidId) || null,
         destTerrain, lostCargoBonus, ghostName: ghostPCC ? ghostPCC.ghostName : null, // contexte pour le récit émergent
         maxSteps: Math.ceil(distance * B.maxStepsDistanceMult * timeMultiplier),
@@ -595,6 +596,7 @@ export function tick() {
             triggerVoidout(p.x, p.y);
             recordHallOfFame(p, 'néantisé');
             applyPrepperDeliveryOutcome(d.quest, false, null);
+            applyUrgentQuestOutcome(d.quest, false, null);
             p.status = "dead";
             continue;
           }
@@ -611,6 +613,7 @@ export function tick() {
             game.reputation = Math.max(0, game.reputation - B.cargoFailedReputationLoss);
             if (d.quest) logEvent(`❌ ${p.name} arrive — cargo urgent invalidé, aucune prime`, 'warn');
             applyPrepperDeliveryOutcome(d.quest, false, null);
+            applyUrgentQuestOutcome(d.quest, false, null);
             p.status = "idle";
             continue;
           }
@@ -627,6 +630,9 @@ export function tick() {
           // Note de livraison (condition cargo à l'arrivée) → likes, canon DS Porter Grade (#1)
           const rating = deliveryRating(d.condition);
           applyPrepperDeliveryOutcome(d.quest, true, rating);
+          // Quête "zéro-dommage" (ex: le Médecin): tout dégât en chemin invalide la réussite côté loyauté,
+          // même si la livraison en elle-même est un succès normal (prime/XP/likes inchangés).
+          applyUrgentQuestOutcome(d.quest, !(d.quest && d.quest.zeroDamage && d.condition < 100), rating);
           p.likes += rating.likes;
           if (rating.grade === 'S') game.reputation = Math.min(100, game.reputation + B.sRankReputationGain); // bonus S-rank
 
@@ -749,6 +755,8 @@ export function advanceDay() {
       }
       tick();
       tickWeatherSystem(); // V0.3.0: météo dynamique par territoire + avance du Chiral Forecast, tous les jours
+      tickUrgentQuestSpawns(); // V0.3.0: chance quotidienne de quête urgente indépendante de la météo (réputation)
+      clearExpiredUrgentQuests();
 
       game.dayInMonth++;
       if (game.dayInMonth >= DAYS_PER_MONTH) {
