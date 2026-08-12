@@ -124,7 +124,8 @@ export function serializeGame() {
         bonds: game.bonds, legacyBonus: game.legacyBonus, collection: game.collection,
         duos: game.duos, sponsor: game.sponsor, automation: game.automation, difficulty: game.difficulty, dayInMonth: game.dayInMonth, monthState: game.monthState, ngPlus: game.ngPlus, infraInvestments: game.infraInvestments, subsidiaries: game.subsidiaries || [],
         activeRelicIds: game.activeRelicIds, activeCampEventIds: runtime.activeCampEvents.map(e => e.id), activeVisitorOfferIds: runtime.activeVisitorOffers.map(o => o.id), activeFestivalIds: runtime.activeFestivalsPool.map(f => f.id),
-        loyalty: game.loyalty, urgentQuests: game.urgentQuests || [], urgentQuestHistory: game.urgentQuestHistory || []
+        loyalty: game.loyalty, urgentQuests: game.urgentQuests || [], urgentQuestHistory: game.urgentQuestHistory || [],
+        telemetry: game.telemetry || null
       };
     }
 
@@ -142,6 +143,7 @@ export function deserializeGame(s) {
         status: p.status === 'en route' ? 'idle' : p.status
       }));
       game.deliveries = [];
+      game.convoys = []; // V0.4.0: en transit uniquement, jamais persisté (même logique que game.deliveries)
       game.structures = s.structures || {};
       game.voidouts = [];
       game.mapsData = {};
@@ -175,6 +177,7 @@ export function deserializeGame(s) {
       game.loyalty = (typeof s.loyalty === 'number') ? s.loyalty : 50;
       game.urgentQuests = s.urgentQuests || [];
       game.urgentQuestHistory = s.urgentQuestHistory || [];
+      game.telemetry = s.telemetry || { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } };
       runtime.activeCampEvents = s.activeCampEventIds ? CAMP_EVENTS.filter(e => s.activeCampEventIds.includes(e.id)) : CAMP_EVENTS;
       runtime.activeVisitorOffers = s.activeVisitorOfferIds ? VISITOR_OFFERS.filter(o => s.activeVisitorOfferIds.includes(o.id)) : VISITOR_OFFERS;
       runtime.activeFestivalsPool = s.activeFestivalIds ? FESTIVALS.filter(f => s.activeFestivalIds.includes(f.id)) : FESTIVALS;
@@ -219,7 +222,7 @@ export function newGame(confirmFirst, slot) {
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';
       const startMoney = DIFFICULTIES[difficulty].startMoney;
-      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [] });
+      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } } });
       Object.keys(game.equipBought).forEach(k => game.equipBought[k] = 0);
       game.gameEnded = false;
       runtime.announcedRank = 0;

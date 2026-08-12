@@ -78,7 +78,10 @@ const result = {
   urgentQuestsActive: (game.urgentQuests || []).length,
   urgentQuestHistoryCount: (game.urgentQuestHistory || []).length,
   currentWeather: (d.weather && d.weather.type) || 'calm',
-  forecast: d.forecast || []
+  forecast: d.forecast || [],
+  // V0.4.0 — couvre le déterminisme des convois/télémétrie (auto-dispatch peut composer des convois via RNG)
+  telemetry: game.telemetry || null,
+  convoysActive: (game.convoys || []).length
 };
 
 process.stdout.write(JSON.stringify(result));

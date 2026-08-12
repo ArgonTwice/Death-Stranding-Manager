@@ -391,7 +391,11 @@ export const BALANCE = {
     botanistDemandMult: 1.4 // +40% demande botaniste (graines/culture fragilisées par la corrosion)
   },
   shelter: {
-    protectionRadius: 1.5 // rayon (cases) dans lequel un Abri Anti-Timefall protège porteurs/PCC
+    protectionRadius: 1.5, // rayon (cases) dans lequel un Abri Anti-Timefall protège porteurs/PCC
+    // V0.4.0 — Abri Chiral Avancé: même protection Timefall que l'abri de base, + réparation auto
+    advancedCost: 1800,
+    advancedProtectionRadius: 2,
+    advancedRepairPerDay: 8 // réduction d'usure/jour pour les porteurs (véhicule compris) dans le rayon
   },
   quest: {
     maxActiveUrgent: 3,
@@ -416,5 +420,27 @@ export const BALANCE = {
     refuseLoyaltyLoss: 4,
     refuseUrgentMedicalLoyaltyLoss: 12,
     loyaltySchemaUnlockThreshold: 70
+  },
+  // V0.4.0 — Heavy Logistics & Convoys Update
+  risk: {
+    baseSignature: 0.05, // signature chirale plancher, même pour un porteur seul à vide
+    weightSignatureMult: 0.0012, // par unité de masse de cargo (cargo.mass)
+    vehicleSignatureBonus: 0.06, // un véhicule est plus visible/bruyant qu'un porteur à pied
+    techSignatureMult: 0.025, // par pièce d'équipement "actif" (scanner/bolagun/cryobox/ancre)
+    signatureRiskMult: 1 // conversion signature -> contribution au risque (même échelle 0-1 que riskMod)
+  },
+  convoy: {
+    maxEscorts: 3, // + 1 porteur-véhicule = 4 membres max
+    rewardSharePerEscort: 0.16, // même logique que squadBonusPerMember (DeliveryEngine)
+    riskCutPerEscort: 0.07,
+    riskCutCap: 0.21,
+    strategies: {
+      fast:     { timeMult: 0.85, gearWearMult: 1.2 },                  // 🚚 Rapide: +15% vitesse, +20% usure
+      secure:   { timeMult: 1.1, dmgMult: 0.6, riskCut: 0.18 },          // 🛡️ Sécurisé: -10% vitesse, moins de dégâts/embuscades
+      economic: { rewardMult: 1.35, signatureMult: 1.5 }                // 💰 Économique: +35% récompense, signature maximale
+    }
+  },
+  telemetry: {
+    historyCap: 30
   }
 };

@@ -18,8 +18,10 @@ import { buildStructure, computeLogisticsDashboard, infraCost, investInfrastruct
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { beachJump, equipSlots, equippedCount, forceRest, hire, porterTitle, repairGear, retirePorter } from '../systems/PorterSystem.js';
 import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel } from '../systems/PrepperSystem.js';
+import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
 import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
 import { refreshInspectorIfOpen } from './CanvasInspector.js';
+import { renderConvoyPanel } from './ConvoyPanel.js';
 import { drawMap } from './MapRenderer.js';
 import { renderMiniMap } from './MiniMap.js';
 import { renderQuestPanel } from './QuestPanel.js';
@@ -66,9 +68,28 @@ export function render() {
       renderWeatherForecast();
       renderMiniMap();
       renderQuestPanel();
+      renderConvoyPanel();
+      renderTelemetryReport();
       refreshInspectorIfOpen();
       renderDebugHud();
       // drawMap tourne en boucle continue (rAF) depuis l'init, pas besoin de la relancer ici
+    }
+
+// V0.4.0 — rapport de performance logistique (TelemetrySystem.js): taux de réussite des convois,
+// taux d'utilisation des Abris Anti-Timefall, meilleur rendement par type d'itinéraire.
+export function renderTelemetryReport() {
+      const el = document.getElementById('telemetryPanel');
+      if (!el) return;
+      const t = generateTelemetryReport();
+      const pct = v => v == null ? '—' : `${v}%`;
+      const routeLabel = { express: '🛡️ Chiral-Express', shortcut: '👹 Raccourci Temporel', contraband: '🏴‍☠️ Contrebande', none: '🚶 Hors itinéraire' };
+      el.innerHTML = `
+        <div class="stat-line"><span class="stat-label">Convois lancés</span><span class="stat-val">${t.convoysLaunched}</span></div>
+        <div class="stat-line"><span class="stat-label">Taux réussite convois</span><span class="stat-val">${pct(t.convoySuccessRate)}</span></div>
+        <div class="stat-line"><span class="stat-label">Convois partiels</span><span class="stat-val">${t.convoysArrivedPartial}</span></div>
+        <div class="stat-line"><span class="stat-label">Utilisation Abris Anti-Timefall</span><span class="stat-val">${pct(t.shelterUtilization)}</span></div>
+        <div class="stat-line"><span class="stat-label">Taux réussite livraisons</span><span class="stat-val">${pct(t.deliverySuccessRate)}</span></div>
+        <div class="stat-line"><span class="stat-label">Meilleur rendement</span><span class="stat-val">${t.bestRouteType ? routeLabel[t.bestRouteType] : '—'}</span></div>`;
     }
 
 // V0.3.0 — Chiral Forecast: météo actuelle + prévision à N jours du territoire affiché, sur le
@@ -640,3 +661,7 @@ eventBus.on('quest:accepted', () => renderQuestPanel());
 eventBus.on('quest:negotiated', () => renderQuestPanel());
 eventBus.on('quest:refused', () => renderQuestPanel());
 eventBus.on('quest:expired', () => renderQuestPanel());
+// V0.4.0
+eventBus.on('convoy:created', () => renderConvoyPanel());
+eventBus.on('convoy:departed', () => { renderConvoyPanel(); renderTelemetryReport(); });
+eventBus.on('convoy:arrived', () => renderTelemetryReport());

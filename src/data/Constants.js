@@ -238,7 +238,16 @@ export const PCC_TYPES = {
       generator: { name: 'Générateur Chiral', icon: '⚡', cost: 800, desc: '+revenu passif mensuel' },
       bridge:    { name: 'Pont PCC', icon: '🌉', cost: 700, desc: 'annule la pénalité rivière à proximité' },
       zipline:   { name: 'Tyrolienne PCC', icon: '🔗', cost: 900, desc: '-20% temps à proximité' },
-      timefallShelter: { name: 'Abri Anti-Timefall', icon: '⛺', cost: 950, desc: 'protège porteurs proches de l\'usure et du ralenti Timefall' }
+      timefallShelter: { name: 'Abri Anti-Timefall', icon: '⛺', cost: 950, desc: 'protège porteurs proches de l\'usure et du ralenti Timefall' },
+      advancedChiralShelter: { name: 'Abri Chiral Avancé', icon: '🏛️', cost: 1800, desc: 'protection Timefall + réparation auto des véhicules/convois à proximité' }
+    };
+
+// Stratégies de Convoi Lourd (V0.4.0) — flavor + icônes; les coefficients numériques vivent dans
+// BALANCE.convoy.strategies (même clé).
+export const CONVOY_STRATEGIES = {
+      fast:     { name: 'Rapide', icon: '🚚', desc: '+15% vitesse, +20% risque d\'usure' },
+      secure:   { name: 'Sécurisé', icon: '🛡️', desc: 'Moins de dégâts/embuscades, -10% vitesse' },
+      economic: { name: 'Économique', icon: '💰', desc: 'Gains maximisés, signature chirale maximale' }
     };
 
 // Météo par territoire (V0.3.0) — la Duststorm australienne canon est présentée au joueur comme

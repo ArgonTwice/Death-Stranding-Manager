@@ -92,6 +92,7 @@
       <button onclick="startPlacingPCC('bridge')">🌉 Pont PCC ($700+)</button>
       <button onclick="startPlacingPCC('zipline')">🔗 Tyrolienne PCC ($900+)</button>
       <button onclick="startPlacingPCC('timefallShelter')">⛺ Abri Anti-Timefall ($950+)</button>
+      <button onclick="startPlacingPCC('advancedChiralShelter')">🏛️ Abri Chiral Avancé ($1800+)</button>
       <button onclick="cancelPlacingPCC()" class="danger">✕ Annuler le placement</button>
       <div id="pccModeHint" style="font-size:9px; color:var(--amber); margin-top:2px;"></div>
 
@@ -161,6 +162,9 @@
 
       <h3>TABLEAU DE BORD LOGISTIQUE</h3>
       <div id="logisticsDashboard"></div>
+
+      <h3>TÉLÉMÉTRIE — CONVOIS &amp; ABRIS</h3>
+      <div id="telemetryPanel"></div>
 
       <h3>AMBIANCE</h3>
       <button onclick="testAudioBeep()">🔊 Tester le son (bip direct)</button>
@@ -233,6 +237,16 @@
     </div>
   </div>
 
+  <!-- Tiroir de planification de convois (V0.4.0) — glisse depuis la droite, comme le tiroir de
+       quêtes; composition d'escouade + prévisualisation risque/gain avant de lancer. -->
+  <div class="quest-drawer" id="convoyDrawer">
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closeConvoyPanel()">✕</button>
+      <h2>◆ CONVOI LOURD</h2>
+      <div id="convoyDrawerBody" class="quest-drawer-body"></div>
+    </div>
+  </div>
+
   <div class="main">
     <div class="map-container">
       <div class="map-status-strip">
@@ -260,6 +274,11 @@
       <!-- Tiroir de quêtes (V0.3.0): glisse depuis le bord, ne recouvre jamais le Canvas -->
       <button id="questDrawerToggle" class="quest-drawer-toggle" onclick="toggleQuestPanel()" aria-label="Quêtes">
         🎯<span id="questDrawerBadge" class="quest-drawer-badge"></span>
+      </button>
+
+      <!-- Tiroir de convois (V0.4.0): même comportement, décalé pour ne pas chevaucher le bouton quêtes -->
+      <button id="convoyDrawerToggle" class="quest-drawer-toggle convoy-drawer-toggle" onclick="toggleConvoyPanel()" aria-label="Convois">
+        🚛
       </button>
     </div>
     

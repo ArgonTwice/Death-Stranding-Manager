@@ -482,10 +482,44 @@ export function playRainSwell() {
       if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
     }
 
+// V0.4.0 — départ de convoi: grondement grave de moteur qui monte puis se stabilise, distinct du
+// "thud" de construction (plus long, plus tendu vers l'avant — un véhicule qui s'ébranle).
+export function playConvoyDepartureRumble() {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(45, now);
+        osc.frequency.linearRampToValueAtTime(75, now + 0.6);
+        osc.frequency.linearRampToValueAtTime(55, now + 1.4);
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 260;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.16, now + 0.3);
+        g.gain.linearRampToValueAtTime(0.08, now + 1);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+        osc.connect(filter);
+        filter.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 1.7);
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
 // --- Abonnements EventBus : engine/systems ne joue jamais de son directement, il émet un événement
 // et c'est le moteur audio qui décide comment le traduire en son. ---
 eventBus.on('sfx:drum', (type) => playCinematicDrum(type));
 eventBus.on('sfx:brass', (intensity) => playBrassStinger(intensity));
+
+// V0.4.0 — Convois: grondement au départ, tension/impact à chaque attaque en transit.
+eventBus.on('convoy:departed', () => playConvoyDepartureRumble());
+eventBus.on('convoy:attacked', () => { pulseAlertAmbience(); playCinematicDrum('impact'); });
+eventBus.on('convoy:arrived', ({ fullSuccess }) => { if (fullSuccess) playBrassStinger(0.6); });
 
 // V0.3.0 — ambiance adaptative Météo/Combat/Quêtes: Exploration calme -> Tension Timefall -> Alerte BT.
 eventBus.on('weather:timefallStarted', () => { setAmbienceState('tension'); playRainSwell(); });

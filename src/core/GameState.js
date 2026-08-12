@@ -55,6 +55,8 @@ export const game = {
       loyalty: 50, // V0.3.0 — loyauté globale du réseau (0-100), distincte de reputation: gérée par QuestSystem (accept/negotiate/refuse)
       urgentQuests: [], // V0.3.0 — quêtes narratives urgentes actives (QuestSystem.js), déclenchées par météo/réputation
       urgentQuestHistory: [], // V0.3.0 — historique borné (succès/échec/refus/expiration) pour l'onglet "Terminées" de QuestPanel.js
+      convoys: [], // V0.4.0 — convois lourds en transit (ConvoySystem.js). Éphémère comme game.deliveries: jamais persisté.
+      telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, // V0.4.0 — rapport de performance logistique cumulé (TelemetrySystem.js), persisté
       // --- Propriétés repliées depuis d'anciennes variables top-level module-scope (refacto ES Modules) ---
       gameEnded: false,
       quarterSnapshot: { completed: 0, deaths: 0, money: 10000 },

@@ -431,6 +431,21 @@
     .qp-empty { font-size: 10px; color: var(--text-dim); padding: 10px 0; }
 
     /* ============================================================
+       V0.4.0 — Heavy Logistics & Convoys: tiroir de convois (réutilise
+       .quest-drawer/.qp-* ci-dessus), liste d'escortes, prévisualisation.
+       ============================================================ */
+    .convoy-drawer-toggle { top: 196px; } /* décalé sous le bouton quêtes, jamais superposés */
+    .convoy-escort-list { max-height: 120px; overflow-y: auto; border: 1px solid #221f18; padding: 2px; margin-bottom: 4px; }
+    .convoy-escort-item { display: flex; align-items: center; gap: 6px; min-height: 40px; font-size: 10px; cursor: pointer; padding: 4px 2px; }
+    .convoy-escort-item input { width: auto; min-height: 20px; }
+    .convoy-dest-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .convoy-preview { background: rgba(0,0,0,0.3); border: 1px solid #221f18; padding: 8px; margin: 8px 0; }
+    .convoy-preview-row { display: flex; justify-content: space-between; font-size: 10px; margin: 3px 0; }
+    .convoy-risk-high { color: var(--blood); font-weight: bold; }
+    .convoy-risk-low { color: var(--chiral); font-weight: bold; }
+    .convoy-launch-btn { width: 100%; margin-top: 6px; }
+
+    /* ============================================================
        MOBILE — placé en TOUT DERNIER dans la feuille de style pour
        gagner la cascade à coup sûr (une règle body{} plus haut dans
        le fichier ne peut plus l'écraser). Refonte, pas un patch:
@@ -483,7 +498,7 @@
          Canvas de la carte (il reste visible/jouable derrière le voile semi-transparent). */
       .quest-drawer { width: 100%; }
       .quest-drawer-toggle, .minimap-expand-btn { width: 48px !important; height: 48px !important; }
-      .qp-tab, .qp-action-btn, .qp-select { min-height: 48px !important; font-size: 11px !important; }
+      .qp-tab, .qp-action-btn, .qp-select, .convoy-escort-item { min-height: 48px !important; font-size: 11px !important; }
       .minimap-widget canvas { width: 84px; height: 84px; }
     }
   

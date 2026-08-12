@@ -1,6 +1,7 @@
 // AUTO-EXTRACTED MODULE: engine/WeatherEngine.js
 // Généré depuis le monolithe index.html original (refacto ES Modules, comportement inchangé).
 
+import { eventBus } from '../core/EventBus.js';
 import { game, logEvent, runtime } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
 import { BALANCE } from '../data/Balance.js';
@@ -50,6 +51,8 @@ export function triggerTimefall() {
         if (p.gearWear >= 100) corroded++;
       }
       if (sheltered > 0) logEvent(`⛺ ${sheltered} porteur(s) protégé(s) de la corrosion par un Abri Anti-Timefall`, 'good');
+      const activePorterCount = game.porters.filter(p => p.status !== 'dead' && p.status !== 'left').length;
+      eventBus.emit('shelter:protectionApplied', { sheltered, exposedTotal: activePorterCount }); // V0.4.0: TelemetrySystem
       if (corroded > 0) logEvent(`⚠️ Corrosion timefall: ${corroded} porteur(s) avec équipement critique — réparation recommandée`, 'warn');
       degradePCCOnMap(game.currentMap, BALANCE.weather.timefallPccDegradeBase + Math.floor(RNG.next() * BALANCE.weather.timefallPccDegradeRandRange));
       emboldenMuleCamps();

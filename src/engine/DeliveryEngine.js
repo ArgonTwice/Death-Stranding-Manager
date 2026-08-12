@@ -16,6 +16,8 @@ import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems
 import { gearEffectiveness, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
 import { applyUrgentQuestOutcome, clearExpiredUrgentQuests, tickUrgentQuestSpawns } from '../systems/QuestSystem.js';
+import { reportConvoyMemberOutcome } from '../systems/ConvoySystem.js';
+import { applyAdvancedShelterRepairs } from '../systems/ShelterSystem.js';
 import { timefallSpeedMult } from '../systems/TimefallSystem.js';
 import { tickWeatherSystem } from '../systems/WeatherSystem.js';
 import { markMapDirty } from '../ui/MapRenderer.js';
@@ -423,7 +425,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
 
       const distance = Math.hypot(destX - porter.x, destY - porter.y);
 
-      const cargoType = pickCargoType();
+      const cargoType = (questOpts && questOpts.forceCargoType) || pickCargoType();
       const cargo = CARGO_TYPES[cargoType];
 
       // Calcul récompense (fixée par la quête si applicable — le cargo influence le risque/temps, pas le montant)
@@ -469,8 +471,11 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
         condition: 100, // état du cargo à l'arrivée -> note S/A/B/C (#1)
         btExposure: sampleBTExposure(porter.x, porter.y, destX, destY), // 0-5 cellules BT sur le trajet
         detection: 0, spotted: false, // jauge de détection progressive (#B)
-        quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need, urgentQuestId: questOpts.urgentQuestId, zeroDamage: questOpts.zeroDamage, icon: questOpts.icon } : null,
+        quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need, urgentQuestId: questOpts.urgentQuestId, zeroDamage: questOpts.zeroDamage, icon: questOpts.icon, convoyId: questOpts.convoyId } : null,
         raidId: (questOpts && questOpts.raidId) || null,
+        dmgMult: (questOpts && questOpts.dmgMult) || 1, // V0.4.0: stratégie de convoi "Sécurisé" (moins de dégâts)
+        gearWearMult: (questOpts && questOpts.gearWearMult) || 1, // V0.4.0: stratégie de convoi "Rapide" (+usure)
+        routeType: (questOpts && questOpts.route) || null, // V0.4.0: TelemetrySystem (rendement par type d'itinéraire)
         destTerrain, lostCargoBonus, ghostName: ghostPCC ? ghostPCC.ghostName : null, // contexte pour le récit émergent
         maxSteps: Math.ceil(distance * B.maxStepsDistanceMult * timeMultiplier),
         reward,
@@ -512,13 +517,15 @@ export function tick() {
             const resistTotal = porterResist(p);
             let actualDmg = dmg * (1 - resistTotal);
             if (p.equipment.exo) actualDmg *= 1 - 0.3 * gearEffectiveness(p);
-            p.gearWear = Math.min(100, (p.gearWear || 0) + B.tickGearWearBase + Math.floor(RNG.next() * B.tickGearWearRandRange)); // usure normale par livraison
+            p.gearWear = Math.min(100, (p.gearWear || 0) + (B.tickGearWearBase + Math.floor(RNG.next() * B.tickGearWearRandRange)) * (d.gearWearMult || 1)); // usure normale par livraison (V0.4.0: stratégie de convoi)
             // Bola gun: arme canon anti-BT/MULEs, inefficace contre tempête/corrosion
             if (p.equipment.bolagun && (evt.id === 'bt' || evt.id === 'ambush')) actualDmg *= B.bolagunDmgMult;
             // Cargo lourd: surcharge, dégâts amplifiés sans exo
             if (d.cargoType === 'heavy' && !p.equipment.exo) actualDmg *= B.heavyCargoDmgMult;
+            actualDmg *= d.dmgMult || 1; // V0.4.0: stratégie de convoi "Sécurisé"
             p.health -= actualDmg;
             if (verbose) logEvent(`  💔 -${Math.ceil(actualDmg)} HP (${Math.ceil(p.health)}/100)`);
+            if (d.quest && d.quest.convoyId && (evt.id === 'bt' || evt.id === 'ambush')) eventBus.emit('convoy:attacked', { convoyId: d.quest.convoyId, porterId: p.id, dmg: actualDmg });
 
             // Condition du cargo dégradée par l'événement (base de la note de livraison, #1)
             d.condition = Math.max(0, d.condition - Math.ceil(actualDmg * B.conditionDmgMult));
@@ -597,6 +604,8 @@ export function tick() {
             recordHallOfFame(p, 'néantisé');
             applyPrepperDeliveryOutcome(d.quest, false, null);
             applyUrgentQuestOutcome(d.quest, false, null);
+            reportConvoyMemberOutcome(d.quest, false);
+            eventBus.emit('delivery:resolved', { reward: 0, onRoute: d.onRoute, routeType: d.routeType, success: false });
             p.status = "dead";
             continue;
           }
@@ -614,6 +623,8 @@ export function tick() {
             if (d.quest) logEvent(`❌ ${p.name} arrive — cargo urgent invalidé, aucune prime`, 'warn');
             applyPrepperDeliveryOutcome(d.quest, false, null);
             applyUrgentQuestOutcome(d.quest, false, null);
+            reportConvoyMemberOutcome(d.quest, false);
+            eventBus.emit('delivery:resolved', { reward: 0, onRoute: d.onRoute, routeType: d.routeType, success: false });
             p.status = "idle";
             continue;
           }
@@ -633,6 +644,8 @@ export function tick() {
           // Quête "zéro-dommage" (ex: le Médecin): tout dégât en chemin invalide la réussite côté loyauté,
           // même si la livraison en elle-même est un succès normal (prime/XP/likes inchangés).
           applyUrgentQuestOutcome(d.quest, !(d.quest && d.quest.zeroDamage && d.condition < 100), rating);
+          reportConvoyMemberOutcome(d.quest, true);
+          eventBus.emit('delivery:resolved', { reward: d.reward, onRoute: d.onRoute, routeType: d.routeType, success: true });
           p.likes += rating.likes;
           if (rating.grade === 'S') game.reputation = Math.min(100, game.reputation + B.sRankReputationGain); // bonus S-rank
 
@@ -757,6 +770,7 @@ export function advanceDay() {
       tickWeatherSystem(); // V0.3.0: météo dynamique par territoire + avance du Chiral Forecast, tous les jours
       tickUrgentQuestSpawns(); // V0.3.0: chance quotidienne de quête urgente indépendante de la météo (réputation)
       clearExpiredUrgentQuests();
+      applyAdvancedShelterRepairs(); // V0.4.0: réparation auto véhicules/convois près d'un Abri Chiral Avancé
 
       game.dayInMonth++;
       if (game.dayInMonth >= DAYS_PER_MONTH) {
