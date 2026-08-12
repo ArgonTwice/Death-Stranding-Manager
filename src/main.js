@@ -24,7 +24,8 @@ import { dismissBBPodAlert, respondToBBPodAlertUI } from './ui/BBPodOverlay.js';
 import { resolveBeachChoiceUI } from './ui/BeachPanel.js';
 import { closeConvoyPanel, launchConvoyFromUI, renderConvoyEscortList, toggleConvoyPanel, updateConvoyPreview } from './ui/ConvoyPanel.js';
 import { closeHallOfFamePanel, toggleHallOfFamePanel } from './ui/HallOfFamePanel.js';
-import { render, renderPorters, showEndScreen } from './ui/HUD.js';
+import { render, renderPorters, showEndScreen, openTelemetryDrawer, closeTelemetryDrawer, toggleTelemetryDrawer, openPortersDrawer, closePortersDrawer, togglePortersDrawer, openNetworkDrawer, closeNetworkDrawer, toggleNetworkDrawer } from './ui/HUD.js';
+import { closeAllDrawersUI, initUIShell } from './ui/UIShell.js';
 import { drawMap } from './ui/MapRenderer.js';
 import { closeMiniMapFullscreen, toggleMiniMapFullscreen } from './ui/MiniMap.js';
 import { checkMobileMode, closeTabModal, setMobileTab } from './ui/Modals.js';
@@ -142,6 +143,7 @@ setInterval(checkTerminalSlowdown, 60000);
 
 (async () => {
       checkMobileMode();
+      initUIShell(); // V0.7.0: pile de navigation (bouton Retour) + physique des tiroirs — indépendant du GameState
       initSplash();
       const mapCanvas = document.getElementById('gameMap');
       if (mapCanvas) mapCanvas.addEventListener('click', (evt) => {
@@ -183,6 +185,16 @@ window.toggleTerminalConsole = toggleTerminalConsole;
 window.closeTerminalConsole = closeTerminalConsole;
 window.sendTerminalCommandUI = sendTerminalCommandUI;
 window.sendTerminalInputUI = sendTerminalInput;
+window.openTelemetryDrawer = openTelemetryDrawer;
+window.closeTelemetryDrawer = closeTelemetryDrawer;
+window.toggleTelemetryDrawer = toggleTelemetryDrawer;
+window.openPortersDrawer = openPortersDrawer;
+window.closePortersDrawer = closePortersDrawer;
+window.togglePortersDrawer = togglePortersDrawer;
+window.openNetworkDrawer = openNetworkDrawer;
+window.closeNetworkDrawer = closeNetworkDrawer;
+window.toggleNetworkDrawer = toggleNetworkDrawer;
+window.closeAllDrawersUI = closeAllDrawersUI;
 window.acceptVisitorOffer = acceptVisitorOffer;
 window.advanceDay = advanceDay;
 window.assaultCamp = assaultCamp;

@@ -5,6 +5,7 @@ import { game } from '../core/GameState.js';
 import { MAP_HEIGHT, MAP_WIDTH } from '../data/Balance.js';
 import { PREPPER_ARCHETYPES } from '../data/Constants.js';
 import { cellKey } from '../data/Constants.js';
+import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
 
 let fullscreenOpen = false;
 
@@ -71,17 +72,22 @@ export function renderMiniMap() {
       }
     }
 
+function applyCloseMiniMapFullscreen() {
+      fullscreenOpen = false;
+      const modal = document.getElementById('miniMapModal');
+      if (modal) modal.classList.remove('open');
+    }
+
 export function toggleMiniMapFullscreen() {
+      if (isPanelOpen('miniMapModal')) { closeMiniMapFullscreen(); return; }
       const modal = document.getElementById('miniMapModal');
       if (!modal) return;
-      fullscreenOpen = !fullscreenOpen;
-      modal.classList.toggle('open', fullscreenOpen);
-      if (fullscreenOpen) renderMiniMap();
+      fullscreenOpen = true;
+      modal.classList.add('open');
+      pushPanel('miniMapModal', applyCloseMiniMapFullscreen);
+      renderMiniMap();
     }
 
 export function closeMiniMapFullscreen() {
-      const modal = document.getElementById('miniMapModal');
-      if (!modal) return;
-      fullscreenOpen = false;
-      modal.classList.remove('open');
+      closePanel('miniMapModal');
     }

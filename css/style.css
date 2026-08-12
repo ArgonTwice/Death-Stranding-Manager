@@ -60,8 +60,6 @@
         radial-gradient(ellipse at 20% 20%, rgba(255,140,43,0.04) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 80%, rgba(74,217,224,0.04) 0%, transparent 50%);
       color: var(--text);
-      display: flex;
-      flex-direction: column;
       height: 100vh;
       height: 100dvh; /* corrige le bug classique mobile: 100vh inclut parfois la barre d'adresse (Samsung Browser++) */
       overflow: hidden;
@@ -69,31 +67,60 @@
       position: relative;
       padding-bottom: 58px; /* place pour la barre d'onglets fixe, desktop et mobile */
     }
-    /* Scanlines CRT — signature discrète qui relie l'interface au splash, jamais gênante */
+    /* Scanlines CRT — signature discrète qui relie l'interface au splash, jamais gênante. Au-dessus
+       des tiroirs/modales (z-index Overlays) puisque purement décoratif et non-interactif. */
     body::before {
       content: '';
-      position: fixed; inset: 0; pointer-events: none; z-index: 400;
+      position: fixed; inset: 0; pointer-events: none; z-index: 210;
       background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px);
       opacity: 0.25;
       mix-blend-mode: overlay;
     }
 
-    /* Barre de stats permanente façon Kairosoft: toujours visible, peu importe l'onglet actif — HUD tactique */
-    #statBar {
-      display: flex; align-items: center; gap: 14px;
-      padding: 10px 18px; margin: 12px 15px 0;
-      background: rgba(18, 16, 13, 0.78);
+    /* ============================================================
+       V0.7.0 — UI Infrastructure & Mobile Navigation Overhaul.
+       Structure globale en grille 100dvh: Header fixe (52px, jamais
+       chevauché) + zone centrale flexible dédiée au Canvas.
+       Hiérarchie de z-index globale (règle 3 de la mission):
+         Canvas: 1 · Header: 10 · Boutons: 20 · Drawers: 100 · Modales/Overlays: 200
+       ============================================================ */
+    #app-shell {
+      display: grid;
+      grid-template-rows: 52px 1fr;
+      height: 100%;
+      overflow: hidden;
+    }
+    #app-header {
+      grid-row: 1; z-index: 10; position: relative;
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 10px;
+      background: rgba(18, 16, 13, 0.9);
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,140,43,0.18);
-      box-shadow: 0 0 24px -8px rgba(255,140,43,0.15), inset 0 1px 0 rgba(255,255,255,0.03);
-      font-size: 11px; letter-spacing: 0.5px; flex-wrap: wrap;
+      border-bottom: 1px solid rgba(255,140,43,0.18);
+      overflow-x: auto; overflow-y: hidden;
+      white-space: nowrap;
+    }
+    .ah-brand {
+      font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px;
+      color: var(--amber); font-size: 13px; flex: 0 0 auto;
+    }
+    #app-main {
+      grid-row: 2; position: relative; z-index: 1;
+      min-height: 0; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    /* Barre de stats permanente façon Kairosoft: toujours visible, dans le header compact 52px */
+    #statBar {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 10px; letter-spacing: 0.4px; flex: 0 0 auto;
     }
     #statBar .sb-item {
-      display: flex; align-items: center; gap: 6px; position: relative;
-      background: rgba(0,0,0,0.2); padding: 4px 10px; border: 1px solid rgba(255,255,255,0.04);
+      display: flex; align-items: center; gap: 5px; position: relative;
+      background: rgba(0,0,0,0.2); padding: 3px 8px; border: 1px solid rgba(255,255,255,0.04);
     }
-    #statBar .sb-ico { font-size: 13px; filter: drop-shadow(0 0 4px currentColor); }
-    #statBar .sb-label { color: var(--text-dim); text-transform: uppercase; font-size: 9px; letter-spacing: 1px; }
+    #statBar .sb-ico { font-size: 12px; filter: drop-shadow(0 0 4px currentColor); }
+    #statBar .sb-label { color: var(--text-dim); text-transform: uppercase; font-size: 8px; letter-spacing: 1px; }
     #statBar .sb-val { color: var(--gold); font-weight: bold; text-shadow: 0 0 8px rgba(232,199,137,0.4); }
     #statBar .sb-sep { color: #332e24; }
 
@@ -131,15 +158,6 @@
       100% { opacity: 0; transform: translateY(-50%) translateY(-18px); }
     }
 
-    .game-row {
-      display: flex;
-      gap: 15px;
-      padding: 12px 15px 15px;
-      flex: 1;
-      min-height: 0;
-      overflow: hidden;
-    }
-
     .panel {
       background: rgba(18, 16, 13, 0.85);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -162,7 +180,7 @@
     .panel::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
 
     .left {
-      position: fixed; inset: 0; z-index: 600;
+      position: fixed; inset: 0; z-index: 200; /* Modales/Overlays — hiérarchie V0.7.0 */
       background: rgba(5,4,3,0.72);
       display: flex;
       align-items: flex-end;
@@ -194,9 +212,14 @@
       cursor: pointer;
     }
     .modal-close:hover { color: var(--blood); border-color: var(--blood); }
-    .main { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-    .map-container { flex: 1; position: relative; }
-    .stats { flex: 0 0 auto; max-height: 190px; overflow-y: auto; }
+
+    /* Zone centrale (V0.7.0): dédiée exclusivement au Canvas — plus de sidebar toujours visible, le
+       Journal/Réseau est désormais un tiroir (#networkDrawer) comme le reste. */
+    .map-container {
+      flex: 1; position: relative; z-index: 1;
+      display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+      padding: 10px;
+    }
 
     h2 {
       font-family: 'Bebas Neue', 'Share Tech Mono', monospace;
@@ -337,7 +360,7 @@
       display: flex; align-items: center; justify-content: center;
       flex-direction: column;
       pointer-events: none;
-      opacity: 0; z-index: 50;
+      opacity: 0; z-index: 20; /* Boutons/HUD widgets — hiérarchie V0.7.0 */
     }
     #voidoutBanner.flash {
       animation: voidoutFlash 2.6s ease-out forwards;
@@ -367,7 +390,7 @@
     #weatherForecastStrip .wf-forecast { opacity: 0.65; }
 
     .minimap-widget {
-      position: absolute; right: 8px; top: 8px; z-index: 40;
+      position: absolute; right: 8px; top: 8px; z-index: 20; /* Boutons/HUD widgets */
       background: rgba(6,5,4,0.85); border: 1px solid rgba(74,217,224,0.25);
       padding: 3px;
     }
@@ -379,12 +402,18 @@
     }
     #miniMapCanvasFull { border: 1px solid #2a2620; }
 
-    /* Tiroir de quêtes: glisse depuis la droite, la carte/canvas reste visible et jouable derrière
-       (contrairement aux modales .left, plein écran) — c'est la différence structurelle demandée. */
-    .quest-drawer-toggle {
-      position: absolute; right: 8px; top: 140px; z-index: 40;
+    /* Barre d'actions tactiles (V0.7.0) — rangée en flux normal en bas de la zone Canvas, jamais en
+       position absolute par-dessus le contenu: élimine structurellement le chevauchement qui
+       affectait l'ancienne pile verticale de boutons flottants sur petit écran. */
+    .map-action-bar {
+      display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+      gap: 8px; padding: 8px 4px 4px; margin-top: auto; flex: 0 0 auto;
+      position: relative; z-index: 20; /* Boutons — hiérarchie V0.7.0 */
+    }
+    .map-action-btn {
+      position: relative; flex: 0 0 auto;
       width: 48px; height: 48px; margin: 0; padding: 0; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; font-size: 20px;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
       background: rgba(10,9,7,0.85); border: 1px solid rgba(255,140,43,0.35);
     }
     .quest-drawer-badge {
@@ -392,21 +421,41 @@
       background: var(--blood); color: #fff; border-radius: 8px; font-size: 9px; font-weight: bold;
       display: none; align-items: center; justify-content: center;
     }
-    .quest-drawer {
-      position: fixed; top: 0; right: 0; bottom: 0; z-index: 650;
-      width: min(360px, 92vw);
-      transform: translateX(100%);
+
+    /* Tiroirs tactiles "bottom sheet" (V0.7.0, DrawerManager.js) — Collapsed (hors écran) / Peek
+       (30vh) / Full (88vh), poignée glissable en haut. Remplace l'ancien tiroir glissant depuis la
+       droite (.quest-drawer): la carte/canvas reste visible et jouable derrière le fond assombri
+       (.ds-drawer-backdrop), jamais en la recouvrant complètement en mode Peek. */
+    .ds-drawer {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 100; /* Drawers — hiérarchie V0.7.0 */
+      max-width: 640px; margin: 0 auto;
+      height: 88vh;
+      transform: translateY(var(--drawer-y, 100%));
       transition: transform 0.28s ease;
-      pointer-events: none;
+      display: flex; flex-direction: column;
     }
-    .quest-drawer.open { transform: translateX(0); pointer-events: auto; }
+    .ds-drawer.dragging { transition: none; }
+    .ds-drawer.state-collapsed { --drawer-y: 100%; pointer-events: none; }
+    .ds-drawer.state-peek { --drawer-y: 58vh; pointer-events: auto; }
+    .ds-drawer.state-full { --drawer-y: 0%; pointer-events: auto; }
+    .ds-drawer-handle {
+      width: 40px; height: 5px; border-radius: 3px; margin: 8px auto 4px;
+      background: rgba(255,255,255,0.18); flex: 0 0 auto;
+      touch-action: none; cursor: grab;
+    }
+    .ds-drawer-backdrop {
+      position: fixed; inset: 0; z-index: 90; /* juste sous les Drawers */
+      background: rgba(5,4,3,0.5); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+      opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    }
+    .ds-drawer-backdrop.active { opacity: 1; pointer-events: auto; }
     .quest-drawer-panel {
-      height: 100%; overflow-y: auto;
+      flex: 1; min-height: 0; overflow-y: auto;
       background: rgba(12,10,8,0.96);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border-left: 1px solid rgba(255,140,43,0.18);
+      border: 1px solid rgba(255,140,43,0.18); border-bottom: none;
       padding: 16px;
-      box-shadow: -24px 0 48px -30px rgba(0,0,0,0.8);
+      box-shadow: 0 -24px 48px -30px rgba(0,0,0,0.8);
     }
     .qp-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
     .qp-tab {
@@ -434,7 +483,6 @@
        V0.4.0 — Heavy Logistics & Convoys: tiroir de convois (réutilise
        .quest-drawer/.qp-* ci-dessus), liste d'escortes, prévisualisation.
        ============================================================ */
-    .convoy-drawer-toggle { top: 196px; } /* décalé sous le bouton quêtes, jamais superposés */
     .convoy-escort-list { max-height: 120px; overflow-y: auto; border: 1px solid #221f18; padding: 2px; margin-bottom: 4px; }
     .convoy-escort-item { display: flex; align-items: center; gap: 6px; min-height: 40px; font-size: 10px; cursor: pointer; padding: 4px 2px; }
     .convoy-escort-item input { width: auto; min-height: 20px; }
@@ -449,7 +497,6 @@
        V0.5.0 — Legends & Procedural Soul: fiche de porteur (résumé
        "3 secondes"), Hall of Fame interactif.
        ============================================================ */
-    .halloffame-drawer-toggle { top: 252px; } /* sous convoy-drawer-toggle, jamais superposés */
     .porter-drawer-advice {
       background: rgba(201,56,56,0.1); border: 1px solid rgba(201,56,56,0.3);
       color: #ff9f9f; padding: 8px; margin: 8px 0; font-size: 10px; font-weight: bold;
@@ -457,7 +504,7 @@
     .porter-drawer-advice-ok { background: rgba(74,217,224,0.08); border-color: rgba(74,217,224,0.3); color: var(--chiral); }
 
     /* BB Pod (V0.6.0) — overlay léger, jamais un tiroir plein écran */
-    .bbpod-overlay { position: absolute; left: 8px; top: 8px; z-index: 40; }
+    .bbpod-overlay { position: absolute; left: 8px; top: 8px; z-index: 20; } /* Boutons/HUD widgets */
     .bbpod-badge {
       display: flex; gap: 8px; align-items: center;
       background: rgba(6,5,4,0.85); border: 1px solid rgba(255,140,43,0.25);
@@ -466,7 +513,7 @@
     .bbpod-stat { color: var(--text-dim); }
     .bbpod-stat-warn { color: var(--blood); font-weight: bold; }
     .bbpod-alert {
-      position: absolute; left: 8px; top: 44px; z-index: 45; width: min(280px, 60%);
+      position: absolute; left: 8px; top: 44px; z-index: 20; width: min(280px, 60%); /* Boutons/HUD widgets */
       background: rgba(10,9,7,0.95); border: 1px solid rgba(201,56,56,0.5);
       padding: 8px; display: none;
     }
@@ -491,7 +538,6 @@
     .beach-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
 
     /* Terminal (V0.6.0) — console de texte rétro, tiroir glissant comme les autres */
-    .terminal-drawer-toggle { top: 308px; } /* sous halloffame-drawer-toggle, jamais superposés */
     .terminal-panel { font-family: 'Courier New', monospace; }
     .terminal-stats { font-size: 10px; color: var(--chiral); margin: 6px 0 8px; }
     .terminal-history {
@@ -522,7 +568,7 @@
        ============================================================ */
     .mtab-bar {
       display: flex;
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; /* Boutons — sous Drawers/Modales, hiérarchie V0.7.0 */
       background: #0d0b08; border-top: 1px solid #332e24;
       padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
       gap: 4px;
@@ -542,10 +588,9 @@
 
     /* MOBILE — layout empilé, cibles tactiles élargies */
     @media (max-width: 900px), (pointer: coarse) {
-      html, body { height: auto !important; min-height: 100dvh !important; overflow: hidden !important; }
       body { padding-bottom: 76px !important; }
-      #statBar { margin: 8px 8px 0 !important; font-size: 10px !important; gap: 12px !important; }
-      .game-row { padding: 8px !important; }
+      #app-header { padding: 0 8px !important; gap: 8px !important; }
+      #statBar { font-size: 9px !important; gap: 8px !important; }
       .panel { font-size: 13px !important; line-height: 1.5; }
       .left .panel { max-height: 88vh; }
       h2 { font-size: 21px !important; letter-spacing: 2px !important; }
@@ -554,15 +599,13 @@
       select, input[type="range"] { min-height: 38px !important; font-size: 13px !important; }
       .skill-badge { font-size: 11px !important; padding: 3px 6px !important; }
       .stat-line { font-size: 12px !important; }
-      .map-container { min-height: 260px; }
-      .stats { max-height: none !important; }
       .log { max-height: 180px !important; font-size: 10px !important; }
 
-      /* V0.3.0 — cibles tactiles ≥48x48px + tiroir de quêtes pleine largeur, sans jamais couvrir le
-         Canvas de la carte (il reste visible/jouable derrière le voile semi-transparent). */
-      .quest-drawer { width: 100%; }
-      .quest-drawer-toggle, .minimap-expand-btn { width: 48px !important; height: 48px !important; }
+      /* V0.3.0-V0.7.0 — cibles tactiles ≥48x48px, tiroirs pleine largeur, jamais de recouvrement du
+         Canvas (il reste visible/jouable derrière le voile semi-transparent du backdrop). */
+      .map-action-btn, .minimap-expand-btn { width: 48px !important; height: 48px !important; }
       .qp-tab, .qp-action-btn, .qp-select, .convoy-escort-item { min-height: 48px !important; font-size: 11px !important; }
       .minimap-widget canvas { width: 84px; height: 84px; }
+      .ds-drawer.state-peek { --drawer-y: 40vh; } /* peek un peu plus généreux sur petit écran tactile */
     }
   

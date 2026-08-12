@@ -5,25 +5,29 @@
 import { game } from '../core/GameState.js';
 import { ROUTE_TYPES } from '../data/Constants.js';
 import { acceptUrgentQuest, negotiateUrgentQuest, refuseUrgentQuest } from '../systems/QuestSystem.js';
+import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
+import { collapseDrawer, openDrawer } from './DrawerManager.js';
 
 let activeTab = 'urgences';
-let panelOpen = false;
+
+// apply(): fermeture visuelle pure, appelée par NavigationManager (bouton Retour OU closeQuestPanel)
+// — ne fait jamais elle-même de pushState/history.back (règle anti-boucle V0.7.0).
+function applyCloseQuestPanel() {
+      collapseDrawer('questDrawer');
+    }
 
 export function openQuestPanel() {
-      panelOpen = true;
-      const el = document.getElementById('questDrawer');
-      if (el) el.classList.add('open');
+      pushPanel('questDrawer', applyCloseQuestPanel);
+      openDrawer('questDrawer', 'peek');
       renderQuestPanel();
     }
 
 export function closeQuestPanel() {
-      panelOpen = false;
-      const el = document.getElementById('questDrawer');
-      if (el) el.classList.remove('open');
+      closePanel('questDrawer');
     }
 
 export function toggleQuestPanel() {
-      if (panelOpen) closeQuestPanel(); else openQuestPanel();
+      if (isPanelOpen('questDrawer')) closeQuestPanel(); else openQuestPanel();
     }
 
 export function setQuestPanelTab(tab) {

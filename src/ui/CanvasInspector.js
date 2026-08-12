@@ -11,8 +11,15 @@ import { pccLogbookLines } from '../systems/NarrativeLogEngine.js';
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { equipSlots, equippedCount, forceRest, porterTitle, repairGear } from '../systems/PorterSystem.js';
 import { prepperCardHtml } from './HUD.js';
+import { closePanel, pushPanel } from '../core/NavigationManager.js';
 
 let inspectorRefresh = null;
+
+function applyCloseInspector() {
+      const modal = document.getElementById('inspectorModal');
+      if (modal) modal.classList.remove('open');
+      inspectorRefresh = null;
+    }
 
 export function openInspector(html, refreshFn) {
       const content = document.getElementById('inspectorContent');
@@ -21,12 +28,11 @@ export function openInspector(html, refreshFn) {
       content.innerHTML = html;
       modal.classList.add('open');
       inspectorRefresh = refreshFn || null;
+      pushPanel('inspectorModal', applyCloseInspector); // idempotent: changer de case inspectée ne repousse pas l'historique
     }
 
 export function closeInspector() {
-      const modal = document.getElementById('inspectorModal');
-      if (modal) modal.classList.remove('open');
-      inspectorRefresh = null;
+      closePanel('inspectorModal');
     }
 
 export function refreshInspectorIfOpen() {

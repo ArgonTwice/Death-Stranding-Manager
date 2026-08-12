@@ -5,22 +5,27 @@
 import { game } from '../core/GameState.js';
 import { JOURNAL_MILESTONES, PORTER_BACKGROUNDS, PORTER_JOYS, PORTER_PHOBIAS, SKILLS } from '../data/Constants.js';
 import { porterQuickSummary } from '../systems/PorterStorySystem.js';
+import { closePanel, pushPanel } from '../core/NavigationManager.js';
+import { collapseDrawer, openDrawer } from './DrawerManager.js';
 
 let openPorterId = null;
 let activeTab = 'resume';
 
+function applyClosePorterDrawer() {
+      openPorterId = null;
+      collapseDrawer('porterDrawer');
+    }
+
 export function openPorterDrawer(porterId) {
       openPorterId = porterId;
       activeTab = 'resume';
-      const el = document.getElementById('porterDrawer');
-      if (el) el.classList.add('open');
+      pushPanel('porterDrawer', applyClosePorterDrawer);
+      openDrawer('porterDrawer', 'full'); // fiche détaillée: plein par défaut, plus lisible
       renderPorterDrawer();
     }
 
 export function closePorterDrawer() {
-      openPorterId = null;
-      const el = document.getElementById('porterDrawer');
-      if (el) el.classList.remove('open');
+      closePanel('porterDrawer');
     }
 
 export function setPorterDrawerTab(tab) {

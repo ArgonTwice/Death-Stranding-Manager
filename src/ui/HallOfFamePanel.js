@@ -4,26 +4,28 @@
 import { game } from '../core/GameState.js';
 import { SKILLS } from '../data/Constants.js';
 import { loadLegends } from '../systems/LegacySystem.js';
+import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
+import { collapseDrawer, openDrawer } from './DrawerManager.js';
 
-let panelOpen = false;
 let cachedLegends = [];
 
+function applyCloseHallOfFamePanel() {
+      collapseDrawer('hallOfFameDrawer');
+    }
+
 export function openHallOfFamePanel() {
-      panelOpen = true;
-      const el = document.getElementById('hallOfFameDrawer');
-      if (el) el.classList.add('open');
+      pushPanel('hallOfFameDrawer', applyCloseHallOfFamePanel);
+      openDrawer('hallOfFameDrawer', 'peek');
       renderHallOfFamePanel();
       loadLegends().then(list => { cachedLegends = list; renderHallOfFamePanel(); });
     }
 
 export function closeHallOfFamePanel() {
-      panelOpen = false;
-      const el = document.getElementById('hallOfFameDrawer');
-      if (el) el.classList.remove('open');
+      closePanel('hallOfFameDrawer');
     }
 
 export function toggleHallOfFamePanel() {
-      if (panelOpen) closeHallOfFamePanel(); else openHallOfFamePanel();
+      if (isPanelOpen('hallOfFameDrawer')) closeHallOfFamePanel(); else openHallOfFamePanel();
     }
 
 export function renderHallOfFamePanel() {

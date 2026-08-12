@@ -23,6 +23,8 @@ import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
 import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
 import { renderBBPodOverlay, showBBPodAlert } from './BBPodOverlay.js';
 import { renderTerminalConsole } from './TerminalConsole.js';
+import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
+import { collapseDrawer, openDrawer } from './DrawerManager.js';
 import { refreshInspectorIfOpen } from './CanvasInspector.js';
 import { renderConvoyPanel } from './ConvoyPanel.js';
 import { renderHallOfFamePanel } from './HallOfFamePanel.js';
@@ -86,6 +88,42 @@ export function render() {
 
 // V0.4.0 — rapport de performance logistique (TelemetrySystem.js): taux de réussite des convois,
 // taux d'utilisation des Abris Anti-Timefall, meilleur rendement par type d'itinéraire.
+// Tiroirs Télémétrie / Porteurs / Réseau (V0.7.0) — extraits de l'ancien onglet mobile plein écran,
+// même pattern nav-aware que les autres tiroirs (QuestPanel.js etc.): apply() ferme visuellement
+// sans jamais toucher l'historique, open()/close() délèguent à NavigationManager.
+function applyCloseTelemetryDrawer() { collapseDrawer('telemetryDrawer'); }
+export function openTelemetryDrawer() {
+      pushPanel('telemetryDrawer', applyCloseTelemetryDrawer);
+      openDrawer('telemetryDrawer', 'peek');
+      renderTelemetryReport();
+    }
+export function closeTelemetryDrawer() { closePanel('telemetryDrawer'); }
+export function toggleTelemetryDrawer() {
+      if (isPanelOpen('telemetryDrawer')) closeTelemetryDrawer(); else openTelemetryDrawer();
+    }
+
+function applyClosePortersDrawer() { collapseDrawer('portersDrawer'); }
+export function openPortersDrawer() {
+      pushPanel('portersDrawer', applyClosePortersDrawer);
+      openDrawer('portersDrawer', 'full');
+      renderPorters();
+    }
+export function closePortersDrawer() { closePanel('portersDrawer'); }
+export function togglePortersDrawer() {
+      if (isPanelOpen('portersDrawer')) closePortersDrawer(); else openPortersDrawer();
+    }
+
+function applyCloseNetworkDrawer() { collapseDrawer('networkDrawer'); }
+export function openNetworkDrawer() {
+      pushPanel('networkDrawer', applyCloseNetworkDrawer);
+      openDrawer('networkDrawer', 'peek');
+      renderStats();
+    }
+export function closeNetworkDrawer() { closePanel('networkDrawer'); }
+export function toggleNetworkDrawer() {
+      if (isPanelOpen('networkDrawer')) closeNetworkDrawer(); else openNetworkDrawer();
+    }
+
 export function renderTelemetryReport() {
       const el = document.getElementById('telemetryPanel');
       if (!el) return;

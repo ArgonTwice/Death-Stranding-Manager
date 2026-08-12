@@ -7,24 +7,25 @@ import { BALANCE, MAP_HEIGHT, MAP_WIDTH } from '../data/Balance.js';
 import { CARGO_TYPES, CONVOY_STRATEGIES, ROUTE_TYPES } from '../data/Constants.js';
 import { convoySignature, signatureToRiskMod } from '../engine/RiskEngine.js';
 import { createConvoy } from '../systems/ConvoySystem.js';
+import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
+import { collapseDrawer, openDrawer } from './DrawerManager.js';
 
-let panelOpen = false;
+function applyCloseConvoyPanel() {
+      collapseDrawer('convoyDrawer');
+    }
 
 export function openConvoyPanel() {
-      panelOpen = true;
-      const el = document.getElementById('convoyDrawer');
-      if (el) el.classList.add('open');
+      pushPanel('convoyDrawer', applyCloseConvoyPanel);
+      openDrawer('convoyDrawer', 'peek');
       renderConvoyPanel();
     }
 
 export function closeConvoyPanel() {
-      panelOpen = false;
-      const el = document.getElementById('convoyDrawer');
-      if (el) el.classList.remove('open');
+      closePanel('convoyDrawer');
     }
 
 export function toggleConvoyPanel() {
-      if (panelOpen) closeConvoyPanel(); else openConvoyPanel();
+      if (isPanelOpen('convoyDrawer')) closeConvoyPanel(); else openConvoyPanel();
     }
 
 function eligibleVehiclePorters() {

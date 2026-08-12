@@ -4,6 +4,7 @@
 // Ne bloque le jeu que le temps de la lecture — se ferme après résolution, comme les autres modales.
 import { eventBus } from '../core/EventBus.js';
 import { resolveBeachChoice } from '../systems/TheBeachEngine.js';
+import { closePanel, pushPanel } from '../core/NavigationManager.js';
 
 let revealTimer = null;
 
@@ -28,10 +29,20 @@ function renderLines(session, revealCount) {
       `;
     }
 
+// apply(): fermeture visuelle pure (bouton Retour OU résolution du choix) — ne touche jamais
+// game.beachSession elle-même (TheBeachEngine.resolveBeachChoice s'en charge séparément), et ne fait
+// jamais de pushState/history.back (règle anti-boucle V0.7.0).
+function applyCloseBeachPanel() {
+      clearTimeout(revealTimer);
+      const modal = el();
+      if (modal) modal.classList.remove('open');
+    }
+
 export function openBeachPanel(session) {
       const modal = el();
       if (!modal) return;
       modal.classList.add('open');
+      pushPanel('beachModal', applyCloseBeachPanel);
       clearTimeout(revealTimer);
       let revealed = 0;
       const step = () => {
@@ -43,10 +54,10 @@ export function openBeachPanel(session) {
       revealTimer = setTimeout(step, 600);
     }
 
+// Fermeture "physique" du Retour Android laisse simplement la modale disparaître (aucune conséquence
+// de jeu — repêcher un souvenir/une relique reste un choix actif, jamais un défaut silencieux).
 export function closeBeachPanel() {
-      clearTimeout(revealTimer);
-      const modal = el();
-      if (modal) modal.classList.remove('open');
+      closePanel('beachModal');
     }
 
 // Pont UI: délègue à TheBeachEngine puis ferme la modale (la mort reste définitive, ce n'est qu'un

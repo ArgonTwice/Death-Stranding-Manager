@@ -37,17 +37,21 @@
     </div>
   </div>
 
-  <div id="statBar">
-    <div class="sb-item" id="statBarMoney"><span class="sb-ico">💰</span><span class="sb-val" id="sbMoney">$0</span></div>
-    <span class="sb-sep">·</span>
-    <div class="sb-item"><span class="sb-ico">📅</span><span class="sb-label">Mois</span><span class="sb-val" id="sbMonth">1/60</span><span class="sb-label" style="margin-left:4px;">J.</span><span class="sb-val" id="sbDay">0/30</span></div>
-    <span class="sb-sep">·</span>
-    <div class="sb-item"><span class="sb-ico">⭐</span><span class="sb-label">Rép.</span><span class="sb-val" id="sbRep">50</span></div>
-    <span class="sb-sep">·</span>
-    <div class="sb-item"><span class="sb-ico">🏅</span><span class="sb-val" id="sbRank">Freelance</span></div>
-  </div>
+  <div id="app-shell">
+  <header id="app-header">
+    <div class="ah-brand">◆ BRIDGES</div>
+    <div id="statBar">
+      <div class="sb-item" id="statBarMoney"><span class="sb-ico">💰</span><span class="sb-val" id="sbMoney">$0</span></div>
+      <span class="sb-sep">·</span>
+      <div class="sb-item"><span class="sb-ico">📅</span><span class="sb-label">Mois</span><span class="sb-val" id="sbMonth">1/60</span><span class="sb-label" style="margin-left:4px;">J.</span><span class="sb-val" id="sbDay">0/30</span></div>
+      <span class="sb-sep">·</span>
+      <div class="sb-item"><span class="sb-ico">⭐</span><span class="sb-label">Rép.</span><span class="sb-val" id="sbRep">50</span></div>
+      <span class="sb-sep">·</span>
+      <div class="sb-item"><span class="sb-ico">🏅</span><span class="sb-val" id="sbRank">Freelance</span></div>
+    </div>
+  </header>
 
-  <div class="game-row">
+  <div id="app-main">
   <div class="left" id="tabModal" onclick="if (event.target === this) closeTabModal()">
     <div class="panel">
     <button class="modal-close" onclick="closeTabModal()">✕</button>
@@ -164,9 +168,6 @@
       <h3>TABLEAU DE BORD LOGISTIQUE</h3>
       <div id="logisticsDashboard"></div>
 
-      <h3>TÉLÉMÉTRIE — CONVOIS &amp; ABRIS</h3>
-      <div id="telemetryPanel"></div>
-
       <h3>AMBIANCE</h3>
       <button onclick="testAudioBeep()">🔊 Tester le son (bip direct)</button>
       <button id="musicBtn" onclick="toggleMusic()">🎵 Musique: OFF</button>
@@ -183,25 +184,6 @@
       <button onclick="newGame(true)">🗑️ Nouvelle partie</button>
     </div>
 
-    <div class="mtab-section" data-tab="porteurs">
-      <h3>PORTEURS</h3>
-      <div style="display:flex; gap:4px; margin-bottom:6px;">
-        <select id="rosterSort" onchange="renderPorters()" style="flex:1; font-size:9px; background:#1a1712; color:var(--text); border:1px solid #332e24;">
-          <option value="default">Tri: ordre de recrutement</option>
-          <option value="level">Tri: niveau ↓</option>
-          <option value="likes">Tri: likes ↓</option>
-          <option value="health">Tri: santé ↑</option>
-          <option value="wear">Tri: usure équip. ↓</option>
-        </select>
-        <select id="rosterFilter" onchange="renderPorters()" style="flex:1; font-size:9px; background:#1a1712; color:var(--text); border:1px solid #332e24;">
-          <option value="all">Filtre: tous</option>
-          <option value="idle">Filtre: disponibles</option>
-          <option value="active">Filtre: en mission</option>
-          <option value="attention">Filtre: nécessite attention</option>
-        </select>
-      </div>
-      <div id="porters"></div>
-    </div>
     </div>
   </div>
 
@@ -225,7 +207,8 @@
 
   <!-- Tiroir de quêtes (V0.3.0) — glisse depuis la droite, ne bloque JAMAIS le Canvas (contrairement
        aux modales .left qui recouvrent tout l'écran). Onglets Urgences/En cours/Terminées. -->
-  <div class="quest-drawer" id="questDrawer">
+  <div class="ds-drawer state-collapsed" id="questDrawer">
+    <div class="ds-drawer-handle"></div>
     <div class="quest-drawer-panel">
       <button class="modal-close" onclick="closeQuestPanel()">✕</button>
       <h2>◆ QUÊTES</h2>
@@ -240,7 +223,8 @@
 
   <!-- Tiroir de planification de convois (V0.4.0) — glisse depuis la droite, comme le tiroir de
        quêtes; composition d'escouade + prévisualisation risque/gain avant de lancer. -->
-  <div class="quest-drawer" id="convoyDrawer">
+  <div class="ds-drawer state-collapsed" id="convoyDrawer">
+    <div class="ds-drawer-handle"></div>
     <div class="quest-drawer-panel">
       <button class="modal-close" onclick="closeConvoyPanel()">✕</button>
       <h2>◆ CONVOI LOURD</h2>
@@ -249,7 +233,8 @@
   </div>
 
   <!-- Fiche de porteur (V0.5.0) — tiroir glissant, onglets Résumé (lecture 3s) / Psychologie / Journal -->
-  <div class="quest-drawer" id="porterDrawer">
+  <div class="ds-drawer state-collapsed" id="porterDrawer">
+    <div class="ds-drawer-handle"></div>
     <div class="quest-drawer-panel">
       <button class="modal-close" onclick="closePorterDrawer()">✕</button>
       <h2>◆ FICHE PORTEUR</h2>
@@ -263,7 +248,8 @@
   </div>
 
   <!-- Hall of Fame (V0.5.0) — tiroir glissant, légendes entre les parties + porteurs de cette partie -->
-  <div class="quest-drawer" id="hallOfFameDrawer">
+  <div class="ds-drawer state-collapsed" id="hallOfFameDrawer">
+    <div class="ds-drawer-handle"></div>
     <div class="quest-drawer-panel">
       <button class="modal-close" onclick="closeHallOfFamePanel()">✕</button>
       <h2>◆ HALL OF FAME</h2>
@@ -282,7 +268,8 @@
 
   <!-- Console du Terminal (V0.6.0) — tiroir glissant rétro, dialogue avec le Terminal (TerminalSoul.js).
        Boutons de commande ≥48x48px: jouable sans clavier au tactile. -->
-  <div class="quest-drawer terminal-drawer" id="terminalDrawer">
+  <div class="ds-drawer state-collapsed terminal-drawer" id="terminalDrawer">
+    <div class="ds-drawer-handle"></div>
     <div class="quest-drawer-panel terminal-panel">
       <button class="modal-close" onclick="closeTerminalConsole()">✕</button>
       <h2>◆ TERMINAL</h2>
@@ -296,57 +283,49 @@
     </div>
   </div>
 
-  <div class="main">
-    <div class="map-container">
-      <div class="map-status-strip">
-        <div class="voyant"><span class="dot"></span> RÉSEAU CHIRAL: EN LIGNE</div>
-        <div class="voyant"><span class="dot dot-amber"></span> SIGNAL BRIDGES: STABLE</div>
-        <div class="voyant"><span class="dot dot-purple"></span> SCAN ODRADEK: ACTIF</div>
-      </div>
-      <!-- Chiral Forecast (V0.3.0): météo du territoire actif + prévision à N jours, toujours exacte -->
-      <div id="weatherForecastStrip" class="map-status-strip" aria-label="Prévision météo chirale"></div>
-      <div id="mapToggle" style="display: flex; gap: 6px; margin-bottom: 6px;"></div>
-      <canvas id="gameMap" width="800" height="400"></canvas>
-      <div id="voidoutBanner">
-        <div class="title">NÉANTISATION</div>
-        <div class="subtitle">— une âme rejoint le rivage —</div>
-      </div>
-
-      <!-- BB Pod (V0.6.0) — overlay léger toujours visible + bannière d'alerte transitoire, jamais
-           un tiroir plein écran (règle 5: overlays légers, pas de surcharge du Canvas). -->
-      <div id="bbPodOverlay" class="bbpod-overlay"></div>
-      <div id="bbPodAlert" class="bbpod-alert"></div>
-
-      <!-- MiniMap (V0.3.0): vue synthétique du réseau, incrustée sur le coin de la carte, jamais
-           bloquante — le bouton ⛶ ouvre une version plein écran (.left, même langage visuel que
-           les autres modales tactiques). -->
-      <div class="minimap-widget">
-        <canvas id="miniMapCanvas" width="120" height="120"></canvas>
-        <button class="minimap-expand-btn" onclick="toggleMiniMapFullscreen()" aria-label="Agrandir la mini-carte">⛶</button>
-      </div>
-
-      <!-- Tiroir de quêtes (V0.3.0): glisse depuis le bord, ne recouvre jamais le Canvas -->
-      <button id="questDrawerToggle" class="quest-drawer-toggle" onclick="toggleQuestPanel()" aria-label="Quêtes">
-        🎯<span id="questDrawerBadge" class="quest-drawer-badge"></span>
-      </button>
-
-      <!-- Tiroir de convois (V0.4.0): même comportement, décalé pour ne pas chevaucher le bouton quêtes -->
-      <button id="convoyDrawerToggle" class="quest-drawer-toggle convoy-drawer-toggle" onclick="toggleConvoyPanel()" aria-label="Convois">
-        🚛
-      </button>
-
-      <!-- Hall of Fame (V0.5.0): légendes entre les parties -->
-      <button id="hallOfFameDrawerToggle" class="quest-drawer-toggle halloffame-drawer-toggle" onclick="toggleHallOfFamePanel()" aria-label="Hall of Fame">
-        🏆
-      </button>
-
-      <!-- Terminal (V0.6.0): dialogue avec le Terminal, souvenirs majeurs, Mémoire Chirale -->
-      <button id="terminalDrawerToggle" class="quest-drawer-toggle terminal-drawer-toggle" onclick="toggleTerminalConsole()" aria-label="Terminal">
-        💬
-      </button>
+  <!-- Télémétrie (V0.7.0) — extrait de l'ancien onglet Options: tiroir dédié, mêmes données
+       (TelemetrySystem.js/HUD.renderTelemetryReport), rien ne change côté logique. -->
+  <div class="ds-drawer state-collapsed" id="telemetryDrawer">
+    <div class="ds-drawer-handle"></div>
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closeTelemetryDrawer()">✕</button>
+      <h2>◆ TÉLÉMÉTRIE</h2>
+      <div id="telemetryPanel"></div>
     </div>
-    
-    <div class="stats panel">
+  </div>
+
+  <!-- Porteurs (V0.7.0) — extrait de l'ancien onglet mobile "Porteurs": tiroir dédié plutôt qu'un
+       onglet plein écran, cohérent avec les autres tiroirs tactiques. -->
+  <div class="ds-drawer state-collapsed" id="portersDrawer">
+    <div class="ds-drawer-handle"></div>
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closePortersDrawer()">✕</button>
+      <h2>◆ PORTEURS</h2>
+      <div style="display:flex; gap:4px; margin-bottom:6px;">
+        <select id="rosterSort" onchange="renderPorters()" style="flex:1; font-size:9px; background:#1a1712; color:var(--text); border:1px solid #332e24;">
+          <option value="default">Tri: ordre de recrutement</option>
+          <option value="level">Tri: niveau ↓</option>
+          <option value="likes">Tri: likes ↓</option>
+          <option value="health">Tri: santé ↑</option>
+          <option value="wear">Tri: usure équip. ↓</option>
+        </select>
+        <select id="rosterFilter" onchange="renderPorters()" style="flex:1; font-size:9px; background:#1a1712; color:var(--text); border:1px solid #332e24;">
+          <option value="all">Filtre: tous</option>
+          <option value="idle">Filtre: disponibles</option>
+          <option value="active">Filtre: en mission</option>
+          <option value="attention">Filtre: nécessite attention</option>
+        </select>
+      </div>
+      <div id="porters"></div>
+    </div>
+  </div>
+
+  <!-- Réseau / Journal (V0.7.0) — extrait de l'ancienne sidebar .stats toujours visible (source de
+       chevauchements sur petit écran): désormais un tiroir à la demande, comme le reste. -->
+  <div class="ds-drawer state-collapsed" id="networkDrawer">
+    <div class="ds-drawer-handle"></div>
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closeNetworkDrawer()">✕</button>
       <h2>◆ RÉSEAU CHIRAL — ÉTAT</h2>
       <div class="stat-line">
         <span class="stat-label">Trésorerie</span>
@@ -380,9 +359,58 @@
         <span class="stat-label">Score (estimé)</span>
         <span class="stat-val" id="stats-score">0</span>
       </div>
-      
+
       <h3>JOURNAL DE BORD</h3>
       <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <!-- Fond assombri commun à tous les tiroirs (V0.7.0) — tapoter dessus ferme le tiroir actif,
+       jamais de logique de jeu ici (DrawerManager.js délègue toujours au close du contrôleur). -->
+  <div id="drawerBackdrop" class="ds-drawer-backdrop" onclick="closeAllDrawersUI()"></div>
+
+    <div class="map-container">
+      <div class="map-status-strip">
+        <div class="voyant"><span class="dot"></span> RÉSEAU CHIRAL: EN LIGNE</div>
+        <div class="voyant"><span class="dot dot-amber"></span> SIGNAL BRIDGES: STABLE</div>
+        <div class="voyant"><span class="dot dot-purple"></span> SCAN ODRADEK: ACTIF</div>
+      </div>
+      <!-- Chiral Forecast (V0.3.0): météo du territoire actif + prévision à N jours, toujours exacte -->
+      <div id="weatherForecastStrip" class="map-status-strip" aria-label="Prévision météo chirale"></div>
+      <div id="mapToggle" style="display: flex; gap: 6px; margin-bottom: 6px;"></div>
+      <canvas id="gameMap" width="800" height="400"></canvas>
+      <div id="voidoutBanner">
+        <div class="title">NÉANTISATION</div>
+        <div class="subtitle">— une âme rejoint le rivage —</div>
+      </div>
+
+      <!-- BB Pod (V0.6.0) — overlay léger toujours visible + bannière d'alerte transitoire, jamais
+           un tiroir plein écran (règle 5: overlays légers, pas de surcharge du Canvas). -->
+      <div id="bbPodOverlay" class="bbpod-overlay"></div>
+      <div id="bbPodAlert" class="bbpod-alert"></div>
+
+      <!-- MiniMap (V0.3.0): vue synthétique du réseau, incrustée sur le coin de la carte, jamais
+           bloquante — le bouton ⛶ ouvre une version plein écran (.left, même langage visuel que
+           les autres modales tactiques). -->
+      <div class="minimap-widget">
+        <canvas id="miniMapCanvas" width="120" height="120"></canvas>
+        <button class="minimap-expand-btn" onclick="toggleMiniMapFullscreen()" aria-label="Agrandir la mini-carte">⛶</button>
+      </div>
+
+      <!-- Barre d'actions tactiles (V0.7.0) — remplace l'ancienne pile verticale de boutons flottants
+           (source de chevauchements sur petit écran écran court): rangée en flux normal, jamais en
+           position absolute par-dessus le Canvas, cibles ≥48x48px, retombe sur 2 lignes si besoin. -->
+      <div class="map-action-bar">
+        <button id="questDrawerToggle" class="map-action-btn" onclick="toggleQuestPanel()" aria-label="Quêtes">
+          🎯<span id="questDrawerBadge" class="quest-drawer-badge"></span>
+        </button>
+        <button id="convoyDrawerToggle" class="map-action-btn" onclick="toggleConvoyPanel()" aria-label="Convois">🚛</button>
+        <button id="hallOfFameDrawerToggle" class="map-action-btn" onclick="toggleHallOfFamePanel()" aria-label="Hall of Fame">🏆</button>
+        <button id="terminalDrawerToggle" class="map-action-btn" onclick="toggleTerminalConsole()" aria-label="Terminal">💬</button>
+        <button id="telemetryDrawerToggle" class="map-action-btn" onclick="toggleTelemetryDrawer()" aria-label="Télémétrie">📡</button>
+        <button id="portersDrawerToggle" class="map-action-btn" onclick="togglePortersDrawer()" aria-label="Porteurs">🎒</button>
+        <button id="networkDrawerToggle" class="map-action-btn" onclick="toggleNetworkDrawer()" aria-label="Réseau">📊</button>
+      </div>
     </div>
   </div>
   </div>
@@ -391,7 +419,6 @@
     <button class="mtab-btn" data-tab="gestion" onclick="setMobileTab('gestion')"><span class="ico">🚚</span>Gestion</button>
     <button class="mtab-btn" data-tab="camp" onclick="setMobileTab('camp')"><span class="ico">🏕️</span>Camp</button>
     <button class="mtab-btn" data-tab="options" onclick="setMobileTab('options')"><span class="ico">⚙️</span>Options</button>
-    <button class="mtab-btn" data-tab="porteurs" onclick="setMobileTab('porteurs')"><span class="ico">🎒</span>Porteurs</button>
   </div>
 
   <div id="endScreen" style="display:none; position:fixed; inset:0; background:rgba(5,5,8,0.92); z-index:999; align-items:center; justify-content:center; flex-direction:column; color:#d8d2c4; font-family:'Courier New',monospace; text-align:center;">

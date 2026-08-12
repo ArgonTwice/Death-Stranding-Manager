@@ -4,25 +4,27 @@
 // de commande ≥48x48px pour rester jouable au tactile sans clavier (règle 5).
 import { game } from '../core/GameState.js';
 import { processTerminalCommand, TERMINAL_COMMAND_LIST } from '../systems/TerminalSoul.js';
+import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
+import { collapseDrawer, openDrawer } from './DrawerManager.js';
 
-let panelOpen = false;
 const history = []; // { role: 'you'|'terminal', text }
 
+function applyCloseTerminalConsole() {
+      collapseDrawer('terminalDrawer');
+    }
+
 export function openTerminalConsole() {
-      panelOpen = true;
-      const el = document.getElementById('terminalDrawer');
-      if (el) el.classList.add('open');
+      pushPanel('terminalDrawer', applyCloseTerminalConsole);
+      openDrawer('terminalDrawer', 'peek');
       renderTerminalConsole();
     }
 
 export function closeTerminalConsole() {
-      panelOpen = false;
-      const el = document.getElementById('terminalDrawer');
-      if (el) el.classList.remove('open');
+      closePanel('terminalDrawer');
     }
 
 export function toggleTerminalConsole() {
-      if (panelOpen) closeTerminalConsole(); else openTerminalConsole();
+      if (isPanelOpen('terminalDrawer')) closeTerminalConsole(); else openTerminalConsole();
     }
 
 export function sendTerminalCommand(cmd) {
