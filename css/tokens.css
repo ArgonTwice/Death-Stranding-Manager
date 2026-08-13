@@ -1,0 +1,38 @@
+/* css/tokens.css (V0.7.5) — Design System "Bridges Cyber-Terminal": variables additives, jamais de
+   redéfinition des tokens existants de style.css (--amber/--chiral/--blood...) pour ne rien casser
+   dans l'UI historique. Les nouveaux composants (TerminalCard/Stepper/Slider/StatusBadge) et les
+   overrides de contrôles natifs (components.css) consomment exclusivement ces --ds-*. */
+:root {
+  --ds-gold: #c9a227;
+  --ds-gold-bright: #e8c860;
+  --ds-gold-glow: rgba(201, 162, 39, 0.45);
+  --ds-chiral-blue: #2a3f5f;
+  --ds-chiral-blue-bright: #4ad9e0;
+  --ds-timefall-red: #8b2635;
+  --ds-timefall-red-bright: #d64f5f;
+
+  --ds-bg-void: #060504;
+  --ds-bg-panel: #0e0c0a;
+  --ds-bg-card: rgba(15, 13, 10, 0.92);
+  --ds-bg-card-raised: rgba(20, 17, 13, 0.95);
+  --ds-bg-input: rgba(4, 4, 3, 0.6);
+  --ds-border: rgba(255, 255, 255, 0.08);
+  --ds-border-strong: rgba(255, 255, 255, 0.16);
+  --ds-text: #d8d2c4;
+  --ds-text-dim: #8a8474;
+
+  --ds-radius-sm: 4px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 14px;
+  --ds-radius-pill: 999px;
+
+  --ds-rarity-common: #6b6459;
+  --ds-rarity-rare: #4ad9e0;
+  --ds-rarity-epic: #a855f7;
+  --ds-rarity-legendary: #c9a227;
+
+  --ds-tap-min: 48px;
+
+  /* Safe area (V0.7.5 règle 5) — jamais de fallback à 0 seul: toujours max() avec un plancher */
+  --ds-safe-bottom: env(safe-area-inset-bottom, 0px);
+}

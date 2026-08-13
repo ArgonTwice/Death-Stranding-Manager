@@ -1,0 +1,193 @@
+/* css/components.css (V0.7.5) — Design System "Bridges Cyber-Terminal": suppression visuelle totale
+   des contrôles HTML natifs bruts (règle 1) + composants custom (TerminalCard/Stepper/Slider/
+   StatusBadge). Pur CSS/présentation: aucune de ces règles ne touche au comportement JS existant
+   (les mêmes onchange/onclick continuent d'appeler exactement les mêmes fonctions gameplay). */
+
+/* --- input[type=range] : piste sombre, curseur ambré, cross-browser --- */
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 28px; background: transparent; margin: 0; padding: 0;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: var(--ds-radius-pill);
+  background: linear-gradient(to right, var(--ds-gold) 0%, var(--ds-gold) var(--range-fill, 50%), var(--ds-bg-input) var(--range-fill, 50%), var(--ds-bg-input) 100%);
+  border: 1px solid var(--ds-border);
+}
+input[type="range"]::-moz-range-track {
+  height: 4px; border-radius: var(--ds-radius-pill);
+  background: var(--ds-bg-input); border: 1px solid var(--ds-border);
+}
+input[type="range"]::-moz-range-progress {
+  height: 4px; border-radius: var(--ds-radius-pill); background: var(--ds-gold);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; margin-top: -9px; border-radius: 50%;
+  background: var(--ds-gold-bright); border: 2px solid var(--ds-bg-void);
+  box-shadow: 0 0 10px var(--ds-gold-glow);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--ds-gold-bright); border: 2px solid var(--ds-bg-void);
+  box-shadow: 0 0 10px var(--ds-gold-glow);
+  cursor: pointer;
+}
+
+/* --- input[type=checkbox] : toggle futuriste, jamais la case système --- */
+input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none;
+  width: 40px; height: 22px; min-height: 0; flex: 0 0 auto;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-bg-input); border: 1px solid var(--ds-border-strong);
+  position: relative; cursor: pointer; margin: 0; padding: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+input[type="checkbox"]::before {
+  content: ''; position: absolute; top: 1px; left: 1px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--ds-text-dim);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+input[type="checkbox"]:checked {
+  background: rgba(201, 162, 39, 0.25); border-color: var(--ds-gold);
+  box-shadow: 0 0 8px var(--ds-gold-glow);
+}
+input[type="checkbox"]:checked::before {
+  transform: translateX(18px);
+  background: var(--ds-gold-bright);
+}
+
+/* --- input[type=number] : masqué visuellement, remplacé par TerminalStepper.js dans les vues
+   refondues; conservé stylé sobrement là où un Stepper n'a pas encore été branché. --- */
+input[type="number"] {
+  background: var(--ds-bg-input); border: 1px solid var(--ds-border); color: var(--ds-text);
+  border-radius: var(--ds-radius-sm); text-align: center;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+
+/* --- input[type=text], select : mêmes fonds/bordures que le reste du Design System --- */
+select, input[type="text"] {
+  background: var(--ds-bg-input); color: var(--ds-text);
+  border: 1px solid var(--ds-border-strong); border-radius: var(--ds-radius-sm);
+}
+select {
+  -webkit-appearance: none; appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ds-gold) 50%), linear-gradient(135deg, var(--ds-gold) 50%, transparent 50%);
+  background-position: calc(100% - 14px) center, calc(100% - 9px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 26px !important;
+}
+
+/* ============================================================
+   TerminalStepper.js — stepper +/- tactile pour les valeurs
+   numériques (seuils d'automatisation, %).
+   ============================================================ */
+.term-stepper {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--ds-bg-input); border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-radius-pill); padding: 2px;
+}
+.term-stepper-btn {
+  width: 32px; height: 32px; min-height: 0; margin: 0; padding: 0; flex: 0 0 auto;
+  border-radius: 50%; border: 1px solid var(--ds-border-strong);
+  background: linear-gradient(180deg, #201a13, #171310);
+  color: var(--ds-gold-bright); font-size: 15px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.term-stepper-btn:hover:not(:disabled) { border-color: var(--ds-gold); box-shadow: 0 0 8px var(--ds-gold-glow); }
+.term-stepper-value {
+  min-width: 34px; text-align: center; font-weight: bold; color: var(--ds-gold-bright);
+  font-size: 12px; letter-spacing: 0.5px;
+}
+
+/* ============================================================
+   TerminalSlider.js — slider ambré avec bulle de valeur.
+   ============================================================ */
+.term-slider { display: flex; flex-direction: column; gap: 4px; }
+.term-slider-row { display: flex; align-items: center; gap: 10px; }
+.term-slider-row input[type="range"] { flex: 1; }
+.term-slider-value {
+  min-width: 34px; text-align: right; font-size: 10px; font-weight: bold;
+  color: var(--ds-gold-bright);
+}
+.term-slider-label {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--ds-text-dim);
+}
+
+/* ============================================================
+   StatusBadge.js — badges de rareté / puces de statut.
+   ============================================================ */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: var(--ds-radius-pill);
+  font-size: 8px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: bold;
+  border: 1px solid currentColor;
+}
+.status-badge-common { color: var(--ds-rarity-common); }
+.status-badge-rare { color: var(--ds-rarity-rare); text-shadow: 0 0 6px currentColor; }
+.status-badge-epic { color: var(--ds-rarity-epic); text-shadow: 0 0 6px currentColor; }
+.status-badge-legendary { color: var(--ds-rarity-legendary); text-shadow: 0 0 8px currentColor; }
+.status-badge-danger { color: var(--ds-timefall-red-bright); }
+.status-badge-info { color: var(--ds-chiral-blue-bright); }
+
+/* ============================================================
+   TerminalCard.js — carte vitrée avec ligne néon de rareté,
+   badges, jauges fines, footer d'actions tactiles ≥48px.
+   ============================================================ */
+.term-card {
+  position: relative;
+  background: var(--ds-bg-card);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  padding: 12px 12px 10px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+.term-card::before {
+  /* ligne néon de rareté, en haut de la carte */
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--ds-card-rarity-color, var(--ds-rarity-common));
+  box-shadow: 0 0 10px var(--ds-card-rarity-color, var(--ds-rarity-common));
+}
+.term-card-rare { --ds-card-rarity-color: var(--ds-rarity-rare); }
+.term-card-epic { --ds-card-rarity-color: var(--ds-rarity-epic); }
+.term-card-legendary { --ds-card-rarity-color: var(--ds-rarity-legendary); }
+.term-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  margin-bottom: 4px;
+}
+.term-card-title { font-size: 12px; font-weight: bold; color: var(--ds-text); letter-spacing: 0.3px; }
+.term-card-subtitle { font-size: 9px; color: var(--ds-text-dim); margin-top: 2px; }
+.term-card-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.term-card-body { font-size: 10px; color: var(--ds-text-dim); line-height: 1.5; }
+.term-card-gauge { margin: 6px 0; }
+.term-card-gauge-label { display: flex; justify-content: space-between; font-size: 8px; color: var(--ds-text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.term-card-gauge-track { height: 4px; background: rgba(0,0,0,0.4); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-pill); overflow: hidden; }
+.term-card-gauge-fill { height: 100%; background: var(--ds-card-rarity-color, var(--ds-gold)); box-shadow: 0 0 6px var(--ds-card-rarity-color, var(--ds-gold)); transition: width 0.3s; }
+.term-card-footer {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--ds-border);
+}
+.term-card-action {
+  flex: 1 1 auto; min-height: var(--ds-tap-min); min-width: 100px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  margin: 0; font-size: 10px;
+}
+
+/* ============================================================
+   Header pills (V0.7.5) — voir layout.css pour la structure, ici
+   uniquement l'habillage visuel des pills individuelles.
+   ============================================================ */
+.hdr-pill {
+  display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+  background: var(--ds-bg-input); border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-radius-pill); padding: 3px 10px;
+  font-size: 10px; white-space: nowrap; color: var(--ds-text);
+}
+.hdr-pill .hdr-pill-ico { color: var(--ds-gold-bright); }
+.hdr-pill .hdr-pill-val { color: var(--ds-gold-bright); font-weight: bold; }

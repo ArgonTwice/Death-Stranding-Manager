@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Death Stranding Manager</title>
   <link rel="stylesheet" href="/css/style.css">
+  <!-- V0.7.5 — Design System "Bridges Cyber-Terminal": tokens additifs + overrides de contrôles
+       natifs + layout header/safe-area. Chargés après style.css pour gagner la cascade. -->
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
 </head>
 <body>
 
@@ -25,7 +30,8 @@
 
       <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px;">
         <button id="splashMusicBtn" onclick="toggleMusic()" style="font-size:9px; padding:6px 12px; background:transparent; border:1px solid rgba(255,140,43,0.3); color:var(--amber); cursor:pointer; letter-spacing:1px;">🔇 Musique: OFF</button>
-        <input id="splashVolume" type="range" min="0" max="100" value="28" oninput="setMusicVolume(this.value)" style="width:90px;">
+        <input id="splashVolume" type="range" min="0" max="100" value="28" style="width:90px; --range-fill:28%"
+          oninput="this.style.setProperty('--range-fill', (((this.value-0)/(100-0))*100)+'%'); setMusicVolume(this.value)">
       </div>
 
       <div style="display:flex; gap:14px; margin-top:22px; flex-wrap:wrap; justify-content:center;">
@@ -39,15 +45,12 @@
 
   <div id="app-shell">
   <header id="app-header">
-    <div class="ah-brand">◆ BRIDGES</div>
-    <div id="statBar">
-      <div class="sb-item" id="statBarMoney"><span class="sb-ico">💰</span><span class="sb-val" id="sbMoney">$0</span></div>
-      <span class="sb-sep">·</span>
-      <div class="sb-item"><span class="sb-ico">📅</span><span class="sb-label">Mois</span><span class="sb-val" id="sbMonth">1/60</span><span class="sb-label" style="margin-left:4px;">J.</span><span class="sb-val" id="sbDay">0/30</span></div>
-      <span class="sb-sep">·</span>
-      <div class="sb-item"><span class="sb-ico">⭐</span><span class="sb-label">Rép.</span><span class="sb-val" id="sbRep">50</span></div>
-      <span class="sb-sep">·</span>
-      <div class="sb-item"><span class="sb-ico">🏅</span><span class="sb-val" id="sbRank">Freelance</span></div>
+    <div class="ah-brand">◆</div>
+    <div id="statBar" class="hdr-pills">
+      <div class="hdr-pill" id="statBarMoney"><span class="hdr-pill-ico">◈</span><span class="hdr-pill-val" id="sbMoney">$0</span></div>
+      <div class="hdr-pill"><span class="hdr-pill-ico">◷</span><span class="hdr-pill-val" id="sbMonth">1/60</span><span class="hdr-pill-ico" style="margin-left:2px;">J</span><span class="hdr-pill-val" id="sbDay">0/30</span></div>
+      <div class="hdr-pill"><span class="hdr-pill-ico">★</span><span class="hdr-pill-val" id="sbRep">50</span></div>
+      <div class="hdr-pill"><span class="hdr-pill-ico">🏅</span><span class="hdr-pill-val" id="sbRank">Freelance</span></div>
     </div>
   </header>
 
@@ -63,29 +66,74 @@
       <div id="candidateDisplay" style="font-size:9px; color:var(--chiral); margin: 2px 0 4px;"></div>
       
       <h3>ÉQUIPEMENT</h3>
-      <select id="porterTarget" onchange="window.runtime.selectedPorterId = this.value === '' ? null : parseInt(this.value)" style="width:100%; margin-bottom:6px; background:#1a1712; color:var(--text); border:1px solid #332e24; font-family:inherit; font-size:9px; padding:6px;"></select>
-      <div class="btn-grid">
-        <button onclick="buyEquip('boots')">👟 Bottes renforcées ($200)</button>
-        <button onclick="buyEquip('exo')">💪 Exosquelette ($400)</button>
-        <button onclick="buyEquip('scanner')">📡 Scanner BT ($300)</button>
-        <button onclick="buyEquip('harness')">🎒 Sac (+1 slot) ($350)</button>
+      <select id="porterTarget" onchange="window.runtime.selectedPorterId = this.value === '' ? null : parseInt(this.value)" style="width:100%; margin-bottom:6px;"></select>
+      <div class="term-card term-card-rare">
+        <div class="term-card-header">
+          <div>
+            <div class="term-card-title">🎒 Paquetage standard</div>
+            <div class="term-card-subtitle">Équipement individuel du porteur sélectionné</div>
+          </div>
+        </div>
+        <div class="term-card-badges"><span class="status-badge status-badge-rare">Rare</span></div>
+        <div class="term-card-footer">
+          <button class="term-card-action" onclick="buyEquip('boots')">👟 Bottes renforcées ($200)</button>
+          <button class="term-card-action" onclick="buyEquip('exo')">💪 Exosquelette ($400)</button>
+          <button class="term-card-action" onclick="buyEquip('scanner')">📡 Scanner BT ($300)</button>
+          <button class="term-card-action" onclick="buyEquip('harness')">🎒 Sac +1 slot ($350)</button>
+        </div>
       </div>
-      <div id="unlock-cryptobiote" class="btn-grid" style="display:none; margin-top:6px;">
-        <button onclick="buyEquip('cryptobiote')">🦠 Cryptobiotes ($150)</button>
-        <button onclick="buyEquip('bolagun')">🎯 Bola gun ($350)</button>
-        <button onclick="buyEquip('cryobox')">🧊 Caisse réfrigérée ($250)</button>
+      <div id="unlock-cryptobiote" class="term-card term-card-epic" style="display:none;">
+        <div class="term-card-header">
+          <div>
+            <div class="term-card-title">🦠 Paquetage avancé</div>
+            <div class="term-card-subtitle">Contre-mesures BT/Timefall</div>
+          </div>
+        </div>
+        <div class="term-card-badges"><span class="status-badge status-badge-epic">Épique</span></div>
+        <div class="term-card-footer">
+          <button class="term-card-action" onclick="buyEquip('cryptobiote')">🦠 Cryptobiotes ($150)</button>
+          <button class="term-card-action" onclick="buyEquip('bolagun')">🎯 Bola gun ($350)</button>
+          <button class="term-card-action" onclick="buyEquip('cryobox')">🧊 Caisse réfrigérée ($250)</button>
+        </div>
       </div>
-      <div id="unlock-rank2gear" style="display:none; margin-top:6px;">
-        <button onclick="buyEquip('climbing_anchor')">⛓️ Ancre chirale (terrain) ($300)</button>
+      <div id="unlock-rank2gear" class="term-card term-card-legendary" style="display:none;">
+        <div class="term-card-header">
+          <div>
+            <div class="term-card-title">⛓️ Paquetage Rang 2</div>
+            <div class="term-card-subtitle">Franchissement de terrain accidenté</div>
+          </div>
+        </div>
+        <div class="term-card-badges"><span class="status-badge status-badge-legendary">Légendaire</span></div>
+        <div class="term-card-footer">
+          <button class="term-card-action" onclick="buyEquip('climbing_anchor')">⛓️ Ancre chirale ($300)</button>
+        </div>
       </div>
 
       <h3>VÉHICULES</h3>
-      <div class="btn-grid">
-        <button onclick="buyVehicle('truck')">🚚 Camion cargo ($2000)</button>
-        <button onclick="buyVehicle('bike')">🏍️ Moto tout-terrain ($1500)</button>
+      <div class="term-card term-card-epic">
+        <div class="term-card-header">
+          <div>
+            <div class="term-card-title">🚚 Flotte Bridges</div>
+            <div class="term-card-subtitle">Cargo motorisé pour le porteur sélectionné</div>
+          </div>
+        </div>
+        <div class="term-card-badges"><span class="status-badge status-badge-epic">Épique</span></div>
+        <div class="term-card-footer">
+          <button class="term-card-action" onclick="buyVehicle('truck')">🚚 Camion cargo ($2000)</button>
+          <button class="term-card-action" onclick="buyVehicle('bike')">🏍️ Moto tout-terrain ($1500)</button>
+        </div>
       </div>
-      <div id="unlock-rank3vehicle" style="display:none; margin-top:6px;">
-        <button onclick="buyVehicle('trike')">🏍️💨 Trike inversé (rapide, léger) ($1800)</button>
+      <div id="unlock-rank3vehicle" class="term-card term-card-legendary" style="display:none;">
+        <div class="term-card-header">
+          <div>
+            <div class="term-card-title">🏍️💨 Trike inversé</div>
+            <div class="term-card-subtitle">Rapide et léger — Rang 3</div>
+          </div>
+        </div>
+        <div class="term-card-badges"><span class="status-badge status-badge-legendary">Légendaire</span></div>
+        <div class="term-card-footer">
+          <button class="term-card-action" onclick="buyVehicle('trike')">🏍️💨 Trike inversé ($1800)</button>
+        </div>
       </div>
 
       <h3>INSTALLATIONS</h3>
@@ -171,7 +219,14 @@
       <h3>AMBIANCE</h3>
       <button onclick="testAudioBeep()">🔊 Tester le son (bip direct)</button>
       <button id="musicBtn" onclick="toggleMusic()">🎵 Musique: OFF</button>
-      <input id="musicVolume" type="range" min="0" max="100" value="28" oninput="setMusicVolume(this.value)" style="width:100%; margin-top:4px;">
+      <div class="term-slider" style="margin-top:6px;">
+        <div class="term-slider-label">Volume musique</div>
+        <div class="term-slider-row">
+          <input id="musicVolume" type="range" min="0" max="100" value="28" style="--range-fill:28%"
+            oninput="this.style.setProperty('--range-fill', (((this.value-0)/(100-0))*100)+'%'); const vEl=document.getElementById('musicVolumeValue'); if(vEl) vEl.textContent=this.value+'%'; setMusicVolume(this.value)">
+          <span class="term-slider-value" id="musicVolumeValue">28%</span>
+        </div>
+      </div>
       <div id="audioDiag" style="font-size:8px; color:var(--text-dim); margin-top:4px; letter-spacing:0.5px;">AudioContext: non initialisé</div>
 
       <h3>SAUVEGARDE</h3>

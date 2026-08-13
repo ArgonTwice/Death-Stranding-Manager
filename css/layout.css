@@ -1,0 +1,45 @@
+/* css/layout.css (V0.7.5) — Header auto-adaptatif à pills scrollables (jamais de texte tronqué) +
+   respect systématique de la safe-area-inset-bottom (règle 5): aucun tiroir/modale/barre ne doit
+   toucher ni être masqué par la zone gestuelle du système (encoche, barre Android/iOS). */
+
+#app-shell {
+  grid-template-rows: 48px 1fr !important; /* bandeau compact V0.7.5, remplace les 52px V0.7.0 */
+}
+#app-header {
+  height: 48px !important;
+}
+
+.hdr-pills {
+  display: flex; align-items: center; gap: 6px;
+  flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.hdr-pills::-webkit-scrollbar { display: none; }
+
+/* Radar/mini-carte (V0.7.5) — confiné dans son propre widget, jamais superposé au statut BB Pod:
+   décalé sous l'overlay BB Pod (voir style.css .bbpod-overlay, coin haut-gauche) en le laissant seul
+   maître du coin haut-droit du Canvas. */
+.minimap-widget { top: 8px; }
+.bbpod-overlay { top: 8px; }
+
+/* Safe area — jamais de recouvrement de la zone gestuelle système en bas d'écran */
+.mtab-bar {
+  padding-bottom: calc(6px + var(--ds-safe-bottom)) !important;
+}
+.ds-drawer {
+  padding-bottom: var(--ds-safe-bottom);
+}
+.left .panel {
+  padding-bottom: calc(16px + var(--ds-safe-bottom));
+}
+#endScreen {
+  padding-bottom: var(--ds-safe-bottom);
+}
+body {
+  padding-bottom: calc(58px + var(--ds-safe-bottom)) !important;
+}
+@media (max-width: 900px), (pointer: coarse) {
+  body { padding-bottom: calc(76px + var(--ds-safe-bottom)) !important; }
+}

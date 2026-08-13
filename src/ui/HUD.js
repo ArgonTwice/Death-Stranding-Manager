@@ -32,6 +32,16 @@ import { drawMap } from './MapRenderer.js';
 import { renderMiniMap } from './MiniMap.js';
 import { refreshPorterDrawerIfOpen } from './PorterDrawer.js';
 import { renderQuestPanel } from './QuestPanel.js';
+import { terminalCardHtml } from './components/TerminalCard.js';
+import { terminalStepperHtml } from './components/TerminalStepper.js';
+import { rarityBadgeHtml, statusBadgeHtml } from './components/StatusBadge.js';
+
+// V0.7.5 — pont Stepper: même mutation que l'ancien input[type=number] (setAutomationThreshold),
+// juste un delta relatif au lieu d'une saisie libre. Purement UI, aucun impact RNG/simulation.
+export function adjustAutomationThreshold(key, delta) {
+      const current = (game.automation && game.automation[key]) || 0;
+      setAutomationThreshold(key, current + delta);
+    }
 
 export function showEndScreen(score, scoresList) {
       const totalRoutes = Object.values(game.mapsData).reduce((s, d) => s + d.routes.size, 0);
@@ -179,7 +189,11 @@ export function renderStatBar() {
         setTimeout(() => pop.remove(), 1350);
       }
       lastBarMoney = game.money;
-      moneyEl.textContent = `$${Math.round(game.money).toLocaleString('fr-FR')}`;
+      // V0.7.5 — pill de header compacte: format abrégé (117k) pour ne jamais tronquer/déborder,
+      // valeur exacte conservée en title (au survol desktop) — purement présentationnel.
+      const m = Math.round(game.money);
+      moneyEl.textContent = Math.abs(m) >= 1000 ? `$${(m / 1000).toFixed(1).replace(/\.0$/, '')}k` : `$${m}`;
+      moneyEl.title = `$${m.toLocaleString('fr-FR')}`;
       document.getElementById('sbMonth').textContent = `${game.month}/${GAME_LENGTH_MONTHS}`;
       document.getElementById('sbDay').textContent = `${game.dayInMonth}/${DAYS_PER_MONTH}`;
       document.getElementById('sbRep').textContent = game.reputation;
@@ -227,33 +241,38 @@ export function renderMuleCamps() {
       const el = document.getElementById('muleCampsPanel');
       if (!el) return;
       const camps = game.muleCamps || [];
-      if (!camps.length) { el.innerHTML = 'Aucun camp détecté sur ce territoire.'; return; }
+      if (!camps.length) { el.innerHTML = '<div style="font-size:9px; color:var(--text-dim);">Aucun camp détecté sur ce territoire.</div>'; return; }
       el.innerHTML = camps.map(c => {
-        const strengthTag = '⚠️'.repeat(c.strength);
+        const strengthBadge = statusBadgeHtml('⚠️'.repeat(c.strength) || 'Force 0', c.strength >= 3 ? 'legendary' : c.strength === 2 ? 'epic' : 'rare');
         if (c.status === 'hostile') {
-          return `<div class="alert-crisis" style="border-left:2px solid var(--blood); padding-left:6px; margin-bottom:6px;">
-            🏴‍☠️ Camp hostile (${c.x},${c.y}) ${strengthTag}<br>
-            <button onclick="assaultCamp('${c.id}','infiltration')" style="font-size:8px;">🥷 Infiltration (discret)</button>
-            <button onclick="assaultCamp('${c.id}','assault')" style="font-size:8px;">💥 Assaut létal</button>
-          </div>`;
+          return terminalCardHtml({
+            title: '🏴‍☠️ Camp hostile', subtitle: `Position (${c.x},${c.y})`, rarity: 'legendary',
+            badgesHtml: strengthBadge + statusBadgeHtml('Hostile', 'danger'),
+            actionsHtml: `<button class="term-card-action" onclick="assaultCamp('${c.id}','infiltration')">🥷 Infiltration</button>
+              <button class="term-card-action danger" onclick="assaultCamp('${c.id}','assault')">💥 Assaut létal</button>`
+          });
         }
         if (c.status === 'pacified') {
-          return `<div style="border-left:2px solid var(--gold); padding-left:6px; margin-bottom:6px;">
-            🛡️ Pacifié (${c.x},${c.y}) — sûr jusqu'au mois ${c.safeUntilMonth}<br>
-            ${c.needsIncineration ? `<button onclick="sendToIncinerator('${c.id}')" style="font-size:8px;">🔥 Envoyer à l'incinérateur ($300)</button>` :
-              `<button onclick="convertCampToRelay('${c.id}')" style="font-size:8px;">🏭 Convertir en relais ($1500)</button>`}
-          </div>`;
+          return terminalCardHtml({
+            title: '🛡️ Camp pacifié', subtitle: `Position (${c.x},${c.y}) · sûr jusqu'au mois ${c.safeUntilMonth}`, rarity: 'rare',
+            badgesHtml: strengthBadge,
+            actionsHtml: c.needsIncineration
+              ? `<button class="term-card-action danger" onclick="sendToIncinerator('${c.id}')">🔥 Incinérer ($300)</button>`
+              : `<button class="term-card-action success" onclick="convertCampToRelay('${c.id}')">🏭 Convertir en relais ($1500)</button>`
+          });
         }
         if (c.status === 'under_attack') {
-          return `<div class="alert-crisis" style="border-left:2px solid var(--blood); padding-left:6px; margin-bottom:6px;">
-            ⚠️ RELAIS SOUS ATTAQUE (${c.x},${c.y}) — tombera aux MULEs si ignoré ce mois-ci<br>
-            <button onclick="defendRelay('${c.id}')" style="font-size:8px;">🛡️ Défendre le relais</button>
-          </div>`;
+          return terminalCardHtml({
+            title: '⚠️ Relais sous attaque', subtitle: `Position (${c.x},${c.y}) · tombera aux MULEs si ignoré ce mois-ci`, rarity: 'legendary',
+            badgesHtml: statusBadgeHtml('Urgent', 'danger'),
+            actionsHtml: `<button class="term-card-action danger" onclick="defendRelay('${c.id}')">🛡️ Défendre le relais</button>`
+          });
         }
-        return `<div style="border-left:2px solid var(--chiral); padding-left:6px; margin-bottom:6px;">
-          🏭 Relais logistique actif (${c.x},${c.y}) — +$${c.strength * 40}/mois${c.fortified ? ' 🏰 fortifié' : ''}<br>
-          ${!c.fortified ? `<button onclick="fortifyRelay('${c.id}')" style="font-size:8px;">🏰 Fortifier ($600)</button>` : ''}
-        </div>`;
+        return terminalCardHtml({
+          title: '🏭 Relais logistique actif', subtitle: `Position (${c.x},${c.y}) · +$${c.strength * 40}/mois`, rarity: c.fortified ? 'epic' : 'common',
+          badgesHtml: strengthBadge + (c.fortified ? statusBadgeHtml('Fortifié', 'epic', '🏰') : ''),
+          actionsHtml: !c.fortified ? `<button class="term-card-action" onclick="fortifyRelay('${c.id}')">🏰 Fortifier ($600)</button>` : ''
+        });
       }).join('');
     }
 
@@ -272,16 +291,20 @@ export function renderAutomationPanel() {
       if (!el) return;
       const a = game.automation || (game.automation = { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false });
       el.innerHTML = `
-        <label style="display:flex; align-items:center; gap:6px; font-size:9px; margin:4px 0;">
-          <input type="checkbox" style="width:auto;" ${a.autoRest ? 'checked' : ''} onchange="toggleAutomation('autoRest')"> Auto-Repos si stress ≥
-          <input type="number" min="0" max="100" value="${a.autoRestThreshold}" style="width:44px; padding:2px; margin:0;" onchange="setAutomationThreshold('autoRestThreshold', this.value)">%
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; font-size:9px; margin:4px 0;">
-          <input type="checkbox" style="width:auto;" ${a.autoRepair ? 'checked' : ''} onchange="toggleAutomation('autoRepair')"> Auto-Réparation si usure ≥
-          <input type="number" min="0" max="100" value="${a.autoRepairThreshold}" style="width:44px; padding:2px; margin:0;" onchange="setAutomationThreshold('autoRepairThreshold', this.value)">%
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; font-size:9px; margin:4px 0;">
-          <input type="checkbox" style="width:auto;" ${a.autoReturn ? 'checked' : ''} onchange="toggleAutomation('autoReturn')"> Auto-Retour au dépôt (porteurs disponibles)
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:9px; flex:1;">
+            <input type="checkbox" ${a.autoRest ? 'checked' : ''} onchange="toggleAutomation('autoRest')"> Auto-Repos si stress ≥
+          </label>
+          ${terminalStepperHtml({ value: a.autoRestThreshold, suffix: '%', min: 0, max: 100, onDec: "adjustAutomationThreshold('autoRestThreshold', -5)", onInc: "adjustAutomationThreshold('autoRestThreshold', 5)" })}
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:9px; flex:1;">
+            <input type="checkbox" ${a.autoRepair ? 'checked' : ''} onchange="toggleAutomation('autoRepair')"> Auto-Réparation si usure ≥
+          </label>
+          ${terminalStepperHtml({ value: a.autoRepairThreshold, suffix: '%', min: 0, max: 100, onDec: "adjustAutomationThreshold('autoRepairThreshold', -5)", onInc: "adjustAutomationThreshold('autoRepairThreshold', 5)" })}
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:9px; margin:6px 0;">
+          <input type="checkbox" ${a.autoReturn ? 'checked' : ''} onchange="toggleAutomation('autoReturn')"> Auto-Retour au dépôt (porteurs disponibles)
         </label>
         <div style="font-size:8px; color:var(--text-dim); margin-top:2px;">Appliqués en fin de mois, coûts identiques aux actions manuelles.</div>`;
     }
@@ -299,6 +322,15 @@ export function renderLogisticsDashboard() {
         <div class="stat-line"><span class="stat-label">Bénéfice net estimé</span><span class="stat-val" style="color:${netColor};">${dash.netEstimate >= 0 ? '+' : ''}$${dash.netEstimate}/mois</span></div>`;
     }
 
+// V0.7.5 — rareté purement présentationnelle, dérivée des mêmes données statiques que l'ancien
+// affichage (SPONSORS): aucune valeur de jeu ajoutée, aucun accès RNG.
+function sponsorRarity(s) {
+      if (s.vip) return 'legendary';
+      if (s.monthlyIncome >= 250) return 'epic';
+      if (s.monthlyIncome >= 150) return 'rare';
+      return 'common';
+    }
+
 export function renderSponsor() {
       const el = document.getElementById('sponsorDisplay');
       if (!el) return;
@@ -306,12 +338,24 @@ export function renderSponsor() {
       const label = LEAGUE_TIERS[tier];
       const leagueLine = `<div style="margin-bottom:4px;">${label.icon} Ligue Porteurs: <b>${label.name}</b>${tier < LEAGUE_TIERS.length - 1 ? ` (prochain palier: rép. ${BALANCE.league.tierThresholds[tier + 1].minReputation}, livraisons ${BALANCE.league.tierThresholds[tier + 1].minCompleted})` : ' — palier maximum'}</div>`;
       if (game.sponsor) {
-        el.innerHTML = leagueLine + `🤝 Sponsor: ${game.sponsor.name} (+$${game.sponsor.monthlyIncome}/mois) — ${game.sponsor.desc}`;
+        el.innerHTML = leagueLine + terminalCardHtml({
+          title: `🤝 ${game.sponsor.name}`,
+          subtitle: game.sponsor.desc,
+          rarity: 'legendary',
+          badgesHtml: statusBadgeHtml('Sous contrat', 'legendary'),
+          bodyHtml: `Revenu: <b>+$${game.sponsor.monthlyIncome}/mois</b>`
+        });
         return;
       }
-      el.innerHTML = leagueLine + 'Aucun sponsor.<br>' + SPONSORS.map(s =>
-        `<button onclick="signSponsor('${s.id}')" style="font-size:8px; margin:1px;">${s.vip ? '💠 ' : ''}Signer: ${s.name} (+$${s.signingBonus}, +$${s.monthlyIncome}/mois)</button>`
-      ).join('');
+      const cards = SPONSORS.map(s => terminalCardHtml({
+        title: s.name,
+        subtitle: s.desc,
+        rarity: sponsorRarity(s),
+        badgesHtml: rarityBadgeHtml(sponsorRarity(s)) + (s.vip ? statusBadgeHtml('VIP', 'legendary', '💠') : ''),
+        bodyHtml: `Bonus signature: <b>+$${s.signingBonus}</b> · Revenu: <b>+$${s.monthlyIncome}/mois</b>`,
+        actionsHtml: `<button class="term-card-action success" onclick="signSponsor('${s.id}')">🤝 Signer</button>`
+      })).join('');
+      el.innerHTML = leagueLine + '<div style="font-size:9px; color:var(--text-dim); margin-bottom:4px;">Aucun sponsor actif.</div>' + cards;
     }
 
 export function renderCampInfo() {
