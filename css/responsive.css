@@ -2,7 +2,7 @@
    du bas (V0.7.0, inchangée en dessous de 900px) ; Tablette/Desktop bascule la même barre
    (.mtab-bar, déjà position:fixed et hors du flux de grille #app-shell) en Sidebar verticale à
    gauche — un pur changement de position/flex-direction en media query, sans toucher au DOM ni au
-   JS (setMobileTab()/NavigationManager.js restent identiques quel que soit le point de rupture).
+   JS (ui/NavigationManager.js restent identiques quel que soit le point de rupture).
    Complète css/theme.css (tokens/typo/cartes) avec la mise en page uniquement. */
 
 /* ============================================================
@@ -95,4 +95,30 @@
   }
 
   .map-container { padding: var(--cb-space-5); }
+}
+
+/* ============================================================
+   V1.0.0 règle 4 — ZÉRO TRONQUAGE, à toute largeur (pas seulement sous un point de rupture):
+   box-sizing:border-box est déjà global (style.css:38, * { box-sizing: border-box }); ici on
+   renforce explicitement overflow-y:auto + min-height:0 sur tous les conteneurs Flexbox/Grid
+   scrollables ajoutés/existants, pour qu'aucun texte ni panneau ne soit jamais coupé sur mobile
+   (375px) ou tablette (768px) — un contenu trop long DOIT scroller, jamais déborder ou disparaître.
+   ============================================================ */
+.left .panel, .quest-drawer-panel, .nav-sub-content, .nav-main-content {
+  overflow-y: auto;
+  min-height: 0;
+  box-sizing: border-box;
+}
+#app-shell, #app-main, .map-container, #mainNavModal, #mainNavModal .panel {
+  min-height: 0;
+}
+.opt-volet-tabs, .nav-sub-item, .term-card-footer, .btn-grid {
+  min-width: 0;
+}
+.opt-volet-tab {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.nav-sub-item-text {
+  overflow-wrap: break-word;
 }

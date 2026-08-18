@@ -3,7 +3,7 @@
 // Composition root: seul fichier autorisé à tout importer (audio, ui, engine, systems, persistence)
 // pour câbler l'application ; les autres couches ne se voient jamais entre elles hors de leur tier.
 
-import { isMusicPlaying, playMenuChime, setMusicVolume, testAudioBeep, toggleMusic } from './audio/SoundEngine.js';
+import { setMusicVolume, toggleMusic } from './audio/SoundEngine.js';
 import { eventBus } from './core/EventBus.js';
 import { setGameSpeed, setTickFn, startGameClock, togglePause } from './core/GameLoop.js';
 import { game, logEvent, runtime } from './core/GameState.js';
@@ -36,7 +36,11 @@ import { closeLoadoutPanelModal, equipItemFromUI, openLoadoutPanelModal } from '
 import { closeBuildActionDrawer, openBuildActionDrawer, requestFieldBuildUI, toggleBuildActionDrawer } from './ui/BuildActionDrawer.js';
 import { drawMap } from './ui/MapRenderer.js';
 import { closeMiniMapFullscreen, toggleMiniMapFullscreen } from './ui/MiniMap.js';
-import { checkMobileMode, closeTabModal, setMobileTab } from './ui/Modals.js';
+import { closeMainNav, closeSubTab, initMainNav, setMainTab, setSubTab } from './ui/NavigationManager.js';
+import { renderManagementSubMenu, setManagementSubTab } from './ui/ManagementPanel.js';
+import { initOptionsPanel, renderOptionsPanel, setOptionsVolet, setReducedMotion } from './ui/OptionsPanel.js';
+import { renderMissionsPanel } from './ui/MissionsPanel.js';
+import { initAudioManager } from './audio/AudioManager.js';
 import { closePorterDrawer, openPorterDrawer, setPorterDrawerTab } from './ui/PorterDrawer.js';
 import { acceptUrgentQuestFromUI, closeQuestPanel, setQuestPanelTab, toggleQuestPanel } from './ui/QuestPanel.js';
 import { closeTerminalConsole, sendTerminalCommandUI, sendTerminalInput, toggleTerminalConsole } from './ui/TerminalConsole.js';
@@ -124,8 +128,9 @@ export async function chooseSlot(slot, mode) {
         if (info && !confirm('Cet emplacement contient une partie en cours. L\'écraser et recommencer ?')) return;
       }
       runtime.currentSlot = slot;
-      playMenuChime();
-      setTimeout(() => { if (!isMusicPlaying()) toggleMusic(); }, 300); // démarre la nappe d'ambiance après le chime, sans action requise
+      // V1.0.0 règle 5: plus de musique/chime auto-déclenchés ici — audio silencieux par défaut,
+      // l'AudioContext s'initialise en tâche de fond (audio/AudioManager.js) et la musique ne démarre
+      // que si l'utilisateur la bascule lui-même dans Options > Paramètres Système.
       dismissSplash();
       if (mode === 'continue') {
         const loaded = await loadGame(slot);
@@ -150,7 +155,9 @@ export async function chooseSlot(slot, mode) {
 setInterval(checkTerminalSlowdown, 60000);
 
 (async () => {
-      checkMobileMode();
+      initMainNav(); // V1.0.0: routeur Kairosoft 2 niveaux (Dashboard/Gestion/Missions/Camp/Options)
+      initOptionsPanel(); // V1.0.0: volet Système/Gestion par défaut + préférence "animations réduites"
+      initAudioManager(); // V1.0.0 règle 5: AudioContext silencieux dès la 1ère interaction, aucune lecture auto
       initUIShell(); // V0.7.0: pile de navigation (bouton Retour) + physique des tiroirs — indépendant du GameState
       initSplash();
       const mapCanvas = document.getElementById('gameMap');
@@ -244,7 +251,17 @@ window.buyVehicle = buyVehicle;
 window.cancelPlacingPCC = cancelPlacingPCC;
 window.chooseSlot = chooseSlot;
 window.closeInspector = closeInspector;
-window.closeTabModal = closeTabModal;
+window.setMainTabUI = (id) => {
+      setMainTab(id);
+      if (id === 'gestion') renderManagementSubMenu();
+      else if (id === 'missions') renderMissionsPanel();
+      else if (id === 'options') renderOptionsPanel();
+    };
+window.closeMainNavUI = closeMainNav;
+window.setManagementSubTab = setManagementSubTab;
+window.closeSubTabUI = closeSubTab;
+window.setOptionsVoletUI = setOptionsVolet;
+window.setReducedMotionUI = setReducedMotion;
 window.connectKnot = connectKnot;
 window.convertCampToRelay = convertCampToRelay;
 window.craft = craft;
@@ -270,13 +287,11 @@ window.sendToIncinerator = sendToIncinerator;
 window.setActiveBranch = setActiveBranch;
 window.setAutomationThreshold = setAutomationThreshold;
 window.setGameSpeed = setGameSpeed;
-window.setMobileTab = setMobileTab;
 window.setMusicVolume = setMusicVolume;
 window.signSponsor = signSponsor;
 window.startNewGamePlus = startNewGamePlus;
 window.startPlacingPCC = startPlacingPCC;
 window.switchMap = switchMap;
-window.testAudioBeep = testAudioBeep;
 window.toggleAutomation = toggleAutomation;
 window.toggleMusic = toggleMusic;
 window.togglePause = togglePause;

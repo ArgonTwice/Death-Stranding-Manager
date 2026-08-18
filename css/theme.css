@@ -156,6 +156,97 @@ button:not(.modal-close):not(.minimap-expand-btn):not(.term-stepper-btn),
 }
 
 /* ============================================================
+   V1.0.0 — Navigation Kairosoft à 2 niveaux (ui/NavigationManager.js).
+   Convention commune: display:none par défaut, .active le révèle —
+   jamais de manipulation de style inline depuis le JS.
+   ============================================================ */
+.nav-sub-menu, .nav-sub-content, .nav-main-content { display: none; }
+.nav-sub-menu.active, .nav-sub-content.active, .nav-main-content.active { display: block; animation: cb-fade-in 0.22s ease both; }
+
+/* Liste tactile aérée (règle 2 "aéré style Kairosoft") — lignes hautes, whitespace généreux,
+   icône + libellé + description + badge/chevron, jamais un bouton texte compact. */
+.nav-sub-item {
+  display: flex; align-items: center; gap: var(--cb-space-3);
+  width: 100%; min-height: 64px; padding: var(--cb-space-3) var(--cb-space-3);
+  margin: var(--cb-space-2) 0; text-align: left;
+  background: rgba(26, 26, 26, 0.55); border: 1px solid var(--ds-border-strong);
+  clip-path: polygon(var(--cb-bevel) 0, 100% 0, 100% calc(100% - var(--cb-bevel)), calc(100% - var(--cb-bevel)) 100%, 0 100%, 0 var(--cb-bevel));
+}
+.nav-sub-item:hover:not(:disabled) { border-color: var(--cb-blue-dim); box-shadow: var(--cb-glow-blue); }
+.nav-sub-item-ico { font-size: 22px; flex: 0 0 auto; }
+.nav-sub-item-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nav-sub-item-label { font-family: var(--cb-font-display); font-size: 13px; color: var(--cb-orange); letter-spacing: 0.5px; }
+.nav-sub-item-desc { font-family: var(--cb-font-mono); font-size: 10px; color: var(--ds-text-dim); }
+.nav-sub-item-badge {
+  flex: 0 0 auto; min-width: 22px; height: 22px; border-radius: var(--ds-radius-pill);
+  background: rgba(255, 159, 28, 0.18); border: 1px solid var(--cb-orange); color: var(--cb-orange);
+  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 6px;
+}
+.nav-sub-item-arrow { flex: 0 0 auto; color: var(--ds-text-dim); font-size: 18px; }
+
+/* V1.0.0 règle 4 — correctif débordement horizontal réel: la barre principale est passée de 3 à 5
+   onglets (Dashboard/Gestion/Missions/Camp/Options); ".mtab-btn{flex:1}" seul ne suffit pas, le mot
+   "Dashboard" (le plus long, incassable) impose une largeur minimale de contenu supérieure à la part
+   équitable du conteneur — sans min-width:0 un item flex ne peut jamais rétrécir sous cette taille,
+   ce qui pousse le dernier onglet hors de l'écran à 375px. */
+/* V1.0.0 règle 4 — même correctif générique pour tout <select>/<input> posé dans une rangée flex
+   (ex: rosterSort/rosterFilter du tiroir Porteurs, V0.7.0): sans min-width:0 un contrôle natif ne
+   rétrécit jamais sous la largeur de son option la plus longue, ce qui débordait déjà avant V1.0.0
+   sur écran 375px — width:100%/width explicite ailleurs n'est pas affecté par ce plancher. */
+select, input {
+  min-width: 0;
+}
+
+/* V1.0.0 règle 4 — #voidoutBanner .title (bannière plein écran "NÉANTISATION", canon pré-existant)
+   débordait horizontalement sur 375px: taille fixe 42px + letter-spacing 8px jamais adaptée au
+   mobile. Fluide via clamp(), jamais de largeur fixe. */
+#voidoutBanner .title {
+  font-size: clamp(24px, 9vw, 42px);
+  letter-spacing: clamp(3px, 1.5vw, 8px);
+  padding: 0 var(--cb-space-3);
+  text-align: center;
+}
+
+.mtab-btn {
+  min-width: 0;
+  font-size: 8.5px;
+  padding: 8px 1px;
+  letter-spacing: 0;
+  overflow: hidden;
+}
+.mtab-btn .ico { font-size: 15px; }
+
+.nav-back-btn {
+  width: auto; min-height: var(--ds-tap-min); padding: var(--cb-space-2) var(--cb-space-3);
+  margin-bottom: var(--cb-space-3); border-left-color: var(--cb-blue);
+}
+
+/* Volets Options (Système/Gestion) — filtre d'affichage local, même langage visuel que .qp-tabs */
+.opt-volet-tabs { display: flex; gap: var(--cb-space-2); margin-bottom: var(--cb-space-3); }
+.opt-volet-tab { flex: 1 1 0; min-height: var(--ds-tap-min); font-size: 11px; text-align: center; }
+.opt-volet-tab.active { border-left-color: var(--cb-blue); color: var(--cb-blue); box-shadow: inset 0 0 0 1px rgba(43,177,230,0.15); }
+.opt-volet-content { display: none; }
+.opt-volet-content.active { display: block; animation: cb-fade-in 0.2s ease both; }
+.opt-toggle-row {
+  display: flex; align-items: center; gap: var(--cb-space-2); min-height: var(--ds-tap-min);
+  padding: var(--cb-space-2) 0; font-size: 11px; color: var(--ds-text); cursor: pointer;
+}
+
+/* Carte Holographique Bridges (ui/BridgesMap.js) — pleine largeur fluide, jamais de largeur fixe px */
+.bridges-map-canvas {
+  display: block; width: 100%; height: auto; aspect-ratio: 800 / 420;
+  background: var(--cb-black); border: 1px solid var(--ds-border-strong);
+  border-radius: var(--cb-radius); margin-bottom: var(--cb-space-3);
+}
+
+/* Affichage/Graphismes (OptionsPanel.js) — coupe les animations décoratives V0.9.8/V1.0.0 */
+body.cb-reduced-motion .mtab-section, body.cb-reduced-motion .term-card,
+body.cb-reduced-motion .nav-sub-menu.active, body.cb-reduced-motion .nav-sub-content.active,
+body.cb-reduced-motion .nav-main-content.active, body.cb-reduced-motion .opt-volet-content.active {
+  animation: none !important;
+}
+
+/* ============================================================
    CARTES "HOLOGRAMME" — glassmorphism + coins biseautés (clip-path)
    + bordures néon, appliqué à toutes les familles de cartes de
    l'app (TerminalCard générique + porter/item/slot legacy) pour

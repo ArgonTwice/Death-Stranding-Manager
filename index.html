@@ -33,11 +33,9 @@
       </div>
       <div id="splashStatus" style="font-size:8px; color:#4a4638; margin-top:6px; letter-spacing:1px;">SÉLECTIONNEZ UN EMPLACEMENT</div>
 
-      <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px;">
-        <button id="splashMusicBtn" onclick="toggleMusic()" style="font-size:9px; padding:6px 12px; background:transparent; border:1px solid rgba(255,140,43,0.3); color:var(--amber); cursor:pointer; letter-spacing:1px;">🔇 Musique: OFF</button>
-        <input id="splashVolume" type="range" min="0" max="100" value="28" style="width:90px; --range-fill:28%"
-          oninput="this.style.setProperty('--range-fill', (((this.value-0)/(100-0))*100)+'%'); setMusicVolume(this.value)">
-      </div>
+      <!-- V1.0.0 règle 5: plus aucun contrôle audio sur le Start Screen — l'AudioContext s'initialise
+           silencieusement à la première interaction (audio/AudioManager.js), le volume/toggle musique
+           se règle exclusivement dans Options > Paramètres Système. -->
 
       <div style="display:flex; gap:14px; margin-top:22px; flex-wrap:wrap; justify-content:center;">
         <div class="slot-card" id="slotCard1"></div>
@@ -61,16 +59,28 @@
   </header>
 
   <div id="app-main">
-  <div class="left" id="tabModal" onclick="if (event.target === this) closeTabModal()">
+  <!-- V1.0.0 — Navigation Kairosoft à 2 niveaux (ui/NavigationManager.js): [Gestion] ouvre d'abord une
+       liste tactile aérée (ui/ManagementPanel.js) plutôt que son contenu directement. Mêmes ids DOM
+       que l'ancien onglet unique "gestion" (V0.7.0-V0.9.8) pour chaque champ/panneau — aucune logique
+       JS existante (HUD.js, EconomySystem.js, NetworkSystem.js...) n'est modifiée par ce déplacement. -->
+  <div class="left" id="mainNavModal" onclick="if (event.target === this) closeMainNavUI()">
     <div class="panel">
-    <button class="modal-close" onclick="closeTabModal()">✕</button>
-    <div class="mtab-section" data-tab="gestion">
-      <h2>◆ TERMINAL BRIDGES</h2>
+    <button class="modal-close" onclick="closeMainNavUI()">✕</button>
+
+    <!-- ===== GESTION — sous-menu ===== -->
+    <div class="nav-sub-menu" data-main="gestion">
+      <h2>◆ GESTION</h2>
+      <div id="managementSubMenu"></div>
+    </div>
+
+    <div class="nav-sub-content" data-main="gestion" data-sub="porters">
+      <button class="nav-back-btn" onclick="closeSubTabUI()">← Retour</button>
+      <h2>◆ PORTEURS</h2>
       <button class="success" onclick="hire()">Recruter porteur (scaling $)</button>
       <div style="font-size: 9px; color: var(--text-dim); margin-top: -2px; margin-bottom: 4px;">+$250 par porteur déjà actif</div>
       <button onclick="scoutCandidate()">🔍 Scouter un candidat ($150+)</button>
       <div id="candidateDisplay" style="font-size:9px; color:var(--chiral); margin: 2px 0 4px;"></div>
-      
+
       <h3>ÉQUIPEMENT</h3>
       <select id="porterTarget" onchange="window.runtime.selectedPorterId = this.value === '' ? null : parseInt(this.value)" style="width:100%; margin-bottom:6px;"></select>
       <div class="term-card term-card-rare">
@@ -114,8 +124,11 @@
           <button class="term-card-action" onclick="buyEquip('climbing_anchor')">⛓️ Ancre chirale ($300)</button>
         </div>
       </div>
+    </div>
 
-      <h3>VÉHICULES</h3>
+    <div class="nav-sub-content" data-main="gestion" data-sub="fleet">
+      <button class="nav-back-btn" onclick="closeSubTabUI()">← Retour</button>
+      <h2>◆ FLOTTE DE VÉHICULES</h2>
       <div class="term-card term-card-epic">
         <div class="term-card-header">
           <div>
@@ -141,7 +154,11 @@
           <button class="term-card-action" onclick="buyVehicle('trike')">🏍️💨 Trike inversé ($1800)</button>
         </div>
       </div>
+    </div>
 
+    <div class="nav-sub-content" data-main="gestion" data-sub="shop">
+      <button class="nav-back-btn" onclick="closeSubTabUI()">← Retour</button>
+      <h2>◆ BOUTIQUE &amp; RESSOURCES</h2>
       <h3>INSTALLATIONS</h3>
       <div id="structuresPanel" class="btn-grid"></div>
 
@@ -160,7 +177,16 @@
       <div id="cauldronPanel"></div>
     </div>
 
-    <div class="mtab-section" data-tab="camp">
+    <!-- ===== MISSIONS — Carte Holographique Bridges + Raids/Expéditions (contenu direct) ===== -->
+    <div class="nav-main-content" data-main="missions">
+      <h2>◆ MISSIONS</h2>
+      <canvas id="missionsMapCanvas" width="800" height="420" class="bridges-map-canvas"></canvas>
+      <div id="missionsPanelBody"></div>
+    </div>
+
+    <!-- ===== CAMP — contenu direct, inchangé ===== -->
+    <div class="nav-main-content" data-main="camp">
+      <h2>◆ CAMP</h2>
       <h3 id="campHeader">CAMP</h3>
       <div id="sponsorDisplay" style="font-size:9px; margin-bottom:4px;"></div>
       <div id="infraDisplay" style="font-size:9px; margin-bottom:4px;"></div>
@@ -207,42 +233,59 @@
       </div>
     </div>
 
-    <div class="mtab-section" data-tab="options">
-      <div class="stat-line">
-        <span class="stat-label">Jour</span>
-        <span class="stat-val" id="dayProgress">0/12</span>
+    <!-- ===== OPTIONS — contenu direct, scindé en 2 volets internes (règle 2), pas de niveau de
+         navigation historisé: un simple filtre d'affichage (ui/OptionsPanel.js). ===== -->
+    <div class="nav-main-content" data-main="options">
+      <h2>◆ OPTIONS</h2>
+      <div class="opt-volet-tabs">
+        <button class="opt-volet-tab" data-volet="system" onclick="setOptionsVoletUI('system')">⚙️ Paramètres Système</button>
+        <button class="opt-volet-tab" data-volet="management" onclick="setOptionsVoletUI('management')">🧭 Paramètres de Gestion</button>
       </div>
-      <button id="pauseBtn" onclick="togglePause()">⏸️ Pause</button>
-      <div id="speedControls" style="display:flex; gap:4px; margin-top:4px;"></div>
-      <button class="danger" style="margin-top: 6px;" onclick="advanceDay()">⏩ +1 jour (manuel)</button>
 
-      <h3>ORDRES PERMANENTS — AUTOMATISATION</h3>
-      <div id="automationPanel"></div>
+      <div class="opt-volet-content" data-volet="system">
+        <h3>AFFICHAGE &amp; GRAPHISMES</h3>
+        <label class="opt-toggle-row">
+          <input id="reducedMotionToggle" type="checkbox" onchange="setReducedMotionUI(this.checked)">
+          <span>Réduire les animations (fondus/transitions)</span>
+        </label>
 
-      <h3>TABLEAU DE BORD LOGISTIQUE</h3>
-      <div id="logisticsDashboard"></div>
-
-      <h3>AMBIANCE</h3>
-      <button onclick="testAudioBeep()">🔊 Tester le son (bip direct)</button>
-      <button id="musicBtn" onclick="toggleMusic()">🎵 Musique: OFF</button>
-      <div class="term-slider" style="margin-top:6px;">
-        <div class="term-slider-label">Volume musique</div>
-        <div class="term-slider-row">
-          <input id="musicVolume" type="range" min="0" max="100" value="28" style="--range-fill:28%"
-            oninput="this.style.setProperty('--range-fill', (((this.value-0)/(100-0))*100)+'%'); const vEl=document.getElementById('musicVolumeValue'); if(vEl) vEl.textContent=this.value+'%'; setMusicVolume(this.value)">
-          <span class="term-slider-value" id="musicVolumeValue">28%</span>
+        <h3>AMBIANCE — VOLUME &amp; MUSIQUE</h3>
+        <button id="musicBtn" onclick="toggleMusic()">🎵 Musique: OFF</button>
+        <div class="term-slider" style="margin-top:6px;">
+          <div class="term-slider-label">Volume musique</div>
+          <div class="term-slider-row">
+            <input id="musicVolume" type="range" min="0" max="100" value="28" style="--range-fill:28%"
+              oninput="this.style.setProperty('--range-fill', (((this.value-0)/(100-0))*100)+'%'); const vEl=document.getElementById('musicVolumeValue'); if(vEl) vEl.textContent=this.value+'%'; setMusicVolume(this.value)">
+            <span class="term-slider-value" id="musicVolumeValue">28%</span>
+          </div>
         </div>
-      </div>
-      <div id="audioDiag" style="font-size:8px; color:var(--text-dim); margin-top:4px; letter-spacing:0.5px;">AudioContext: non initialisé</div>
+        <div id="audioDiag" style="font-size:8px; color:var(--text-dim); margin-top:4px; letter-spacing:0.5px;">AudioContext: non initialisé</div>
 
-      <h3>SAUVEGARDE</h3>
-      <button onclick="saveGame()">💾 Sauvegarder</button>
-      <select id="difficultySelect" style="width:100%; margin:4px 0; background:#1a1712; color:var(--text); border:1px solid #332e24; font-family:inherit; font-size:9px; padding:4px;">
-        <option value="easy">🟢 Facile (-15% coûts/salaires/risque, +$3000 départ)</option>
-        <option value="normal" selected>🟡 Normal</option>
-        <option value="hard">🔴 Difficile (+15% coûts/salaires/risque, -$2000 départ)</option>
-      </select>
-      <button onclick="newGame(true)">🗑️ Nouvelle partie</button>
+        <h3>SAUVEGARDE</h3>
+        <button onclick="saveGame()">💾 Sauvegarder</button>
+        <select id="difficultySelect" style="width:100%; margin:4px 0; background:#1a1712; color:var(--text); border:1px solid #332e24; font-family:inherit; font-size:9px; padding:4px;">
+          <option value="easy">🟢 Facile (-15% coûts/salaires/risque, +$3000 départ)</option>
+          <option value="normal" selected>🟡 Normal</option>
+          <option value="hard">🔴 Difficile (+15% coûts/salaires/risque, -$2000 départ)</option>
+        </select>
+        <button onclick="newGame(true)">🗑️ Nouvelle partie</button>
+      </div>
+
+      <div class="opt-volet-content" data-volet="management">
+        <div class="stat-line">
+          <span class="stat-label">Jour</span>
+          <span class="stat-val" id="dayProgress">0/12</span>
+        </div>
+        <button id="pauseBtn" onclick="togglePause()">⏸️ Pause</button>
+        <div id="speedControls" style="display:flex; gap:4px; margin-top:4px;"></div>
+        <button class="danger" style="margin-top: 6px;" onclick="advanceDay()">⏩ +1 jour (manuel)</button>
+
+        <h3>ORDRES PERMANENTS — AUTOMATISATION (auto-repos, auto-réparation...)</h3>
+        <div id="automationPanel"></div>
+
+        <h3>TABLEAU DE BORD LOGISTIQUE — NOTIFICATIONS</h3>
+        <div id="logisticsDashboard"></div>
+      </div>
     </div>
 
     </div>
@@ -541,10 +584,15 @@
   </div>
   </div>
 
+  <!-- V1.0.0 — Barre principale Kairosoft à 5 onglets (règle 2). [Dashboard] referme tout et révèle
+       la Carte (elle EST le tableau de bord); les 4 autres ouvrent #mainNavModal sur leur contenu
+       (ui/NavigationManager.js gère l'état 2 niveaux + le bouton Retour physique). -->
   <div class="mtab-bar">
-    <button class="mtab-btn" data-tab="gestion" onclick="setMobileTab('gestion')"><span class="ico">🚚</span>Gestion</button>
-    <button class="mtab-btn" data-tab="camp" onclick="setMobileTab('camp')"><span class="ico">🏕️</span>Camp</button>
-    <button class="mtab-btn" data-tab="options" onclick="setMobileTab('options')"><span class="ico">⚙️</span>Options</button>
+    <button class="mtab-btn active" data-tab="dashboard" onclick="setMainTabUI('dashboard')"><span class="ico">📊</span>Dashboard</button>
+    <button class="mtab-btn" data-tab="gestion" onclick="setMainTabUI('gestion')"><span class="ico">🚚</span>Gestion</button>
+    <button class="mtab-btn" data-tab="missions" onclick="setMainTabUI('missions')"><span class="ico">🧭</span>Missions</button>
+    <button class="mtab-btn" data-tab="camp" onclick="setMainTabUI('camp')"><span class="ico">🏕️</span>Camp</button>
+    <button class="mtab-btn" data-tab="options" onclick="setMainTabUI('options')"><span class="ico">⚙️</span>Options</button>
   </div>
 
   <div id="endScreen" style="display:none; position:fixed; inset:0; background:rgba(5,5,8,0.92); z-index:999; align-items:center; justify-content:center; flex-direction:column; color:#d8d2c4; font-family:'Courier New',monospace; text-align:center;">

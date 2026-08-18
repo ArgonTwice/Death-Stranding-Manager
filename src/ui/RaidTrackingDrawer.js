@@ -74,12 +74,11 @@ function historyCardHtml(h) {
       });
     }
 
-export function renderRaidTrackingDrawer() {
-      const el = document.getElementById('raidTrackingDrawer');
-      if (!el) return;
-      const bodyEl = document.getElementById('raidTrackingDrawerBody');
-      if (!bodyEl) return;
-
+// V1.0.0 — extrait en fonction pure (chaîne HTML) pour être partagée avec MissionsPanel.js (l'onglet
+// principal [Missions] de la nav Kairosoft): même contenu (Raid actif/jauges, historiques Raids +
+// Expéditions, actions rapides), rendu dans deux conteneurs différents (ce tiroir ET le panneau
+// Missions), sans dupliquer la logique.
+export function raidMissionsSectionHtml() {
       const raid = game.activeRaid;
       const history = game.raidHistory || [];
       const historyHtml = history.length ? history.map(historyCardHtml).join('') : '<div class="qp-empty">Aucun Raid Tactique achevé pour l\'instant.</div>';
@@ -100,17 +99,24 @@ export function renderRaidTrackingDrawer() {
         : '';
 
       if (raid && raid.status === 'active') {
-        bodyEl.innerHTML = expeditionStatusHtml + activeRaidCardHtml(raid) + `<h3 style="margin-top:12px;">🏆 Historique</h3>` + historyHtml
+        return expeditionStatusHtml + activeRaidCardHtml(raid) + `<h3 style="margin-top:12px;">🏆 Historique</h3>` + historyHtml
           + `<h3 style="margin-top:12px;">🧭 Expéditions</h3>${expHistoryHtml}`;
-      } else {
-        bodyEl.innerHTML = `
+      }
+      return `
           <div class="qp-empty" style="margin-bottom:8px;">Aucun Raid Tactique en cours.</div>
           <button class="qp-action-btn success" style="min-height:48px;" onclick="openRaidSelectionModalUI()">🗺️ Choisir une route</button>
           <button class="qp-action-btn" style="min-height:48px;" onclick="openContractBoardModalUI()">📋 Tableau de contrats</button>
           <button class="qp-action-btn" style="min-height:48px;" onclick="openLoadoutPanelModalUI()">🎒 Préparer le Loadout</button>
           <h3 style="margin-top:12px;">🏆 Historique des Raids</h3>${historyHtml}
           <h3 style="margin-top:12px;">🧭 Expéditions</h3>${expHistoryHtml}`;
-      }
+    }
+
+export function renderRaidTrackingDrawer() {
+      const el = document.getElementById('raidTrackingDrawer');
+      if (!el) return;
+      const bodyEl = document.getElementById('raidTrackingDrawerBody');
+      if (!bodyEl) return;
+      bodyEl.innerHTML = raidMissionsSectionHtml();
     }
 
 export function refreshRaidTrackingDrawerIfOpen() {

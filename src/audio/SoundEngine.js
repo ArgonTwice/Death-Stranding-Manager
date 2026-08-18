@@ -68,8 +68,6 @@ export function toggleMusic() {
       if (musicPlaying) stopMusic(); else startMusic();
       const btn = document.getElementById('musicBtn');
       if (btn) btn.textContent = musicPlaying ? '🎵 Musique: ON' : '🎵 Musique: OFF';
-      const splashBtn = document.getElementById('splashMusicBtn');
-      if (splashBtn) splashBtn.textContent = musicPlaying ? '🔊 Musique: ON' : '🔇 Musique: OFF';
       setTimeout(audioDiag, 300); // re-vérifie l'état une fois resume() éventuellement retombé
     }
 
@@ -144,29 +142,6 @@ export function playBrassStinger(intensity = 1) {
         });
       };
       if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
-    }
-
-export function testAudioBeep() {
-      initAudio();
-      audioDiag();
-      if (!audioCtx) return;
-      try { audioCtx.resume(); } catch (e) {}
-      try {
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = 660;
-        const g = audioCtx.createGain();
-        g.gain.value = 0.25;
-        osc.connect(g);
-        g.connect(audioCtx.destination);
-        osc.start();
-        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-        osc.stop(audioCtx.currentTime + 0.55);
-        logEvent('🔊 Bip envoyé — si tu n\'entends rien, le problème est matériel/OS, pas le code');
-      } catch (e) {
-        logEvent('❌ Bip échoué: ' + e.message, 'warn');
-      }
-      setTimeout(audioDiag, 300);
     }
 
 export function setMusicVolume(v) {
