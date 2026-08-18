@@ -149,7 +149,19 @@ export function generateBTZones() {
       }
     }
 
-let muleCampIdCounter = 0;
+// V1.0.3 — le compteur d'ids mule camps vit désormais dans game.meta.counters.muleCampId (persisté par
+// SaveManager.js), plus dans une variable module-scope: une variable module-scope repart TOUJOURS de
+// zéro au chargement d'une page (nouvel onglet, reload navigateur), y compris lorsqu'une sauvegarde
+// existante est CHARGÉE (pas "Nouvelle partie") — un joueur qui débloque un territoire, sauvegarde,
+// recharge la page puis débloque un second territoire régénérait alors mule-0/mule-1 en collision avec
+// les ids mule-0/mule-1 déjà présents dans le premier territoire (le compteur en mémoire ignorait tout
+// de la progression déjà persistée). Isoler ce compteur dans game.* (RuntimeState) le fait survivre au
+// save/reload comme n'importe quel autre état de partie, exactement comme game.world.nextStructureId.
+function muleCampCounters() {
+      game.meta = game.meta || { counters: { muleCampId: 0 } };
+      game.meta.counters = game.meta.counters || { muleCampId: 0 };
+      return game.meta.counters;
+    }
 
 // Doit rester incrémental au sein d'UNE MÊME partie (plusieurs territoires débloqués = plusieurs
 // appels à generateMuleCamps(), les ids ne doivent jamais entrer en collision entre eux) — mais doit
@@ -157,9 +169,10 @@ let muleCampIdCounter = 0;
 // dans le même onglet navigateur produisent des ids différents (mule-0/1 vs mule-2/3...) pour un état
 // par ailleurs strictement identique (même seed): violation silencieuse du déterminisme, détectée par
 // tests/resilience/RngUiOrthogonality.test.js. Appelé par SaveManager.js#newGame().
-export function resetMuleCampIdCounter() { muleCampIdCounter = 0; }
+export function resetMuleCampIdCounter() { muleCampCounters().muleCampId = 0; }
 
 export function generateMuleCamps() {
+      const counters = muleCampCounters();
       const camps = [];
       let tries = 0;
       while (camps.length < BALANCE.map.muleCampCountBase + Math.floor(RNG.next() * BALANCE.map.muleCampCountRandRange) && tries < BALANCE.map.muleCampMaxTries) { // 2-3 camps
@@ -168,7 +181,7 @@ export function generateMuleCamps() {
         const y = Math.floor(RNG.next() * MAP_HEIGHT);
         if (Math.hypot(x - HQ.x, y - HQ.y) < BALANCE.map.muleCampMinDistanceFromHQ) continue; // pas trop près du camp
         if (camps.some(c => Math.hypot(c.x - x, c.y - y) < BALANCE.map.muleCampMinDistanceBetween)) continue; // pas collés entre eux
-        camps.push({ id: `mule-${muleCampIdCounter++}`, x, y, strength: BALANCE.map.muleCampStrengthBase + Math.floor(RNG.next() * BALANCE.map.muleCampStrengthRandRange), status: 'hostile', safeUntilMonth: null, needsIncineration: false });
+        camps.push({ id: `mule-${counters.muleCampId++}`, x, y, strength: BALANCE.map.muleCampStrengthBase + Math.floor(RNG.next() * BALANCE.map.muleCampStrengthRandRange), status: 'hostile', safeUntilMonth: null, needsIncineration: false });
       }
       return camps;
     }

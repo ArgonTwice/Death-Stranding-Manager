@@ -68,21 +68,37 @@ export function skipTutorial() {
       finishTutorial();
     }
 
+// V1.0.3 — reconcile(state) rattrape la progression en UNE SEULE passe: contrairement à
+// checkTutorialProgress() (n'avance QUE d'une étape par appel, pensé pour le rythme du render() en
+// jeu), reconcile() boucle tant que l'étape courante est déjà satisfaite par l'état RÉEL de la partie
+// (state.porters/state.mapsData/state.completed — jamais un id ou une référence qui pourrait avoir
+// disparu depuis, toujours une inspection directe des entités qui existent VRAIMENT dans GameState
+// au moment de l'appel). Nécessaire pour un reload/import qui restaure d'un coup un état où plusieurs
+// jalons sont déjà réunis (vieille save migrée, import externe): sans la boucle, il aurait fallu
+// plusieurs render() futurs pour rattraper chaque étape une par une.
+// RÈGLE D'ISOLATION (V1.0.1 règle 1, inchangée): aucun accès à RNG.js, ne mute que state.tutorial.*.
+export function reconcile(state) {
+      if (state.tutorial.completed) return;
+      let step = tutorialStepByIndex(state.tutorial.step);
+      if (!step) { finishTutorial(); return; } // index hors-limites (état corrompu/migré) — clôture défensive, comme avant V1.0.3
+      while (step && step.isStepSatisfied(state)) {
+        state.tutorial.step++;
+        if (state.tutorial.step >= TUTORIAL_STEP_COUNT) { finishTutorial(); return; }
+        step = tutorialStepByIndex(state.tutorial.step);
+      }
+      applyHighlightForCurrentStep();
+      renderTutorialOverlay();
+    }
+
 // Ré-évaluée à chaque render() (HUD.js) — coût négligeable (une poignée de comparaisons sur des
 // champs déjà en mémoire), et c'est exactement ce qui permet la reprise automatique après reload: au
 // premier appel suivant un chargement de sauvegarde, une étape déjà accomplie dans une session
 // précédente est aussitôt détectée comme satisfaite et l'étape suivante s'affiche sans redemander au
-// joueur une action déjà faite.
+// joueur une action déjà faite. Délègue à reconcile() (qui ne fait qu'UN tour de boucle la plupart du
+// temps — un seul jalon franchi par jour simulé — donc un comportement inchangé pour tous les appels
+// existants).
 export function checkTutorialProgress() {
-      if (game.tutorial.completed) return;
-      const step = tutorialStepByIndex(game.tutorial.step);
-      if (!step) { finishTutorial(); return; }
-      if (step.isStepSatisfied(game)) {
-        game.tutorial.step++;
-        if (game.tutorial.step >= TUTORIAL_STEP_COUNT) { finishTutorial(); return; }
-      }
-      applyHighlightForCurrentStep();
-      renderTutorialOverlay();
+      reconcile(game);
     }
 
 // Relance verbale non-bloquante (règle 4): un clic hors de la cible en surbrillance ne fait JAMAIS

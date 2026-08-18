@@ -9,6 +9,18 @@
   height: 48px !important;
 }
 
+/* V1.0.3 — sur très petits écrans (<480px), le header générique (padding 0 8px hérité de la règle
+   <900px de style.css) laissait encore trop peu de place aux pills scrollables (.hdr-pills) une fois
+   le logo/badge affichés à côté; max-height verrouille la hauteur à 48px (jamais plus, même si un
+   futur contenu du header grossissait par accident) tandis que le padding réduit à 6px/gap 6px rend
+   plus de largeur utile aux pills sans jamais dépasser la hauteur du bandeau. */
+@media (max-width: 480px) {
+  #app-header { max-height: 48px !important; padding: 0 6px !important; gap: 6px !important; }
+  .ah-brand { font-size: 11px; }
+  #statBar { gap: 6px !important; }
+  #statBar .sb-item { padding: 2px 5px; }
+}
+
 .hdr-pills {
   display: flex; align-items: center; gap: 6px;
   flex: 1 1 auto; min-width: 0;

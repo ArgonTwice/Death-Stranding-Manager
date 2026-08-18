@@ -330,6 +330,51 @@ body.cb-reduced-motion .nav-main-content.active, body.cb-reduced-motion .opt-vol
 }
 
 /* ============================================================
+   V1.0.3 — ModalService (ui/ModalService.js): remplace les confirm() natifs. Même langage visuel
+   glassmorphic que .left/.ds-drawer-backdrop, mais toujours au-dessus de TOUT le reste (z-index 400 >
+   Modales/Overlays 200 > Tutoriel 300... en pratique la confirmation peut être déclenchée DEPUIS
+   l'intérieur d'une modale déjà ouverte, ex: écraser un emplacement de sauvegarde depuis le menu des
+   slots) puisqu'une confirmation bloquante doit toujours rester au-dessus de ce qui l'a déclenchée.
+   body.modal-open est posé par core/NavigationManager.js (pushPanel/closePanel, point de
+   centralisation unique — cf. commentaire là-bas) dès qu'au moins un panneau est ouvert: bloque le
+   rubber-band/overscroll d'arrière-plan sur mobile, y compris quand cette modale de confirmation
+   recouvre un tiroir/une modale déjà ouverte.
+   ============================================================ */
+body.modal-open { overflow: hidden; overscroll-behavior: none; }
+
+.ds-modal-backdrop {
+  position: fixed; inset: 0; z-index: 400;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--cb-space-4);
+  background: rgba(5, 4, 3, 0.78);
+  backdrop-filter: blur(var(--cb-glass-blur)); -webkit-backdrop-filter: blur(var(--cb-glass-blur));
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.ds-modal-backdrop.open { opacity: 1; pointer-events: auto; }
+.ds-modal-confirm {
+  width: 100%; max-width: 360px;
+  background: rgba(15, 13, 10, 0.92);
+  border: 1px solid var(--cb-orange); border-radius: var(--cb-radius);
+  box-shadow: var(--cb-glow-orange), 0 12px 40px -12px rgba(0, 0, 0, 0.7);
+  padding: var(--cb-space-4);
+  transform: translateY(12px); opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.ds-modal-backdrop.open .ds-modal-confirm { transform: translateY(0); opacity: 1; }
+.ds-modal-title {
+  font-family: var(--cb-font-display); font-size: 14px; letter-spacing: 2px;
+  color: var(--cb-orange); text-transform: uppercase; margin-bottom: var(--cb-space-2);
+}
+.ds-modal-message {
+  font-family: var(--cb-font-mono); font-size: 13px; line-height: 1.5; color: var(--ds-text);
+  margin-bottom: var(--cb-space-4);
+}
+.ds-modal-actions { display: flex; gap: var(--cb-space-2); }
+.ds-modal-actions button { width: auto; flex: 1; text-align: center; margin: 0; }
+.ds-modal-confirm-btn.danger { border-left-color: var(--cb-red); color: #ff9aa6; }
+
+/* ============================================================
    CARTES "HOLOGRAMME" — glassmorphism + coins biseautés (clip-path)
    + bordures néon, appliqué à toutes les familles de cartes de
    l'app (TerminalCard générique + porter/item/slot legacy) pour

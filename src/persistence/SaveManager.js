@@ -13,6 +13,7 @@ import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { ensurePorterIdentity } from '../systems/PorterStorySystem.js';
 import { greetOnLoad } from '../systems/TerminalSoul.js';
 import { render } from '../ui/HUD.js';
+import { confirmModal } from '../ui/ModalService.js';
 
 export function computeScore() {
       const totalRoutes = Object.values(game.mapsData).reduce((s, d) => s + d.routes.size, 0);
@@ -144,7 +145,8 @@ export function serializeGame() {
         world: game.world || { structures: [], nextStructureId: 0 },
         activeExpedition: game.activeExpedition || null,
         expeditionHistory: game.expeditionHistory || [],
-        tutorial: game.tutorial || { step: 0, completed: false, skipped: false, rewardsGranted: false }
+        tutorial: game.tutorial || { step: 0, completed: false, skipped: false, rewardsGranted: false },
+        meta: game.meta || { counters: { muleCampId: 0 } }
       };
     }
 
@@ -211,7 +213,18 @@ export function deserializeGame(s) {
       game.world = s.world || { structures: [], nextStructureId: 0 };
       game.activeExpedition = s.activeExpedition || null;
       game.expeditionHistory = s.expeditionHistory || [];
+      // V1.0.3 règle 3 — ne PAS auto-réconcilier ici: une vieille sauvegarde antérieure à V1.0.1 (donc
+      // sans champ `tutorial`) a très probablement déjà tous les jalons réunis (porteurs recrutés,
+      // réseau étendu, livraisons complétées) sans jamais avoir "joué" le tutoriel — appeler
+      // reconcile()/checkTutorialProgress() ICI accorderait alors rétroactivement le kit de départ
+      // (+$1000, +2 chiral crystal) à CHAQUE chargement d'une partie vétéran, en silence. Le
+      // comportement établi depuis V1.0.1 reste inchangé: seul le prochain render() (HUD.js, via
+      // TutorialManager.js#checkTutorialProgress -> reconcile) rattrape la progression — reconcile()
+      // boucle désormais en une seule passe plutôt qu'un jalon par appel (voir TutorialManager.js).
       game.tutorial = s.tutorial || { step: 0, completed: false, skipped: false, rewardsGranted: false };
+      game.meta = s.meta || { counters: { muleCampId: 0 } };
+      game.meta.counters = game.meta.counters || { muleCampId: 0 };
+      game.meta.counters.muleCampId = game.meta.counters.muleCampId || 0;
       runtime.activeCampEvents = s.activeCampEventIds ? CAMP_EVENTS.filter(e => s.activeCampEventIds.includes(e.id)) : CAMP_EVENTS;
       runtime.activeVisitorOffers = s.activeVisitorOfferIds ? VISITOR_OFFERS.filter(o => s.activeVisitorOfferIds.includes(o.id)) : VISITOR_OFFERS;
       runtime.activeFestivalsPool = s.activeFestivalIds ? FESTIVALS.filter(f => s.activeFestivalIds.includes(f.id)) : FESTIVALS;
@@ -251,8 +264,13 @@ export function initFreshMap() {
       game.muleCamps = game.mapsData.mexico.muleCamps;
     }
 
-export function newGame(confirmFirst, slot) {
-      if (confirmFirst && !confirm('Nouvelle partie ? La sauvegarde actuelle sera écrasée.')) return;
+// V1.0.3 — confirmFirst passe désormais par ModalService.js (Promise-based) plutôt que le confirm()
+// natif bloquant. `async` uniquement pour ce branchement: quand confirmFirst est falsy (l'écrasante
+// majorité des appels, cf. main.js/startNewGamePlus()), le `&&` court-circuite AVANT tout `await` —
+// la fonction s'exécute alors intégralement de façon synchrone, exactement comme avant (aucun appelant
+// existant n'awaite newGame(), leur code continue de s'exécuter juste après l'appel).
+export async function newGame(confirmFirst, slot) {
+      if (confirmFirst && !(await confirmModal({ title: 'Nouvelle partie', message: 'Nouvelle partie ? La sauvegarde actuelle sera écrasée.', confirmLabel: 'Écraser', cancelLabel: 'Annuler', danger: true }))) return;
       if (slot) runtime.currentSlot = slot;
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';

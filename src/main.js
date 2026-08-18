@@ -13,6 +13,7 @@ import { assaultCamp, buyConsumable, convertCampToRelay, defendRelay, engageCatc
 import { acceptVisitorOffer, advanceDay, buildRoute, craft, dismissVisitor, launchQuestFromUI, sendDelivery } from './engine/DeliveryEngine.js';
 import { buildExpansion, foundBranch, setActiveBranch, switchMap } from './engine/MapEngine.js';
 import { computeScore, loadGame, loadScores, newGame, peekSlot, saveGame, startNewGamePlus } from './persistence/SaveManager.js';
+import { confirmModal } from './ui/ModalService.js';
 import { setAutomationThreshold, toggleAutomation } from './systems/AutomationManager.js';
 import { buildStructure, buyEquip, buyVehicle, investInfrastructure, signSponsor } from './systems/EconomySystem.js';
 import { cancelPlacingPCC, canvasClickToCell, placePCCAt, repairPCC, startPlacingPCC } from './systems/NetworkSystem.js';
@@ -127,7 +128,7 @@ export async function renderSlotMenu() {
 export async function chooseSlot(slot, mode) {
       if (mode === 'new') {
         const info = await peekSlot(slot);
-        if (info && !confirm('Cet emplacement contient une partie en cours. L\'écraser et recommencer ?')) return;
+        if (info && !(await confirmModal({ title: 'Écraser l\'emplacement', message: 'Cet emplacement contient une partie en cours. L\'écraser et recommencer ?', confirmLabel: 'Écraser', cancelLabel: 'Annuler', danger: true }))) return;
       }
       runtime.currentSlot = slot;
       // V1.0.0 règle 5: plus de musique/chime auto-déclenchés ici — audio silencieux par défaut,

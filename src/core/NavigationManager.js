@@ -15,6 +15,17 @@
 let stack = []; // [{ id, apply }] — apply() ferme visuellement le panneau, jamais d'appel history.*
 let initialized = false;
 
+// V1.0.3 règle 2 — point de centralisation UNIQUE pour body.modal-open: pushPanel()/onPopState() sont
+// déjà le seul chemin par lequel TOUTE modale/tiroir/ModalService de l'app s'ouvre ou se ferme (17
+// fichiers ui/* passent par ici), donc poser la classe ici l'applique gratuitement partout plutôt que
+// de dupliquer un toggle dans chaque module. css/theme.css lit body.modal-open pour bloquer le
+// rubber-band/overscroll d'arrière-plan tant qu'au moins un panneau reste ouvert.
+function syncModalOpenClass() {
+      if (typeof document !== 'undefined' && document.body && document.body.classList) {
+        document.body.classList.toggle('modal-open', stack.length > 0);
+      }
+    }
+
 export function initNavigation() {
       if (initialized) return;
       initialized = true;
@@ -30,6 +41,7 @@ export function pushPanel(id, apply) {
       if (stack.length && stack[stack.length - 1].id === id) return;
       stack.push({ id, apply });
       history.pushState({ __nav: true, depth: stack.length }, '');
+      syncModalOpenClass();
     }
 
 // Fermeture demandée par l'UI (bouton ✕, ou fermeture programmatique après une action) — jamais par
@@ -52,4 +64,5 @@ function onPopState(event) {
         const panel = stack.pop();
         panel.apply();
       }
+      syncModalOpenClass();
     }

@@ -187,6 +187,7 @@
     .left {
       position: fixed; inset: 0; z-index: 200; /* Modales/Overlays — hiérarchie V0.7.0 */
       background: rgba(5,4,3,0.72);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); /* V1.0.3 — même traitement glassmorphic que .ds-drawer-backdrop/.ds-modal-backdrop */
       display: flex;
       align-items: flex-end;
       justify-content: center;
