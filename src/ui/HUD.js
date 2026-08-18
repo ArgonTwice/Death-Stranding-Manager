@@ -24,6 +24,7 @@ import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
 import { renderBBPodOverlay, showBBPodAlert } from './BBPodOverlay.js';
 import { renderTerminalConsole } from './TerminalConsole.js';
 import { renderWalkDrawer } from './WalkDrawer.js';
+import { renderRaidTrackingDrawer } from './RaidTrackingDrawer.js';
 import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
 import { collapseDrawer, openDrawer } from './DrawerManager.js';
 import { refreshInspectorIfOpen } from './CanvasInspector.js';
@@ -92,6 +93,7 @@ export function render() {
       renderBBPodOverlay();
       renderTerminalConsole();
       renderWalkDrawer();
+      renderRaidTrackingDrawer();
       refreshPorterDrawerIfOpen();
       refreshInspectorIfOpen();
       renderDebugHud();

@@ -10,9 +10,12 @@ const RUN_ONCE = path.join(__dirname, 'run-once.mjs');
 
 const SEED = process.argv[2] || '777001';
 const DAYS = process.argv[3] || '50';
+// Tout argument CLI au-delà de SEED/DAYS (INJECT_STEPS, LAUNCH_RAID, ...) est transmis tel quel à
+// run-once.mjs — évite d'oublier de le relayer à chaque nouveau paramètre ajouté par une mission.
+const EXTRA_ARGS = process.argv.slice(4);
 
 function runOnce() {
-  const out = execFileSync('node', [RUN_ONCE, SEED, DAYS], { encoding: 'utf8' });
+  const out = execFileSync('node', [RUN_ONCE, SEED, DAYS, ...EXTRA_ARGS], { encoding: 'utf8' });
   return JSON.parse(out);
 }
 

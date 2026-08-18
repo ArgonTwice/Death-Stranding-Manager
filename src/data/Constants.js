@@ -275,7 +275,8 @@ export const JOURNAL_MILESTONES = {
       timefall_survived: { name: 'Tempête traversée', icon: '🌧️', acquiredTraitName: 'Résistant au Timefall', stress_mult: 0.9 },
       raid_survived:      { name: 'Raid survécu', icon: '⚔️', acquiredTraitName: 'Vétéran des raids', dmg_resist: 0.05 },
       perfect_delivery:   { name: 'Livraison parfaite', icon: '⭐', acquiredTraitName: 'Perfectionniste', dmg_resist: 0.03 },
-      bt_encounter:       { name: 'Rencontre BT', icon: '👻', acquiredTraitName: 'Sang-froid BT', stress_mult: 0.9 }
+      bt_encounter:       { name: 'Rencontre BT', icon: '👻', acquiredTraitName: 'Sang-froid BT', stress_mult: 0.9 },
+      tactical_raid_legend: { name: 'Raid Tactique Légendaire', icon: '🏆', acquiredTraitName: 'Légende du Rivage', dmg_resist: 0.04 } // V0.9.0
     };
 
 export const LEAGUE_TIERS = [

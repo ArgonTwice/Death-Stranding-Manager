@@ -27,6 +27,9 @@ import { closeHallOfFamePanel, toggleHallOfFamePanel } from './ui/HallOfFamePane
 import { render, renderPorters, showEndScreen, openTelemetryDrawer, closeTelemetryDrawer, toggleTelemetryDrawer, openPortersDrawer, closePortersDrawer, togglePortersDrawer, openNetworkDrawer, closeNetworkDrawer, toggleNetworkDrawer } from './ui/HUD.js';
 import { closeAllDrawersUI, initUIShell } from './ui/UIShell.js';
 import { addManualWalkBoostUI, closeWalkDrawer, openWalkDrawer, requestRealWalkActivationUI, stopRealWalkUI, toggleWalkDrawer } from './ui/WalkDrawer.js';
+import './systems/raid/RaidSystem.js'; // enregistre l'abonnement walk:stepDetected (effet de bord au chargement du module)
+import { closeRaidSelectionModal, launchRaidFromUI, openRaidSelectionModal } from './ui/RaidSelectionModal.js';
+import { abandonRaidUI, closeRaidTrackingDrawer, openRaidSelectionModalUI, openRaidTrackingDrawer, toggleRaidTrackingDrawer } from './ui/RaidTrackingDrawer.js';
 import { drawMap } from './ui/MapRenderer.js';
 import { closeMiniMapFullscreen, toggleMiniMapFullscreen } from './ui/MiniMap.js';
 import { checkMobileMode, closeTabModal, setMobileTab } from './ui/Modals.js';
@@ -202,6 +205,14 @@ window.toggleWalkDrawer = toggleWalkDrawer;
 window.requestRealWalkActivationUI = requestRealWalkActivationUI;
 window.stopRealWalkUI = stopRealWalkUI;
 window.addManualWalkBoostUI = addManualWalkBoostUI;
+window.openRaidSelectionModal = openRaidSelectionModal;
+window.closeRaidSelectionModal = closeRaidSelectionModal;
+window.launchRaidFromUI = launchRaidFromUI;
+window.openRaidTrackingDrawer = openRaidTrackingDrawer;
+window.closeRaidTrackingDrawer = closeRaidTrackingDrawer;
+window.toggleRaidTrackingDrawer = toggleRaidTrackingDrawer;
+window.abandonRaidUI = abandonRaidUI;
+window.openRaidSelectionModalUI = openRaidSelectionModalUI;
 window.acceptVisitorOffer = acceptVisitorOffer;
 window.advanceDay = advanceDay;
 window.assaultCamp = assaultCamp;

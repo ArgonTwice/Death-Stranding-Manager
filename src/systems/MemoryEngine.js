@@ -83,3 +83,11 @@ eventBus.on('legacy:legendRecorded', ({ name, cause, porterId }) => {
 eventBus.on('beach:resolved', ({ choice, porterName }) => {
       if (choice === 'memory') pushMajorMemory(`Le rivage a rendu un souvenir de ${porterName}.`, B.scorePorterDeath, null);
     });
+
+// V0.9.0 — Raids Tactiques: score dérivé du rang obtenu, jamais du RNG (le rang lui-même est déjà
+// déterministe, calculé par RaidRewardResolver.js).
+const RAID_RANK_SCORE = { LEGENDARY: 95, S: 82, A: 55, B: 30, C: 15, D: 5 };
+eventBus.on('raid:completed', ({ porterId, rank }) => {
+      const score = RAID_RANK_SCORE[rank] || 0;
+      if (score > 0) evaluateSignificance(score, `${porterName(porterId)} a achevé un Raid Tactique — rang ${rank}.`, porterId);
+    });

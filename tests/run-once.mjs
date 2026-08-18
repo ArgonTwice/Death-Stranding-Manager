@@ -46,6 +46,7 @@ const SRC = 'file://' + path.join(ROOT, 'src') + '/';
 const SEED = parseInt(process.argv[2] || '777001', 10);
 const DAYS = parseInt(process.argv[3] || '50', 10);
 const INJECT_STEPS = parseInt(process.argv[4] || '0', 10); // V0.8.0 — total de pas simulés répartis sur DAYS jours
+const LAUNCH_RAID = process.argv[5] === '1'; // V0.9.0 — lance un Raid Tactique avant l'injection de pas ci-dessus
 
 const { game } = await import(SRC + 'core/GameState.js');
 const { RNG } = await import(SRC + 'core/RNG.js');
@@ -54,11 +55,21 @@ const { advanceDay } = await import(SRC + 'engine/DeliveryEngine.js');
 const { hireRaw } = await import(SRC + 'systems/PorterSystem.js');
 const { createMockMotionAdapter } = await import(SRC + 'sensors/MockMotionAdapter.js');
 const { recordSteps } = await import(SRC + 'systems/RealWalkSystem.js');
+const { launchRaid } = await import(SRC + 'systems/raid/RaidSystem.js'); // l'import seul enregistre déjà l'abonnement walk:stepDetected (effet de bord au chargement)
 
 RNG.setSeed(SEED);
 newGame(false);
 game.money = 20000;
 ['scout', 'hauler', 'driver', 'dooms'].forEach(s => hireRaw(s));
+
+// V0.9.0 — fixture de test: construit directement une couverture réseau suffisante (au lieu de
+// jouer buildRoute() plusieurs fois) pour déverrouiller mexico_south, puis lance le raid AVANT
+// l'injection de pas ci-dessous — les mêmes pas alimentent alors RealWalkSystem ET RaidSystem,
+// exactement comme en jeu réel (RaidSystem n'est qu'un observateur de walk:stepDetected).
+if (LAUNCH_RAID) {
+  for (let i = 0; i < 10; i++) game.mapsData.mexico.routes.add(`${i},0`);
+  launchRaid('mexico_south', game.porters[0].id);
+}
 
 // V0.8.0 — passe systématiquement par le pipeline MockMotionAdapter -> StepDetector plutôt que
 // d'appeler recordSteps() directement: exerce le même chemin de code qu'un vrai capteur (règle 1),
@@ -104,7 +115,11 @@ const result = {
   totalSteps: game.totalSteps || 0,
   bbPodStress: (game.bbPod && game.bbPod.stress) || 0,
   gratitudeTrace: game.gratitudeTrace || 0,
-  chiralCrystal: (game.materials && game.materials.chiral_crystal) || 0
+  chiralCrystal: (game.materials && game.materials.chiral_crystal) || 0,
+  // V0.9.0 — couvre le déterminisme du pipeline de Raid Tactique (raidSeed dérivé, événements aux
+  // checkpoints, récompense finale)
+  activeRaid: game.activeRaid ? { status: game.activeRaid.status, traveledSteps: game.activeRaid.traveledSteps, targetDistanceSteps: game.activeRaid.targetDistanceSteps, cargoState: game.activeRaid.cargoState, events: game.activeRaid.events, rank: game.activeRaid.rank || null } : null,
+  raidHistory: game.raidHistory || []
 };
 
 process.stdout.write(JSON.stringify(result));

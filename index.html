@@ -322,6 +322,16 @@
     </div>
   </div>
 
+  <!-- Sélection de Raid Tactique (V0.9.0) — routes A->B, une seule sélectionnable si connectée au
+       Réseau Chiral (ChiralNetworkSystem.js). Même langage visuel que les autres modales .left. -->
+  <div class="left" id="raidSelectionModal" onclick="if (event.target === this) closeRaidSelectionModal()">
+    <div class="panel">
+      <button class="modal-close" onclick="closeRaidSelectionModal()">✕</button>
+      <h2>◆ RAID TACTIQUE — CHOIX DE ROUTE</h2>
+      <div id="raidSelectionModalBody"></div>
+    </div>
+  </div>
+
   <!-- Console du Terminal (V0.6.0) — tiroir glissant rétro, dialogue avec le Terminal (TerminalSoul.js).
        Boutons de commande ≥48x48px: jouable sans clavier au tactile. -->
   <div class="ds-drawer state-collapsed terminal-drawer" id="terminalDrawer">
@@ -432,6 +442,17 @@
     </div>
   </div>
 
+  <!-- Suivi de Raid Tactique (V0.9.0) — jauge de pas en direct, journal d'événements, état du cargo,
+       abandon. Alimenté par les mêmes pas IRL que le tiroir Porteur ci-dessus (walk:stepDetected). -->
+  <div class="ds-drawer state-collapsed" id="raidTrackingDrawer">
+    <div class="ds-drawer-handle"></div>
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closeRaidTrackingDrawer()">✕</button>
+      <h2>◆ RAID TACTIQUE</h2>
+      <div id="raidTrackingDrawerBody"></div>
+    </div>
+  </div>
+
   <!-- Fond assombri commun à tous les tiroirs (V0.7.0) — tapoter dessus ferme le tiroir actif,
        jamais de logique de jeu ici (DrawerManager.js délègue toujours au close du contrôleur). -->
   <div id="drawerBackdrop" class="ds-drawer-backdrop" onclick="closeAllDrawersUI()"></div>
@@ -478,6 +499,7 @@
         <button id="portersDrawerToggle" class="map-action-btn" onclick="togglePortersDrawer()" aria-label="Porteurs">🎒</button>
         <button id="networkDrawerToggle" class="map-action-btn" onclick="toggleNetworkDrawer()" aria-label="Réseau">📊</button>
         <button id="walkDrawerToggle" class="map-action-btn" onclick="toggleWalkDrawer()" aria-label="Porteur IRL">👟</button>
+        <button id="raidTrackingDrawerToggle" class="map-action-btn" onclick="toggleRaidTrackingDrawer()" aria-label="Raid Tactique">🚩</button>
       </div>
     </div>
   </div>

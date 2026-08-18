@@ -66,6 +66,8 @@ export const game = {
       gratitudeTrace: 0, // V0.6.0 — Likes cumulés du réseau fantôme (ChiralTraceSystem.js), déclenche les Pèlerins
       beachSession: null, // V0.6.0 — séquence de la Plage en cours (TheBeachEngine.js). Éphémère, jamais persisté, comme game.deliveries.
       totalSteps: 0, // V0.8.0 — pas IRL cumulés validés (RealWalkSystem.js), persisté, jamais affecté par RNG.js
+      activeRaid: null, // V0.9.0 — Raid Tactique en cours (RaidSystem.js), persisté: peut s'étaler sur plusieurs sessions IRL
+      raidHistory: [], // V0.9.0 — historique borné des raids achevés (rang, récompense), affiché dans RaidTrackingDrawer.js
       // --- Propriétés repliées depuis d'anciennes variables top-level module-scope (refacto ES Modules) ---
       gameEnded: false,
       quarterSnapshot: { completed: 0, deaths: 0, money: 10000 },

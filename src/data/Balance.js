@@ -554,5 +554,25 @@ export const BALANCE = {
     checkpointSaveStepInterval: 100, // sauvegarde silencieuse tous les 100 pas, jamais à chaque pas
     stepCooldownMs: 300, // anti-triche: délai minimal entre deux pas validés (StepDetector.js)
     maxPlausibleStepsPerMinute: 220 // au-delà: secouage frénétique, pas ignorés (StepDetector.js)
+  },
+  raid: {
+    // V0.9.0 — Le Voyage du Porteur & Raids Tactiques. Un raidSeed unique est tiré du flux RNG.js
+    // PARTAGÉ au lancement (Math.floor(RNG.next()*4294967296), même geste que porterSeed) — c'est la
+    // SEULE consommation de RNG.js de tout le pipeline. Tout le reste (événements, détours) découle
+    // exclusivement du générateur DÉRIVÉ de cette seed (RNG.deriveGenerator), jamais du flux partagé.
+    checkpoints: [0.25, 0.5, 0.75], // fractions de baseDistanceSteps (fixe, ne bouge jamais) déclenchant un événement
+    detourStepsMin: 200,
+    detourStepsMax: 800,
+    detourBonusCap: 0.25, // plafond anti-exploit: le bonus de récompense lié aux détours ne dépasse jamais +25%
+    cargoDamagePerBadEvent: 0.15, // fraction d'intégrité cargo perdue par événement défavorable
+    cargoStateFloor: 0.25, // l'intégrité cargo ne descend jamais sous ce plancher (toujours livrable)
+    likesPerScorePoint: 0.08,
+    chiraliumPerScorePoint: 0.004,
+    muleScrapPerScorePoint: 0.002,
+    reputationPerScorePoint: 0.006,
+    xpPerScorePoint: 0.05,
+    // Rang = detourBonusMult(<=1+detourBonusCap) x cargoState(>=cargoStateFloor) — indépendant de la
+    // distance, donc comparable entre routes courtes et longues. Sinon: rang D.
+    rankThresholds: { LEGENDARY: 1.15, S: 1.0, A: 0.85, B: 0.65, C: 0.45 }
   }
 };
