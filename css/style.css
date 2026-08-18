@@ -595,7 +595,7 @@
       .left .panel { max-height: 88vh; }
       h2 { font-size: 21px !important; letter-spacing: 2px !important; }
       h3 { font-size: 12px !important; letter-spacing: 2px !important; margin-top: 14px !important; }
-      button { min-height: 40px !important; padding: 10px 12px !important; font-size: 13px !important; margin: 3px 0 !important; }
+      button:not(.modal-close):not(.minimap-expand-btn):not(.term-stepper-btn) { min-height: 48px !important; padding: 10px 12px !important; font-size: 13px !important; margin: 3px 0 !important; }
       select, input[type="range"] { min-height: 38px !important; font-size: 13px !important; }
       .skill-badge { font-size: 11px !important; padding: 3px 6px !important; }
       .stat-line { font-size: 12px !important; }

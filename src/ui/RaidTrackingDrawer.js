@@ -54,8 +54,8 @@ function activeRaidCardHtml(raid) {
         subtitle: `${porter ? porter.name : '?'} · ${raid.traveledSteps.toLocaleString('fr-FR')} / ${raid.targetDistanceSteps.toLocaleString('fr-FR')} pas`,
         rarity: route ? (RANK_TONE[route.difficulty] || 'common') : 'common',
         badgesHtml: statusBadgeHtml('Raid en cours', 'legendary', '👟'),
+        radialGauge: { value: progressPct, valueLabel: `${progressPct}%`, color: 'var(--cb-blue)' },
         gauges: [
-          { label: 'Progression', value: progressPct, valueLabel: `${progressPct}%` },
           { label: 'État du cargo', value: Math.round(raid.cargoState * 100), valueLabel: `${Math.round(raid.cargoState * 100)}%` }
         ],
         bodyHtml: `<h3 style="margin-top:8px;">📋 Journal du Raid</h3>${eventsHtml}`,

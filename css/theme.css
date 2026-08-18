@@ -1,0 +1,194 @@
+/* css/theme.css (V0.9.8) — Design System "Cyber-Bridges 2.0": recolore et re-typographie
+   l'intégralité de l'UI existante en réassignant les VALEURS des tokens déjà consommés partout
+   (legacy --amber/--chiral/--void-black/... de style.css ET --ds-* du Design System V0.7.5 de
+   tokens.css/components.css) — jamais en dupliquant des règles de présentation. Chargé en dernier
+   dans index.html pour gagner la cascade sans "!important". Complété par css/responsive.css pour la
+   structure de navigation adaptative (Sidebar/Bottom-nav).
+
+   Palette stricte de la mission: Noir #0A0A0A, Gris sombre #1A1A1A, Bridges Orange #FF9F1C,
+   Chiral Blue #2BB1E6. Polices: 'Orbitron' (titres/display) + 'Rajdhani' (données techniques). */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root {
+  /* --- Palette Cyber-Bridges 2.0 --- */
+  --cb-black: #0A0A0A;
+  --cb-dark: #1A1A1A;
+  --cb-dark-raised: #201f1c;
+  --cb-orange: #FF9F1C;
+  --cb-orange-dim: #b5700f;
+  --cb-blue: #2BB1E6;
+  --cb-blue-dim: #1a6b8a;
+  --cb-red: #d64f5f;
+
+  /* --- Échelle d'espacement (règle 3: whitespace généreux) --- */
+  --cb-space-1: 4px;
+  --cb-space-2: 8px;
+  --cb-space-3: 14px;
+  --cb-space-4: 20px;
+  --cb-space-5: 28px;
+  --cb-space-6: 40px;
+
+  /* --- Rayons & bevel --- */
+  --cb-radius: 10px;
+  --cb-bevel: 12px; /* taille du coin biseauté (clip-path) des cartes "hologramme" */
+
+  /* --- Typographie --- */
+  --cb-font-display: 'Orbitron', 'Bebas Neue', sans-serif;
+  --cb-font-mono: 'Rajdhani', 'Roboto Mono', 'Share Tech Mono', monospace;
+
+  /* --- Verre / lueurs --- */
+  --cb-glass-blur: 16px;
+  --cb-glow-orange: 0 0 16px -2px rgba(255, 159, 28, 0.5);
+  --cb-glow-blue: 0 0 16px -2px rgba(43, 177, 230, 0.5);
+
+  /* ============================================================
+     Réassignation des tokens LEGACY (style.css) — recolore
+     instantanément body/boutons/panels/cartes/gauges historiques.
+     ============================================================ */
+  --void-black: var(--cb-black);
+  --ash: var(--cb-dark);
+  --panel: var(--cb-dark);
+  --panel-raised: var(--cb-dark-raised);
+  --amber: var(--cb-orange);
+  --amber-dim: var(--cb-orange-dim);
+  --gold: var(--cb-orange);
+  --chiral: var(--cb-blue);
+  --chiral-dim: var(--cb-blue-dim);
+  --text: #e8e6e1;
+  --text-dim: #8a8a86;
+
+  /* ============================================================
+     Réassignation des tokens --ds-* (Design System V0.7.5) —
+     recolore TerminalCard/Stepper/Slider/StatusBadge/hdr-pill.
+     ============================================================ */
+  --ds-gold: var(--cb-orange);
+  --ds-gold-bright: #ffb84d;
+  --ds-gold-glow: rgba(255, 159, 28, 0.45);
+  --ds-chiral-blue: var(--cb-blue-dim);
+  --ds-chiral-blue-bright: var(--cb-blue);
+  --ds-timefall-red: #7a2230;
+  --ds-timefall-red-bright: var(--cb-red);
+
+  --ds-bg-void: var(--cb-black);
+  --ds-bg-panel: var(--cb-dark);
+  --ds-bg-card: rgba(26, 26, 26, 0.68);
+  --ds-bg-card-raised: rgba(32, 31, 28, 0.78);
+  --ds-bg-input: rgba(10, 10, 10, 0.65);
+  --ds-border: rgba(255, 255, 255, 0.09);
+  --ds-border-strong: rgba(255, 255, 255, 0.18);
+  --ds-text: var(--text);
+  --ds-text-dim: var(--text-dim);
+
+  --ds-rarity-common: #6b6f76;
+  --ds-rarity-rare: var(--cb-blue);
+  --ds-rarity-epic: #a855f7;
+  --ds-rarity-legendary: var(--cb-orange);
+}
+
+/* ============================================================
+   TYPOGRAPHIE — Orbitron pour les titres/display, Rajdhani pour
+   les données techniques et le corps de texte. Surcharge ciblée,
+   jamais une redéfinition globale de body{} (qui garde Inter en
+   repli pour le texte long non-technique).
+   ============================================================ */
+h1, h2, h3,
+.ah-brand, .slot-title,
+.term-card-title, .porter-card-name,
+.qp-tab, .mtab-btn,
+#voidoutBanner .title {
+  font-family: var(--cb-font-display);
+}
+h2 { letter-spacing: 4px; }
+h3 { letter-spacing: 2.2px; }
+
+body,
+.term-card-body, .term-card-subtitle,
+.stat-val, .stat-label,
+.hdr-pill, .status-badge,
+.log, .porter-card, .item,
+select, input, button {
+  font-family: var(--cb-font-mono);
+}
+
+/* ============================================================
+   CIBLES TACTILES — 48px minimum, en toute circonstance (règle 3),
+   pas uniquement sous le point de rupture mobile. Les icônes
+   rondes déjà dimensionnées explicitement (fermeture, stepper,
+   expand) sont exclues pour ne pas déformer leur cercle.
+   ============================================================ */
+button:not(.modal-close):not(.minimap-expand-btn):not(.term-stepper-btn),
+.qp-tab, .qp-select, .convoy-escort-item, .term-card-action {
+  min-height: var(--ds-tap-min);
+}
+.mtab-btn { min-height: var(--ds-tap-min); }
+
+/* ============================================================
+   ANIMATIONS — transitions douces entre vues (règle 4).
+   ============================================================ */
+@keyframes cb-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cb-slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.mtab-section { animation: cb-fade-in 0.28s ease both; }
+.term-card { animation: cb-slide-up 0.24s ease both; }
+
+/* ============================================================
+   JAUGE CIRCULAIRE — indicateur de progression fin pour Raids/
+   Constructions (règle 4), alternative au linéaire déjà existant
+   (.term-card-gauge). Piloté par --cb-gauge-pct (0-100) et
+   --cb-gauge-color, posé en style inline par l'appelant.
+   ============================================================ */
+.cb-radial-gauge {
+  --cb-gauge-pct: 0;
+  --cb-gauge-color: var(--cb-orange);
+  width: 56px; height: 56px; border-radius: 50%; position: relative; flex: 0 0 auto;
+  background: conic-gradient(var(--cb-gauge-color) calc(var(--cb-gauge-pct) * 1%), rgba(255,255,255,0.08) 0);
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cb-gauge-color) 55%, transparent));
+}
+.cb-radial-gauge::before {
+  content: ''; position: absolute; inset: 5px; border-radius: 50%;
+  background: var(--cb-black); border: 1px solid var(--ds-border);
+}
+.cb-radial-gauge-label {
+  position: relative; z-index: 1; font-family: var(--cb-font-mono); font-weight: 700;
+  font-size: 11px; color: var(--cb-gauge-color);
+}
+
+/* ============================================================
+   CARTES "HOLOGRAMME" — glassmorphism + coins biseautés (clip-path)
+   + bordures néon, appliqué à toutes les familles de cartes de
+   l'app (TerminalCard générique + porter/item/slot legacy) pour
+   une esthétique de fiche technique Bridges cohérente partout.
+   ============================================================ */
+.term-card, .porter-card, .item, .slot-card {
+  clip-path: polygon(
+    var(--cb-bevel) 0, 100% 0, 100% calc(100% - var(--cb-bevel)),
+    calc(100% - var(--cb-bevel)) 100%, 0 100%, 0 var(--cb-bevel)
+  );
+  backdrop-filter: blur(var(--cb-glass-blur)); -webkit-backdrop-filter: blur(var(--cb-glass-blur));
+  background: rgba(26, 26, 26, 0.55);
+  border: 1px solid var(--ds-border-strong);
+  padding: var(--cb-space-3);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.term-card:hover, .porter-card:hover, .item:hover, .slot-card:hover {
+  border-color: var(--cb-blue-dim);
+  box-shadow: var(--cb-glow-blue);
+}
+.term-card { margin: var(--cb-space-2) 0; }
+.term-card-footer { gap: var(--cb-space-2); padding-top: var(--cb-space-2); margin-top: var(--cb-space-2); }
+
+/* Panels/modales — verre plus prononcé, cohérent avec les cartes */
+.panel {
+  background: rgba(26, 26, 26, 0.62);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--ds-border-strong);
+  padding: var(--cb-space-4);
+}
+.quest-drawer-panel {
+  background: rgba(26, 26, 26, 0.72);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-color: var(--ds-border-strong);
+  padding: var(--cb-space-4);
+}

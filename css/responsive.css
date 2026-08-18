@@ -1,0 +1,98 @@
+/* css/responsive.css (V0.9.8) — Structure adaptative "Cyber-Bridges 2.0": Mobile garde la Tab-bar
+   du bas (V0.7.0, inchangée en dessous de 900px) ; Tablette/Desktop bascule la même barre
+   (.mtab-bar, déjà position:fixed et hors du flux de grille #app-shell) en Sidebar verticale à
+   gauche — un pur changement de position/flex-direction en media query, sans toucher au DOM ni au
+   JS (setMobileTab()/NavigationManager.js restent identiques quel que soit le point de rupture).
+   Complète css/theme.css (tokens/typo/cartes) avec la mise en page uniquement. */
+
+/* ============================================================
+   TABLETTE — >= 768px (résolution de recette officielle de la
+   mission) : Sidebar Navigation à gauche, carte agrandie (plus de
+   bandeau d'onglets en bas qui grignote la hauteur), grilles 2
+   colonnes pour les listes de cartes. Volontairement DÉCOUPLÉ du
+   point de rupture historique 900px de style.css/layout.css (qui
+   ne gère que la densité typographique mobile, "!important",
+   toujours actif jusqu'à 900px): responsive.css se charge après
+   et gagne la cascade à spécificité égale sur les propriétés qu'il
+   redéfinit (padding-bottom, etc.).
+   ============================================================ */
+@media (min-width: 768px) {
+  body {
+    padding-bottom: 0 !important;
+    padding-left: 84px;
+  }
+
+  .mtab-bar {
+    left: 0; right: auto; top: 48px; bottom: 0;
+    width: 84px;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--cb-space-2);
+    padding: var(--cb-space-4) var(--cb-space-1);
+    background: rgba(26, 26, 26, 0.72);
+    backdrop-filter: blur(var(--cb-glass-blur)); -webkit-backdrop-filter: blur(var(--cb-glass-blur));
+    border-top: none;
+    border-right: 1px solid var(--ds-border-strong);
+  }
+  .mtab-btn { flex: 0 0 auto; width: 100%; }
+
+  /* Modales .left — panneau centré plus large, la sidebar ne le recouvre jamais (z-index modales
+     200 > sidebar 20 de toute façon, mais on laisse un vrai espace de respiration à gauche). */
+  .left { padding-left: 84px; }
+  .left .panel { max-width: 620px; }
+
+  /* Tiroirs bottom-sheet (V0.7.0) — restent centrés (max-width déjà posé par style.css), mais dans
+     l'espace RESTANT à droite de la sidebar (left décalé, pas juste un padding interne) afin qu'ils
+     ne s'ouvrent jamais dessous. */
+  .ds-drawer { left: 84px; }
+
+  /* Listes de cartes pures (Contrats/Loadout/Construction/Sélection de Raid) — grille fluide en
+     colonnes plutôt qu'un empilement vertical qui gaspille la largeur disponible. Les lignes
+     d'onglets/états vides restent en pleine largeur (grid-column: 1/-1). */
+  #contractBoardModalBody, #loadoutPanelModalBody, #buildActionDrawerBody, #raidSelectionModalBody {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--cb-space-3);
+    align-items: start;
+  }
+  #contractBoardModalBody > .qp-tabs, #loadoutPanelModalBody > .qp-tabs,
+  #buildActionDrawerBody > .qp-tabs, #raidSelectionModalBody > .qp-tabs,
+  .qp-empty {
+    grid-column: 1 / -1;
+  }
+  #contractBoardModalBody .term-card, #loadoutPanelModalBody .term-card,
+  #buildActionDrawerBody .term-card, #raidSelectionModalBody .term-card {
+    margin: 0; /* le gap de la grille remplace la marge verticale de flux normal */
+  }
+
+  .btn-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* Carte tactique plein écran (règle: "carte agrandie en plein écran" sur tablette/desktop) —
+     davantage d'air autour, overlays repositionnés proprement sans jamais se chevaucher. */
+  .map-container { padding: var(--cb-space-4); }
+  .minimap-widget canvas { width: 140px; height: 140px; }
+}
+
+/* ============================================================
+   DESKTOP — >= 1280px : Sidebar élargie avec libellés en ligne,
+   grilles 3 colonnes, panneaux modaux encore plus larges.
+   ============================================================ */
+@media (min-width: 1280px) {
+  body { padding-left: 220px; }
+  .mtab-bar { width: 220px; padding: var(--cb-space-5) var(--cb-space-3); gap: var(--cb-space-2); }
+  .mtab-btn {
+    flex-direction: row; justify-content: flex-start; gap: var(--cb-space-2);
+    padding: 12px var(--cb-space-3); font-size: 12px;
+  }
+  .mtab-btn .ico { font-size: 18px; }
+
+  .left { padding-left: 220px; }
+  .left .panel { max-width: 760px; }
+  .ds-drawer { left: 220px; max-width: 780px; }
+
+  #contractBoardModalBody, #loadoutPanelModalBody, #buildActionDrawerBody, #raidSelectionModalBody {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+
+  .map-container { padding: var(--cb-space-5); }
+}
