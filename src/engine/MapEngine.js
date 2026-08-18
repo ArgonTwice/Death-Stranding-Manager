@@ -151,6 +151,14 @@ export function generateBTZones() {
 
 let muleCampIdCounter = 0;
 
+// Doit rester incrémental au sein d'UNE MÊME partie (plusieurs territoires débloqués = plusieurs
+// appels à generateMuleCamps(), les ids ne doivent jamais entrer en collision entre eux) — mais doit
+// impérativement repartir de zéro à chaque NOUVELLE partie, sinon deux "Nouvelle partie" consécutives
+// dans le même onglet navigateur produisent des ids différents (mule-0/1 vs mule-2/3...) pour un état
+// par ailleurs strictement identique (même seed): violation silencieuse du déterminisme, détectée par
+// tests/resilience/RngUiOrthogonality.test.js. Appelé par SaveManager.js#newGame().
+export function resetMuleCampIdCounter() { muleCampIdCounter = 0; }
+
 export function generateMuleCamps() {
       const camps = [];
       let tries = 0;

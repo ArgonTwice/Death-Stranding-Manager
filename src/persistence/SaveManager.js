@@ -7,7 +7,7 @@ import { currentRankIndex, game, logEvent, runtime } from '../core/GameState.js'
 import { RNG } from '../core/RNG.js';
 import { DIFFICULTIES, GAME_LENGTH_MONTHS, HQ, RANKS } from '../data/Balance.js';
 import { CAMP_EVENTS, FESTIVALS, RELICS, VISITOR_OFFERS, pickN, rollTrait } from '../data/Constants.js';
-import { generateBTZones, generateMainKnots, generateMuleCamps, generateTerrain, loadMapData } from '../engine/MapEngine.js';
+import { generateBTZones, generateMainKnots, generateMuleCamps, generateTerrain, loadMapData, resetMuleCampIdCounter } from '../engine/MapEngine.js';
 import { applyLegacyCarryOver } from '../systems/LegacySystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { ensurePorterIdentity } from '../systems/PorterStorySystem.js';
@@ -271,6 +271,7 @@ export function newGame(confirmFirst, slot) {
       runtime.activeCampEvents = pickN(CAMP_EVENTS, 6);
       runtime.activeVisitorOffers = pickN(VISITOR_OFFERS, 5);
       runtime.activeFestivalsPool = pickN(FESTIVALS, 4);
+      resetMuleCampIdCounter(); // repart de mule-0 à chaque nouvelle partie (jamais un compteur qui fuit d'une partie à l'autre dans le même onglet)
       initFreshMap();
       debugLog(`RNG seed pour cette partie: ${RNG.getSeed()}`);
       logEvent(`🎮 Nouvelle partie [${DIFFICULTIES[difficulty].label}] — Chiral Network ONLINE`);
