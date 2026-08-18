@@ -574,5 +574,30 @@ export const BALANCE = {
     // Rang = detourBonusMult(<=1+detourBonusCap) x cargoState(>=cargoStateFloor) — indépendant de la
     // distance, donc comparable entre routes courtes et longues. Sinon: rang D.
     rankThresholds: { LEGENDARY: 1.15, S: 1.0, A: 0.85, B: 0.65, C: 0.45 }
+  },
+  // V0.9.5 — Relay Contract Boards, Personal Loadout & Field Construction. Tous les coefficients
+  // d'équilibrage de la mise à jour vivent ici (règle 3) — aucun nombre magique dans les systèmes.
+  loadout: {
+    slots: ['boots', 'body', 'vehicle', 'pcc'],
+    maxWeightKg: 40, // plafond du sac à dos (véhicule exclu, on le conduit/pousse, on ne le porte pas)
+    cargoDamageReductionCap: 0.6 // jamais plus de -60% de dégâts cargo, toutes sources confondues (anti-exploit)
+  },
+  vehicles: {
+    maxStepEfficiencyMult: 3.0 // plafond anti-exploit toutes sources confondues (bottes + corps + véhicule)
+  },
+  building: {
+    pccMaterialCost: { chiral_crystal: 3 }, // coût de base (Abri); Relais/Générateur = multiples de ce coût
+    shelterDurability: 100,
+    relayDurability: 100,
+    generatorDurability: 100,
+    maxFieldStructuresPerRoute: 3, // anti-exploit: pas de mur de structures sur une seule route
+    rewardMultPerFieldStructure: 0.03 // bonus passif de récompense par structure de terrain active sur la carte (porteurs PNJ)
+  },
+  multiStop: {
+    contractsPerRelay: 3, // taille du tableau de contrats généré par relais/mois (ContractGenerator.js)
+    legCountLocal: 1,
+    legCountMultiStopMin: 2,
+    legCountMultiStopMax: 3,
+    rewardMultPerExtraLeg: 0.15 // bonus cumulatif de récompense finale d'expédition par étape au-delà de la première
   }
 };

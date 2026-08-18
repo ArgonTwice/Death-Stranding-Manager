@@ -12,6 +12,7 @@ import { isRouteAvailable } from './ChiralNetworkSystem.js';
 import { resolveCheckpointEvent, releaseRaidGenerator } from './RaidEventResolver.js';
 import { resolveRaidReward } from './RaidRewardResolver.js';
 import { recordJournalEntry } from '../PorterStorySystem.js';
+import { loadoutCargoDamageReduction, loadoutStepEfficiencyMult } from '../player/PlayerLoadout.js';
 
 export function activeRaid() { return game.activeRaid; }
 
@@ -33,10 +34,15 @@ export function launchRaid(routeId, porterId) {
       }
 
       const raidSeed = Math.floor(RNG.next() * 4294967296); // SEULE consommation de RNG.js du pipeline raid
+      // V0.9.5 — le loadout IRL (bottes/corps/véhicule) module la distance RÉELLE à parcourir pour
+      // couvrir la même distance chirale: un multiplicateur >1 réduit le nombre de pas requis. Calculé
+      // UNE FOIS au lancement (règle 1: seul RaidSystem.js applique ce modificateur, jamais RealWalkSystem.js).
+      const efficiencyMult = loadoutStepEfficiencyMult();
+      const targetDistanceSteps = Math.max(1, Math.round(route.baseDistanceSteps / efficiencyMult));
       game.activeRaid = {
         routeId, porterId, raidSeed,
         baseDistanceSteps: route.baseDistanceSteps,
-        targetDistanceSteps: route.baseDistanceSteps,
+        targetDistanceSteps,
         traveledSteps: 0,
         cargoState: 1.0,
         totalDetourSteps: 0,
@@ -46,8 +52,8 @@ export function launchRaid(routeId, porterId) {
         startedMonth: game.month
       };
       porter.status = 'en route'; // réservé pour la durée du raid, comme une livraison classique
-      logEvent(`🚩 Raid IRL lancé — ${route.name} : ${porter.name} prend la route (${route.baseDistanceSteps.toLocaleString('fr-FR')} pas).`, 'good');
-      eventBus.emit('raid:started', { routeId, porterId, baseDistanceSteps: route.baseDistanceSteps });
+      logEvent(`🚩 Raid IRL lancé — ${route.name} : ${porter.name} prend la route (${targetDistanceSteps.toLocaleString('fr-FR')} pas${efficiencyMult > 1 ? `, loadout x${efficiencyMult.toFixed(2)}` : ''}).`, 'good');
+      eventBus.emit('raid:started', { routeId, porterId, baseDistanceSteps: route.baseDistanceSteps, targetDistanceSteps });
       return true;
     }
 
@@ -70,7 +76,10 @@ function applyCheckpointEvent(raid, fraction) {
         raid.totalDetourSteps += event.detourSteps;
       }
       if (event.cargoDamage > 0) {
-        raid.cargoState = Math.max(BALANCE.raid.cargoStateFloor, raid.cargoState - event.cargoDamage);
+        // V0.9.5: le corps équipé (Exosquelette) atténue les dégâts cargo — RaidEventResolver.js reste
+        // pur/déterministe, seul RaidSystem.js combine son résultat brut avec le modificateur de loadout.
+        const mitigatedDamage = event.cargoDamage * (1 - loadoutCargoDamageReduction());
+        raid.cargoState = Math.max(BALANCE.raid.cargoStateFloor, raid.cargoState - mitigatedDamage);
       }
       const pct = Math.round(fraction * 100);
       if (event.bad) {
@@ -119,7 +128,9 @@ function tryAdvanceRaidWithSteps(added) {
       raid.traveledSteps += added;
 
       for (const fraction of BALANCE.raid.checkpoints) {
-        const thresholdSteps = raid.baseDistanceSteps * fraction;
+        // V0.9.5: fraction de targetDistanceSteps (pas baseDistanceSteps) — s'adapte au multiplicateur
+        // de loadout ET aux détours déjà résolus, plutôt qu'à la distance d'origine non modifiée.
+        const thresholdSteps = raid.targetDistanceSteps * fraction;
         if (raid.traveledSteps >= thresholdSteps && !raid.resolvedCheckpoints.includes(fraction)) {
           raid.resolvedCheckpoints.push(fraction);
           applyCheckpointEvent(raid, fraction);

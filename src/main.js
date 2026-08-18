@@ -28,8 +28,12 @@ import { render, renderPorters, showEndScreen, openTelemetryDrawer, closeTelemet
 import { closeAllDrawersUI, initUIShell } from './ui/UIShell.js';
 import { addManualWalkBoostUI, closeWalkDrawer, openWalkDrawer, requestRealWalkActivationUI, stopRealWalkUI, toggleWalkDrawer } from './ui/WalkDrawer.js';
 import './systems/raid/RaidSystem.js'; // enregistre l'abonnement walk:stepDetected (effet de bord au chargement du module)
+import './systems/expedition/ExpeditionSystem.js'; // enregistre les abonnements raid:completed/raid:abandoned (effet de bord au chargement du module)
 import { closeRaidSelectionModal, launchRaidFromUI, openRaidSelectionModal } from './ui/RaidSelectionModal.js';
-import { abandonRaidUI, closeRaidTrackingDrawer, openRaidSelectionModalUI, openRaidTrackingDrawer, toggleRaidTrackingDrawer } from './ui/RaidTrackingDrawer.js';
+import { abandonRaidUI, closeRaidTrackingDrawer, openContractBoardModalUI, openLoadoutPanelModalUI, openRaidSelectionModalUI, openRaidTrackingDrawer, toggleRaidTrackingDrawer } from './ui/RaidTrackingDrawer.js';
+import { closeContractBoardModal, launchContractFromUI, openContractBoardModal, setContractBoardFilter } from './ui/ContractBoardModal.js';
+import { closeLoadoutPanelModal, equipItemFromUI, openLoadoutPanelModal } from './ui/LoadoutPanelModal.js';
+import { closeBuildActionDrawer, openBuildActionDrawer, requestFieldBuildUI, toggleBuildActionDrawer } from './ui/BuildActionDrawer.js';
 import { drawMap } from './ui/MapRenderer.js';
 import { closeMiniMapFullscreen, toggleMiniMapFullscreen } from './ui/MiniMap.js';
 import { checkMobileMode, closeTabModal, setMobileTab } from './ui/Modals.js';
@@ -213,6 +217,19 @@ window.closeRaidTrackingDrawer = closeRaidTrackingDrawer;
 window.toggleRaidTrackingDrawer = toggleRaidTrackingDrawer;
 window.abandonRaidUI = abandonRaidUI;
 window.openRaidSelectionModalUI = openRaidSelectionModalUI;
+window.openContractBoardModalUI = openContractBoardModalUI;
+window.openLoadoutPanelModalUI = openLoadoutPanelModalUI;
+window.closeContractBoardModal = closeContractBoardModal;
+window.launchContractFromUI = launchContractFromUI;
+window.openContractBoardModal = openContractBoardModal;
+window.setContractBoardFilter = setContractBoardFilter;
+window.closeLoadoutPanelModal = closeLoadoutPanelModal;
+window.equipItemFromUI = equipItemFromUI;
+window.openLoadoutPanelModal = openLoadoutPanelModal;
+window.closeBuildActionDrawer = closeBuildActionDrawer;
+window.openBuildActionDrawer = openBuildActionDrawer;
+window.requestFieldBuildUI = requestFieldBuildUI;
+window.toggleBuildActionDrawer = toggleBuildActionDrawer;
 window.acceptVisitorOffer = acceptVisitorOffer;
 window.advanceDay = advanceDay;
 window.assaultCamp = assaultCamp;

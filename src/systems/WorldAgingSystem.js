@@ -47,4 +47,11 @@ export function tickWorldAgingMonthly() {
           p.durability = Math.max(0, (p.durability ?? 100) - B.pccDecayPerMonth);
         }
       }
+      // V0.9.5 — les structures posées en Raid IRL (PlayerBuildSystem.js) vieillissent exactement
+      // comme les PCC posées en jeu: même rythme, même continuité, jamais de pénalité soudaine.
+      if (game.world && game.world.structures) {
+        for (const s of game.world.structures) {
+          s.durability = Math.max(0, (s.durability ?? 100) - B.pccDecayPerMonth);
+        }
+      }
     }

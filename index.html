@@ -332,6 +332,37 @@
     </div>
   </div>
 
+  <!-- Tableau de Contrats de Relais (V0.9.5) — Ordres Locaux/Long-Courriers/Multi-Étapes, filtre par
+       type. Même langage visuel .left que les autres modales tactiques. -->
+  <div class="left" id="contractBoardModal" onclick="if (event.target === this) closeContractBoardModal()">
+    <div class="panel">
+      <button class="modal-close" onclick="closeContractBoardModal()">✕</button>
+      <h2>◆ TABLEAU DE CONTRATS</h2>
+      <div id="contractBoardModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Loadout IRL (V0.9.5) — Bottes/Corps/Véhicule/Kit PCC, jauge de poids, modificateurs transmis
+       exclusivement à RaidSystem.js/ExpeditionSystem.js (jamais au Real Walk Engine). -->
+  <div class="left" id="loadoutPanelModal" onclick="if (event.target === this) closeLoadoutPanelModal()">
+    <div class="panel">
+      <button class="modal-close" onclick="closeLoadoutPanelModal()">✕</button>
+      <h2>◆ LOADOUT DU PORTEUR IRL</h2>
+      <div id="loadoutPanelModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Construction en Raid IRL (V0.9.5) — tiroir d'action rapide, accessible sans quitter le suivi de
+       Raid (RaidTrackingDrawer.js). Exige un Raid actif + un kit PCC équipé. -->
+  <div class="ds-drawer state-collapsed" id="buildActionDrawer">
+    <div class="ds-drawer-handle"></div>
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closeBuildActionDrawer()">✕</button>
+      <h2>◆ CONSTRUCTION DE TERRAIN</h2>
+      <div id="buildActionDrawerBody"></div>
+    </div>
+  </div>
+
   <!-- Console du Terminal (V0.6.0) — tiroir glissant rétro, dialogue avec le Terminal (TerminalSoul.js).
        Boutons de commande ≥48x48px: jouable sans clavier au tactile. -->
   <div class="ds-drawer state-collapsed terminal-drawer" id="terminalDrawer">

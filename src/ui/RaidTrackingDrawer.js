@@ -11,6 +11,8 @@ import { abandonRaid } from '../systems/raid/RaidSystem.js';
 import { terminalCardHtml } from './components/TerminalCard.js';
 import { statusBadgeHtml } from './components/StatusBadge.js';
 import { openRaidSelectionModal } from './RaidSelectionModal.js';
+import { openContractBoardModal } from './ContractBoardModal.js';
+import { openLoadoutPanelModal } from './LoadoutPanelModal.js';
 
 function applyCloseRaidTrackingDrawer() {
       collapseDrawer('raidTrackingDrawer');
@@ -34,6 +36,8 @@ export function abandonRaidUI() {
     }
 
 export function openRaidSelectionModalUI() { openRaidSelectionModal(); }
+export function openContractBoardModalUI() { openContractBoardModal(game.currentMap); }
+export function openLoadoutPanelModalUI() { openLoadoutPanelModal(); }
 
 const RANK_TONE = { LEGENDARY: 'legendary', S: 'legendary', A: 'epic', B: 'rare', C: 'rare', D: 'common' };
 
@@ -55,7 +59,8 @@ function activeRaidCardHtml(raid) {
           { label: 'État du cargo', value: Math.round(raid.cargoState * 100), valueLabel: `${Math.round(raid.cargoState * 100)}%` }
         ],
         bodyHtml: `<h3 style="margin-top:8px;">📋 Journal du Raid</h3>${eventsHtml}`,
-        actionsHtml: `<button class="term-card-action danger" onclick="abandonRaidUI()">🚫 Abandonner le Raid</button>`
+        actionsHtml: `<button class="term-card-action" onclick="openBuildActionDrawer()">🏗️ Construire</button>
+          <button class="term-card-action danger" onclick="abandonRaidUI()">🚫 Abandonner le Raid</button>`
       });
     }
 
@@ -79,13 +84,32 @@ export function renderRaidTrackingDrawer() {
       const history = game.raidHistory || [];
       const historyHtml = history.length ? history.map(historyCardHtml).join('') : '<div class="qp-empty">Aucun Raid Tactique achevé pour l\'instant.</div>';
 
+      const expedition = game.activeExpedition;
+      const expHistory = game.expeditionHistory || [];
+      const expHistoryHtml = expHistory.length
+        ? expHistory.map(h => terminalCardHtml({
+            title: `🧭 Expédition · ${h.legCount} étape(s)`,
+            subtitle: `mois ${h.month}`,
+            rarity: h.legCount > 1 ? 'legendary' : 'rare',
+            bodyHtml: h.legResults.map(r => `${r.rank} — ${r.routeName}`).join(' · '),
+            badgesHtml: statusBadgeHtml(`+${h.bonusLikes} likes bonus`, 'legendary')
+          })).join('')
+        : '<div class="qp-empty">Aucune expédition multi-étapes achevée pour l\'instant.</div>';
+      const expeditionStatusHtml = expedition && expedition.status === 'active'
+        ? `<div style="margin:6px 0;">${statusBadgeHtml(`Expédition en cours — étape ${expedition.currentLegIndex + 1}/${expedition.legs.length}`, 'legendary', '🧭')}</div>`
+        : '';
+
       if (raid && raid.status === 'active') {
-        bodyEl.innerHTML = activeRaidCardHtml(raid) + `<h3 style="margin-top:12px;">🏆 Historique</h3>` + historyHtml;
+        bodyEl.innerHTML = expeditionStatusHtml + activeRaidCardHtml(raid) + `<h3 style="margin-top:12px;">🏆 Historique</h3>` + historyHtml
+          + `<h3 style="margin-top:12px;">🧭 Expéditions</h3>${expHistoryHtml}`;
       } else {
         bodyEl.innerHTML = `
           <div class="qp-empty" style="margin-bottom:8px;">Aucun Raid Tactique en cours.</div>
           <button class="qp-action-btn success" style="min-height:48px;" onclick="openRaidSelectionModalUI()">🗺️ Choisir une route</button>
-          <h3 style="margin-top:12px;">🏆 Historique</h3>${historyHtml}`;
+          <button class="qp-action-btn" style="min-height:48px;" onclick="openContractBoardModalUI()">📋 Tableau de contrats</button>
+          <button class="qp-action-btn" style="min-height:48px;" onclick="openLoadoutPanelModalUI()">🎒 Préparer le Loadout</button>
+          <h3 style="margin-top:12px;">🏆 Historique des Raids</h3>${historyHtml}
+          <h3 style="margin-top:12px;">🧭 Expéditions</h3>${expHistoryHtml}`;
       }
     }
 
@@ -101,3 +125,7 @@ eventBus.on('raid:event', () => refreshRaidTrackingDrawerIfOpen());
 eventBus.on('raid:started', () => refreshRaidTrackingDrawerIfOpen());
 eventBus.on('raid:completed', () => refreshRaidTrackingDrawerIfOpen());
 eventBus.on('raid:abandoned', () => refreshRaidTrackingDrawerIfOpen());
+eventBus.on('expedition:started', () => refreshRaidTrackingDrawerIfOpen());
+eventBus.on('expedition:legAdvanced', () => refreshRaidTrackingDrawerIfOpen());
+eventBus.on('expedition:completed', () => refreshRaidTrackingDrawerIfOpen());
+eventBus.on('expedition:abandoned', () => refreshRaidTrackingDrawerIfOpen());

@@ -27,6 +27,7 @@ import { checkLeaguePromotion, generateVipContract } from '../systems/PorterLeag
 import { acquiredTraitStressMult, applyPsychologyDailyEffects, doomsDetectionMult, recordJournalEntry } from '../systems/PorterStorySystem.js';
 import { regionalNetworkRewardMult, regionalNetworkRiskCut } from '../systems/RegionalNetwork.js';
 import { realWalkSpeedBonusMult } from '../systems/RealWalkSystem.js';
+import { structuresForMap } from '../systems/player/PlayerBuildSystem.js';
 import { applyAdvancedShelterRepairs } from '../systems/ShelterSystem.js';
 import { timefallSpeedMult } from '../systems/TimefallSystem.js';
 import { tickWeatherSystem } from '../systems/WeatherSystem.js';
@@ -445,6 +446,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       reward = Math.ceil(reward * (1 + (game.infraInvestments || 0) * B.infraRewardMultPerInvestment)); // investissements infrastructure, permanent
       reward = Math.ceil(reward * regionalNetworkRewardMult()); // V0.5.0: bonus permanent des Super-Relais régionaux
       reward = Math.ceil(reward * historicRouteRewardMult(porter.map, destX, destY)); // V0.6.0: Route Historique (continuité du monde)
+      reward = Math.ceil(reward * (1 + structuresForMap(porter.map).length * BALANCE.building.rewardMultPerFieldStructure)); // V0.9.5: bonus passif des structures de terrain (Raid IRL) pour les porteurs PNJ automatisés
 
       // Surcharge: ratio masse cargo / capacité porteur — au-delà de 0.9 ça pénalise risque + vitesse (canon: balance/stamina DS)
       const overload = overloadRatio(porter, cargo);

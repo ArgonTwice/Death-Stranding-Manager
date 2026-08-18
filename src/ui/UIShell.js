@@ -14,6 +14,7 @@ import { closeQuestPanel } from './QuestPanel.js';
 import { closeTerminalConsole } from './TerminalConsole.js';
 import { closeWalkDrawer } from './WalkDrawer.js';
 import { closeRaidTrackingDrawer } from './RaidTrackingDrawer.js';
+import { closeBuildActionDrawer } from './BuildActionDrawer.js';
 
 const BOTTOM_SHEET_DRAWERS = [
       ['questDrawer', closeQuestPanel],
@@ -25,7 +26,8 @@ const BOTTOM_SHEET_DRAWERS = [
       ['portersDrawer', closePortersDrawer],
       ['networkDrawer', closeNetworkDrawer],
       ['walkDrawer', closeWalkDrawer],
-      ['raidTrackingDrawer', closeRaidTrackingDrawer]
+      ['raidTrackingDrawer', closeRaidTrackingDrawer],
+      ['buildActionDrawer', closeBuildActionDrawer]
     ];
 
 export function initUIShell() {

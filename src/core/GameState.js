@@ -68,6 +68,10 @@ export const game = {
       totalSteps: 0, // V0.8.0 — pas IRL cumulés validés (RealWalkSystem.js), persisté, jamais affecté par RNG.js
       activeRaid: null, // V0.9.0 — Raid Tactique en cours (RaidSystem.js), persisté: peut s'étaler sur plusieurs sessions IRL
       raidHistory: [], // V0.9.0 — historique borné des raids achevés (rang, récompense), affiché dans RaidTrackingDrawer.js
+      playerLoadout: { boots: 'none', body: 'none', vehicle: 'none', pcc: 'none' }, // V0.9.5 — équipement IRL (PlayerLoadout.js)
+      world: { structures: [], nextStructureId: 0 }, // V0.9.5 — structures posées en Raid IRL (PlayerBuildSystem.js), vieillissent (WorldAgingSystem.js)
+      activeExpedition: null, // V0.9.5 — expédition multi-étapes en cours (ExpeditionSystem.js), orchestre plusieurs Raids successifs
+      expeditionHistory: [], // V0.9.5 — historique borné des expéditions multi-étapes achevées
       // --- Propriétés repliées depuis d'anciennes variables top-level module-scope (refacto ES Modules) ---
       gameEnded: false,
       quarterSnapshot: { completed: 0, deaths: 0, money: 10000 },
