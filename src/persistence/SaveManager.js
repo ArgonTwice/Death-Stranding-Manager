@@ -143,7 +143,8 @@ export function serializeGame() {
         playerLoadout: game.playerLoadout || { boots: 'none', body: 'none', vehicle: 'none', pcc: 'none' },
         world: game.world || { structures: [], nextStructureId: 0 },
         activeExpedition: game.activeExpedition || null,
-        expeditionHistory: game.expeditionHistory || []
+        expeditionHistory: game.expeditionHistory || [],
+        tutorial: game.tutorial || { step: 0, completed: false, skipped: false, rewardsGranted: false }
       };
     }
 
@@ -210,6 +211,7 @@ export function deserializeGame(s) {
       game.world = s.world || { structures: [], nextStructureId: 0 };
       game.activeExpedition = s.activeExpedition || null;
       game.expeditionHistory = s.expeditionHistory || [];
+      game.tutorial = s.tutorial || { step: 0, completed: false, skipped: false, rewardsGranted: false };
       runtime.activeCampEvents = s.activeCampEventIds ? CAMP_EVENTS.filter(e => s.activeCampEventIds.includes(e.id)) : CAMP_EVENTS;
       runtime.activeVisitorOffers = s.activeVisitorOfferIds ? VISITOR_OFFERS.filter(o => s.activeVisitorOfferIds.includes(o.id)) : VISITOR_OFFERS;
       runtime.activeFestivalsPool = s.activeFestivalIds ? FESTIVALS.filter(f => s.activeFestivalIds.includes(f.id)) : FESTIVALS;
@@ -255,7 +257,7 @@ export function newGame(confirmFirst, slot) {
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';
       const startMoney = DIFFICULTIES[difficulty].startMoney;
-      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null, totalSteps: 0, activeRaid: null, raidHistory: [], playerLoadout: { boots: 'none', body: 'none', vehicle: 'none', pcc: 'none' }, world: { structures: [], nextStructureId: 0 }, activeExpedition: null, expeditionHistory: [] });
+      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null, totalSteps: 0, activeRaid: null, raidHistory: [], playerLoadout: { boots: 'none', body: 'none', vehicle: 'none', pcc: 'none' }, world: { structures: [], nextStructureId: 0 }, activeExpedition: null, expeditionHistory: [], tutorial: { step: 0, completed: false, skipped: false, rewardsGranted: false } });
       Object.keys(game.equipBought).forEach(k => game.equipBought[k] = 0);
       game.gameEnded = false;
       runtime.announcedRank = 0;

@@ -247,6 +247,48 @@ body.cb-reduced-motion .nav-main-content.active, body.cb-reduced-motion .opt-vol
 }
 
 /* ============================================================
+   V1.0.1 — Tutoriel guidé Die-Hardman (ui/TutorialOverlay.js). Bannière compacte, jamais plein
+   écran (règle 4): z-index au-dessus des modales (200) pour rester lisible par-dessus n'importe
+   quelle vue, mais ne couvre jamais qu'une bande fine en haut d'écran — tout le reste de l'UI reste
+   cliquable en dessous, aucun pointer-events:none nulle part.
+   ============================================================ */
+.tutorial-overlay {
+  position: fixed; top: 48px; left: 0; right: 0; z-index: 300;
+  display: flex; align-items: center; gap: var(--cb-space-3);
+  padding: var(--cb-space-3) var(--cb-space-4);
+  background: rgba(10, 10, 10, 0.88);
+  backdrop-filter: blur(var(--cb-glass-blur)); -webkit-backdrop-filter: blur(var(--cb-glass-blur));
+  border-bottom: 1px solid var(--cb-orange);
+  box-shadow: 0 4px 24px -8px rgba(255, 159, 28, 0.35);
+  transform: translateY(-120%);
+  transition: transform 0.3s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.tutorial-overlay.open { transform: translateY(0); }
+.tutorial-overlay.nudge { border-bottom-color: var(--cb-blue); box-shadow: 0 4px 24px -8px rgba(43, 177, 230, 0.5); }
+.tutorial-portrait { font-size: 28px; flex: 0 0 auto; filter: drop-shadow(0 0 6px rgba(255, 159, 28, 0.6)); }
+.tutorial-body { flex: 1 1 auto; min-width: 0; }
+.tutorial-name { font-family: var(--cb-font-display); font-size: 11px; letter-spacing: 2px; color: var(--cb-orange); }
+.tutorial-line { font-family: var(--cb-font-mono); font-size: 12px; color: var(--ds-text); line-height: 1.4; }
+.tutorial-skip-btn {
+  flex: 0 0 auto; width: auto; min-height: var(--ds-tap-min); padding: var(--cb-space-2) var(--cb-space-3);
+  border-left-color: var(--cb-blue); font-family: var(--cb-font-display); letter-spacing: 1px; font-size: 11px;
+}
+
+/* Halo néon clignotant (règle 4) — posé sur N'IMPORTE QUEL élément cible (bouton d'onglet, etc.).
+   outline (pas border/box-shadow seul) pour ne jamais perturber la mise en page de l'élément ciblé. */
+@keyframes tutorial-halo-pulse {
+  0%, 100% { outline-color: rgba(255, 159, 28, 0.9); box-shadow: 0 0 12px 2px rgba(255, 159, 28, 0.55); }
+  50% { outline-color: rgba(255, 159, 28, 0.3); box-shadow: 0 0 4px 0px rgba(255, 159, 28, 0.15); }
+}
+.tutorial-highlight {
+  outline: 2px solid var(--cb-orange);
+  outline-offset: 2px;
+  animation: tutorial-halo-pulse 1.3s ease-in-out infinite;
+  position: relative;
+  z-index: 21; /* légèrement au-dessus du reste des Boutons (20) pour que le halo ne soit jamais rogné */
+}
+
+/* ============================================================
    CARTES "HOLOGRAMME" — glassmorphism + coins biseautés (clip-path)
    + bordures néon, appliqué à toutes les familles de cartes de
    l'app (TerminalCard générique + porter/item/slot legacy) pour

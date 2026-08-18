@@ -25,6 +25,7 @@ import { renderBBPodOverlay, showBBPodAlert } from './BBPodOverlay.js';
 import { renderTerminalConsole } from './TerminalConsole.js';
 import { renderWalkDrawer } from './WalkDrawer.js';
 import { renderRaidTrackingDrawer } from './RaidTrackingDrawer.js';
+import { checkTutorialProgress } from './TutorialManager.js';
 import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
 import { collapseDrawer, openDrawer } from './DrawerManager.js';
 import { refreshInspectorIfOpen } from './CanvasInspector.js';
@@ -97,6 +98,7 @@ export function render() {
       refreshPorterDrawerIfOpen();
       refreshInspectorIfOpen();
       renderDebugHud();
+      checkTutorialProgress(); // V1.0.1 — auto-validation d'étape à chaque render, jamais de RNG ici
       // drawMap tourne en boucle continue (rAF) depuis l'init, pas besoin de la relancer ici
     }
 

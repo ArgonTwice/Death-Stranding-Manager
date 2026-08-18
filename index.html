@@ -595,6 +595,18 @@
     <button class="mtab-btn" data-tab="options" onclick="setMainTabUI('options')"><span class="ico">⚙️</span>Options</button>
   </div>
 
+  <!-- V1.0.1 — Tutoriel guidé Die-Hardman (ui/TutorialOverlay.js/TutorialManager.js). Bannière
+       compacte, jamais plein écran: le reste de l'interface reste totalement interactif dessous
+       (règle 4 — pas de pointer-events:none bloquant). [SKIP] toujours présent (règle 2). -->
+  <div id="tutorialOverlay" class="tutorial-overlay">
+    <div class="tutorial-portrait">🕴️</div>
+    <div class="tutorial-body">
+      <div class="tutorial-name">DIE-HARDMAN</div>
+      <div id="tutorialLine" class="tutorial-line"></div>
+    </div>
+    <button class="tutorial-skip-btn" onclick="skipTutorialUI()">SKIP</button>
+  </div>
+
   <div id="endScreen" style="display:none; position:fixed; inset:0; background:rgba(5,5,8,0.92); z-index:999; align-items:center; justify-content:center; flex-direction:column; color:#d8d2c4; font-family:'Courier New',monospace; text-align:center;">
     <div style="font-size:22px; letter-spacing:2px; margin-bottom:10px;">🏁 CONTRAT BRIDGES TERMINÉ</div>
     <div id="endScreenBody" style="font-size:13px; line-height:1.8; margin-bottom:20px;"></div>

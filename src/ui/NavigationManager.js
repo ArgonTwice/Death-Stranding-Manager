@@ -9,6 +9,7 @@
 // RNG.next(), ne déclenche JAMAIS advanceDay()/tick(). Purement de la plomberie d'affichage
 // (classes CSS + historique UI) — au même titre que core/NavigationManager.js.
 import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
+import { eventBus } from '../core/EventBus.js';
 
 export const MAIN_TABS = ['dashboard', 'gestion', 'missions', 'camp', 'options'];
 
@@ -57,6 +58,11 @@ function renderNavState() {
 
       const panel = modal && modal.querySelector('.panel');
       if (panel) panel.scrollTop = 0;
+
+      // V1.0.1 — pur événement de plomberie UI (aucune donnée de partie), consommé par
+      // TutorialManager.js pour re-cibler son highlight/sa progression à chaque bascule de vue.
+      // N'enfreint pas la règle d'isolation: ce module ignore totalement qui écoute et pourquoi.
+      eventBus.emit('nav:mainTabChanged', { main: currentMain, sub: currentSub });
     }
 
 // Bascule l'onglet PRINCIPAL. [Dashboard] referme tout et révèle la Carte (comportement "maison" —

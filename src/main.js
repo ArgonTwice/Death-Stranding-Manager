@@ -40,6 +40,7 @@ import { closeMainNav, closeSubTab, initMainNav, setMainTab, setSubTab } from '.
 import { renderManagementSubMenu, setManagementSubTab } from './ui/ManagementPanel.js';
 import { initOptionsPanel, renderOptionsPanel, setOptionsVolet, setReducedMotion } from './ui/OptionsPanel.js';
 import { renderMissionsPanel } from './ui/MissionsPanel.js';
+import { initTutorial, skipTutorial } from './ui/TutorialManager.js';
 import { initAudioManager } from './audio/AudioManager.js';
 import { closePorterDrawer, openPorterDrawer, setPorterDrawerTab } from './ui/PorterDrawer.js';
 import { acceptUrgentQuestFromUI, closeQuestPanel, setQuestPanelTab, toggleQuestPanel } from './ui/QuestPanel.js';
@@ -146,6 +147,7 @@ export async function chooseSlot(slot, mode) {
         logEvent('🎮 Bridges Delivery Network — Chiral Network ONLINE (UCA)');
       }
       render();
+      initTutorial(); // V1.0.1 — démarre ou reprend le tutoriel (fast-forward des étapes déjà acquises)
       drawMap(); // démarre la boucle d'animation continue (auto-planifiée via rAF)
       startGameClock(); // 1 sec réelle = 1 jour, pause auto si onglet caché (#temps réel)
     }
@@ -260,6 +262,7 @@ window.setMainTabUI = (id) => {
 window.closeMainNavUI = closeMainNav;
 window.setManagementSubTab = setManagementSubTab;
 window.closeSubTabUI = closeSubTab;
+window.skipTutorialUI = () => { skipTutorial(); render(); };
 window.setOptionsVoletUI = setOptionsVolet;
 window.setReducedMotionUI = setReducedMotion;
 window.connectKnot = connectKnot;

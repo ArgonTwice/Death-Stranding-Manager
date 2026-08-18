@@ -36,6 +36,10 @@
   }
   .mtab-btn { flex: 0 0 auto; width: 100%; }
 
+  /* Bannière tutoriel (V1.0.1) — même logique que .left/.ds-drawer ci-dessous: décalée dans l'espace
+     restant à droite de la sidebar, jamais superposée à ses boutons. */
+  .tutorial-overlay { left: 84px; }
+
   /* Modales .left — panneau centré plus large, la sidebar ne le recouvre jamais (z-index modales
      200 > sidebar 20 de toute façon, mais on laisse un vrai espace de respiration à gauche). */
   .left { padding-left: 84px; }
@@ -89,6 +93,7 @@
   .left { padding-left: 220px; }
   .left .panel { max-width: 760px; }
   .ds-drawer { left: 220px; max-width: 780px; }
+  .tutorial-overlay { left: 220px; }
 
   #contractBoardModalBody, #loadoutPanelModalBody, #buildActionDrawerBody, #raidSelectionModalBody {
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
