@@ -553,9 +553,9 @@ export function prepperCardHtml(d, k, i, idlePorters) {
       const arch = PREPPER_ARCHETYPES[k.archetype];
       if (!connected) {
         return `<div class="item" style="margin-bottom:5px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span>🔒 ${k.name} <span style="color:var(--text-dim);">(${arch.icon} ${arch.name})</span></span>
-            <button style="font-size:8px; padding:2px 6px; margin:0; width:auto;" onclick="connectKnot(${i})">Raccorder</button>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+            <span style="min-width:0;">🔒 ${k.name} <span style="color:var(--text-dim);">(${arch.icon} ${arch.name})</span></span>
+            <button style="font-size:8px; padding:2px 6px; margin:0; width:auto; flex-shrink:0;" onclick="connectKnot(${i})">Raccorder</button>
           </div>
         </div>`;
       }
@@ -571,7 +571,7 @@ export function prepperCardHtml(d, k, i, idlePorters) {
             <select id="pcp-${uid}-${c.id}" style="flex:1; font-size:8px; background:#1a1712; color:var(--text); border:1px solid #332e24;">${porterOptions}</select>
             <select id="pcr-${uid}-${c.id}" style="flex:1; font-size:8px; background:#1a1712; color:var(--text); border:1px solid #332e24;">${routeOptions}</select>
           </div>
-          <div style="display:flex; gap:3px; margin-top:2px;">
+          <div style="display:flex; gap:3px; margin-top:2px; flex-wrap:wrap;">
             <button style="font-size:8px; padding:2px 6px; margin:0; width:auto;" ${idlePorters.length ? '' : 'disabled'}
               onclick="assignPrepperContract(${i}, '${c.id}', parseInt(document.getElementById('pcp-${uid}-${c.id}').value), document.getElementById('pcr-${uid}-${c.id}').value)">🚚 Assigner ce porteur</button>
             ${c.negotiable && !c.negotiated ? `<button style="font-size:8px; padding:2px 6px; margin:0; width:auto;" onclick="negotiatePrepperContract(${i}, '${c.id}')">🗣️ Négocier</button>` : ''}
@@ -625,7 +625,7 @@ export function renderSideQuests() {
       el.innerHTML = quests.map(q => `
         <div class="${q.crisis ? 'alert-crisis' : ''}" style="font-size:9px; margin-bottom:5px; border-left:2px solid ${q.crisis ? 'var(--blood)' : q.special ? '#c76bff' : 'var(--amber)'}; padding-left:4px;">
           ${q.crisis ? '🌌 HAUTE MENACE — ' : q.special ? '⭐ ORDRE SPÉCIAL — ' : ''}${q.flavor}<br>→ (${q.x},${q.y}) +$${q.reward} · expire mois ${q.expiresMonth}<br>
-          <select id="route-${q.id}" style="font-size:8px; margin-top:2px; background:#1a1712; color:var(--text); border:1px solid #332e24;">
+          <select id="route-${q.id}" style="width:100%; font-size:8px; margin-top:2px; background:#1a1712; color:var(--text); border:1px solid #332e24;">
             ${Object.entries(ROUTE_TYPES).map(([k, r]) => `<option value="${k}">${r.icon} ${r.name} — ${r.desc}</option>`).join('')}
           </select>
           ${squadPickerTemplate.split('__QID__').join(q.id)}
