@@ -251,7 +251,13 @@ body.cb-reduced-motion .nav-main-content.active, body.cb-reduced-motion .opt-vol
    écran (règle 4): z-index au-dessus des modales (200) pour rester lisible par-dessus n'importe
    quelle vue, mais ne couvre jamais qu'une bande fine en haut d'écran — tout le reste de l'UI reste
    cliquable en dessous, aucun pointer-events:none nulle part.
+   V1.0.2 fix règle 1 — la bande occupait trop de hauteur sur mobile: la réplique se limite désormais
+   à 2 lignes (clamp, jamais un pavé de texte qui grossit sans borne) et un bouton [▼/▲] permet de la
+   replier en simple pastille icône+SKIP (voir .collapsed ci-dessous). #app-main (style.css) lit
+   --tutorial-h (posée dynamiquement par ui/TutorialOverlay.js via ResizeObserver) pour ne jamais
+   laisser l'overlay recouvrir le contenu qu'il surplombe.
    ============================================================ */
+:root { --tutorial-h: 0px; }
 .tutorial-overlay {
   position: fixed; top: 48px; left: 0; right: 0; z-index: 300;
   display: flex; align-items: center; gap: var(--cb-space-3);
@@ -261,17 +267,52 @@ body.cb-reduced-motion .nav-main-content.active, body.cb-reduced-motion .opt-vol
   border-bottom: 1px solid var(--cb-orange);
   box-shadow: 0 4px 24px -8px rgba(255, 159, 28, 0.35);
   transform: translateY(-120%);
-  transition: transform 0.3s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.3s ease, padding 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .tutorial-overlay.open { transform: translateY(0); }
 .tutorial-overlay.nudge { border-bottom-color: var(--cb-blue); box-shadow: 0 4px 24px -8px rgba(43, 177, 230, 0.5); }
-.tutorial-portrait { font-size: 28px; flex: 0 0 auto; filter: drop-shadow(0 0 6px rgba(255, 159, 28, 0.6)); }
+.tutorial-portrait { font-size: 28px; flex: 0 0 auto; filter: drop-shadow(0 0 6px rgba(255, 159, 28, 0.6)); transition: font-size 0.2s ease; }
 .tutorial-body { flex: 1 1 auto; min-width: 0; }
 .tutorial-name { font-family: var(--cb-font-display); font-size: 11px; letter-spacing: 2px; color: var(--cb-orange); }
-.tutorial-line { font-family: var(--cb-font-mono); font-size: 12px; color: var(--ds-text); line-height: 1.4; }
+.tutorial-line {
+  font-family: var(--cb-font-mono); font-size: 12px; color: var(--ds-text); line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
 .tutorial-skip-btn {
   flex: 0 0 auto; width: auto; min-height: var(--ds-tap-min); padding: var(--cb-space-2) var(--cb-space-3);
   border-left-color: var(--cb-blue); font-family: var(--cb-font-display); letter-spacing: 1px; font-size: 11px;
+}
+
+/* V1.0.2 règle 1 — bouton [▼/▲] : replie/déplie la bannière, toujours ≥48px de cible tactile même
+   quand la bannière elle-même est réduite à une pastille. */
+.tutorial-toggle-btn {
+  flex: 0 0 auto; width: var(--ds-tap-min); min-width: var(--ds-tap-min); min-height: var(--ds-tap-min);
+  background: transparent; border: 1px solid var(--cb-orange); border-radius: 6px; color: var(--cb-orange);
+  font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* Mode replié — plus qu'une pastille (portrait + [▼/▲] + [SKIP]), le texte de Die-Hardman disparaît
+   mais SKIP reste toujours atteignable (règle 2 de V1.0.1, jamais remise en cause). Les boutons
+   passent sous --ds-tap-min (48px) UNIQUEMENT dans cet état explicitement choisi par le joueur
+   (jamais la taille par défaut d'un contrôle principal) — 36px reste une cible tactile confortable et
+   c'est ce qui permet à la pastille repliée d'être VRAIMENT plus compacte que la bannière dépliée,
+   plutôt qu'un habillage cosmétique dont la hauteur ne bouge pas (les gros boutons ≥48px dominaient
+   sinon la hauteur totale de la ligne, quel que soit le padding retiré autour). */
+.tutorial-overlay.collapsed { padding: 4px var(--cb-space-3); gap: var(--cb-space-2); }
+.tutorial-overlay.collapsed .tutorial-body { display: none; }
+.tutorial-overlay.collapsed .tutorial-portrait { font-size: 16px; }
+/* Sélecteur ancré sur l'ID (spécificité (1,X,0)) — la règle générique "button:not(...)" de ce même
+   fichier (ligne ~120) a une spécificité (0,3,1) qui bat un simple triple-sélecteur de classes
+   (0,3,0): sans l'ID ici, [▼/▲] n'arrivait jamais à faire retomber la bannière sous 48px repliée. */
+#tutorialOverlay.collapsed .tutorial-skip-btn,
+#tutorialOverlay.collapsed .tutorial-toggle-btn {
+  min-height: 36px; min-width: 36px; padding-top: 4px; padding-bottom: 4px;
+}
+
+@media (max-width: 480px) {
+  .tutorial-overlay { padding: var(--cb-space-2) var(--cb-space-3); }
+  .tutorial-portrait { font-size: 20px; }
+  .tutorial-line { font-size: 11px; }
 }
 
 /* Halo néon clignotant (règle 4) — posé sur N'IMPORTE QUEL élément cible (bouton d'onglet, etc.).

@@ -14,6 +14,7 @@ import { renderTutorialOverlay, showTutorialNudge } from './TutorialOverlay.js';
 
 let currentHighlightEl = null;
 let documentClickBound = false;
+let highlightObserver = null;
 
 function clearHighlight() {
       if (currentHighlightEl) { currentHighlightEl.classList.remove('tutorial-highlight'); currentHighlightEl = null; }
@@ -26,6 +27,19 @@ function applyHighlightForCurrentStep() {
       if (!step || !step.targetSelector) return;
       const el = document.querySelector(step.targetSelector);
       if (el) { el.classList.add('tutorial-highlight'); currentHighlightEl = el; }
+    }
+
+// V1.0.2 fix règle 2 — checkTutorialProgress() ne tourne qu'à chaque render()/navigation, ce qui
+// suffisait pour les boutons statiques de la barre d'onglets, mais une cible future vivant dans un
+// contenu recréé à l'ouverture d'un tiroir/modale (ex: un bouton "Signer" à l'intérieur d'une carte de
+// contrat régénérée en innerHTML) pouvait apparaître APRÈS le dernier appel et ne jamais recevoir le
+// halo. Un MutationObserver sur childList/subtree (jamais 'attributes', pour ne pas se redéclencher
+// sur son propre classList.add/remove — donc aucun risque de boucle infinie) réapplique le highlight
+// dès que le DOM change, quelle que soit son origine.
+function ensureHighlightObserver() {
+      if (highlightObserver || typeof MutationObserver !== 'function' || typeof document === 'undefined' || !document.body) return;
+      highlightObserver = new MutationObserver(() => applyHighlightForCurrentStep());
+      highlightObserver.observe(document.body, { childList: true, subtree: true });
     }
 
 // Idempotent (règle 2: jamais de double attribution) — que ce soit via [SKIP] ou une fin de parcours
@@ -76,6 +90,10 @@ export function checkTutorialProgress() {
 // glisser un mot au passage.
 function handleDocumentClick(evt) {
       if (game.tutorial.completed) return;
+      // V1.0.2 fix — un clic sur la bannière elle-même (ex: [▼/▲]) n'est jamais un "mauvais clic":
+      // sans ce garde-fou, showTutorialNudge() se redéployait automatiquement (elle se déplie si elle
+      // était repliée) juste après que le joueur vienne de la replier, annulant son clic.
+      if (typeof evt.target.closest === 'function' && evt.target.closest('#tutorialOverlay')) return;
       const step = tutorialStepByIndex(game.tutorial.step);
       if (!step || !step.targetSelector || !step.nudge) return;
       const hitTarget = typeof evt.target.closest === 'function' && evt.target.closest(step.targetSelector);
@@ -92,6 +110,7 @@ export function initTutorial() {
         document.addEventListener('click', handleDocumentClick);
         documentClickBound = true;
       }
+      ensureHighlightObserver();
       if (game.tutorial.completed) { renderTutorialOverlay(); return; }
       checkTutorialProgress(); // fast-forward des étapes déjà satisfaites (reprise après reload)
     }

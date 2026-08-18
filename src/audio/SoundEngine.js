@@ -31,6 +31,19 @@ export function initAudio() {
       }
     }
 
+// V1.0.2 — beaucoup de navigateurs créent l'AudioContext à l'état 'suspended' tant qu'aucun resume()
+// explicite n'a été appelé depuis un vrai geste utilisateur (audio/AudioManager.js appelle ceci au
+// tout premier pointerdown/keydown de la page), même si initAudio() a déjà tourné une fois — sans
+// quoi Options > Diagnostics restait bloqué sur "AudioContext: non initialisé" ou sur l'état
+// 'suspended'. Ne joue jamais aucun son (règle 5 silence par défaut) — resume() seul.
+export function resumeAudioContext() {
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      audioDiag();
+    }
+
 // Bascule fluide de l'ambiance sonore entre 'calm' (nappe ouverte), 'tension' (Timefall/Tempête
 // Chirale — filtre étouffé, oppressant) et un pulse ponctuel d'alerte (BT détecté).
 const AMBIENCE_CUTOFF = { calm: 20000, tension: 900 };

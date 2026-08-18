@@ -41,6 +41,7 @@ import { renderManagementSubMenu, setManagementSubTab } from './ui/ManagementPan
 import { initOptionsPanel, renderOptionsPanel, setOptionsVolet, setReducedMotion } from './ui/OptionsPanel.js';
 import { renderMissionsPanel } from './ui/MissionsPanel.js';
 import { initTutorial, skipTutorial } from './ui/TutorialManager.js';
+import { toggleTutorialCompact } from './ui/TutorialOverlay.js';
 import { initAudioManager } from './audio/AudioManager.js';
 import { closePorterDrawer, openPorterDrawer, setPorterDrawerTab } from './ui/PorterDrawer.js';
 import { acceptUrgentQuestFromUI, closeQuestPanel, setQuestPanelTab, toggleQuestPanel } from './ui/QuestPanel.js';
@@ -263,6 +264,7 @@ window.closeMainNavUI = closeMainNav;
 window.setManagementSubTab = setManagementSubTab;
 window.closeSubTabUI = closeSubTab;
 window.skipTutorialUI = () => { skipTutorial(); render(); };
+window.toggleTutorialUI = () => { toggleTutorialCompact(); }; // V1.0.2 — pur affichage, ne touche jamais game.*
 window.setOptionsVoletUI = setOptionsVolet;
 window.setReducedMotionUI = setReducedMotion;
 window.connectKnot = connectKnot;

@@ -107,6 +107,11 @@
     #app-main {
       grid-row: 2; position: relative; z-index: 1;
       min-height: 0; overflow: hidden;
+      /* V1.0.2 règle 1 — padding-top DYNAMIQUE (pas une valeur fixe devinée): --tutorial-h est posée
+         par ui/TutorialOverlay.js (ResizeObserver, 0px si le tutoriel est fermé/terminé) pour que la
+         bannière Die-Hardman ne recouvre jamais le haut du Canvas/des vues, quelle que soit sa hauteur
+         réelle (texte sur 1 ou 2 lignes, repliée ou non, largeur d'écran). */
+      padding-top: var(--tutorial-h, 0px); transition: padding-top 0.25s ease; box-sizing: border-box;
       display: flex; flex-direction: column;
     }
 
@@ -595,7 +600,11 @@
       .left .panel { max-height: 88vh; }
       h2 { font-size: 21px !important; letter-spacing: 2px !important; }
       h3 { font-size: 12px !important; letter-spacing: 2px !important; margin-top: 14px !important; }
-      button:not(.modal-close):not(.minimap-expand-btn):not(.term-stepper-btn) { min-height: 48px !important; padding: 10px 12px !important; font-size: 13px !important; margin: 3px 0 !important; }
+      /* V1.0.2 — .tutorial-skip-btn/.tutorial-toggle-btn gèrent eux-mêmes leur taille tactile (48px
+         par défaut, réduite à 36px en mode replié .collapsed uniquement — cf. css/theme.css): sans
+         cette exclusion, ce !important générique repassait la bannière repliée à 48px et annulait tout
+         effet visuel du bouton [▼/▲] sur la hauteur réelle de la bannière. */
+      button:not(.modal-close):not(.minimap-expand-btn):not(.term-stepper-btn):not(.tutorial-skip-btn):not(.tutorial-toggle-btn) { min-height: 48px !important; padding: 10px 12px !important; font-size: 13px !important; margin: 3px 0 !important; }
       select, input[type="range"] { min-height: 38px !important; font-size: 13px !important; }
       .skill-badge { font-size: 11px !important; padding: 3px 6px !important; }
       .stat-line { font-size: 12px !important; }

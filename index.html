@@ -597,13 +597,15 @@
 
   <!-- V1.0.1 — Tutoriel guidé Die-Hardman (ui/TutorialOverlay.js/TutorialManager.js). Bannière
        compacte, jamais plein écran: le reste de l'interface reste totalement interactif dessous
-       (règle 4 — pas de pointer-events:none bloquant). [SKIP] toujours présent (règle 2). -->
+       (règle 4 — pas de pointer-events:none bloquant). [SKIP] toujours présent (règle 2).
+       V1.0.2 — bouton [▼/▲] pour replier la bannière en pastille sur mobile (SKIP reste accessible). -->
   <div id="tutorialOverlay" class="tutorial-overlay">
     <div class="tutorial-portrait">🕴️</div>
     <div class="tutorial-body">
       <div class="tutorial-name">DIE-HARDMAN</div>
       <div id="tutorialLine" class="tutorial-line"></div>
     </div>
+    <button id="tutorialToggleBtn" class="tutorial-toggle-btn" onclick="toggleTutorialUI()" aria-label="Replier/déplier le tutoriel">▼</button>
     <button class="tutorial-skip-btn" onclick="skipTutorialUI()">SKIP</button>
   </div>
 
