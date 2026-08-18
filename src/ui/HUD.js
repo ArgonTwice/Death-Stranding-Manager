@@ -23,6 +23,7 @@ import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
 import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
 import { renderBBPodOverlay, showBBPodAlert } from './BBPodOverlay.js';
 import { renderTerminalConsole } from './TerminalConsole.js';
+import { renderWalkDrawer } from './WalkDrawer.js';
 import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
 import { collapseDrawer, openDrawer } from './DrawerManager.js';
 import { refreshInspectorIfOpen } from './CanvasInspector.js';
@@ -90,6 +91,7 @@ export function render() {
       renderHallOfFamePanel();
       renderBBPodOverlay();
       renderTerminalConsole();
+      renderWalkDrawer();
       refreshPorterDrawerIfOpen();
       refreshInspectorIfOpen();
       renderDebugHud();

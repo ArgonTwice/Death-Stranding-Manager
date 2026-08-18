@@ -10,6 +10,7 @@ import { BALANCE } from '../data/Balance.js';
 import { NARRATIVE_LOG_LINES, TERMINAL_MOOD_LINES } from '../data/Constants.js';
 import { logAbsenceJournalEntry } from './NarrativeLogEngine.js';
 import { generateNightlyDream } from './AbsenceMuseum.js';
+import { recordSteps, totalChiralKm } from './RealWalkSystem.js';
 
 function pick(arr) { return arr[Math.floor(RNG.next() * arr.length)]; }
 
@@ -65,16 +66,27 @@ const COMMANDS = {
         game.majorMemories.shift();
         return 'Un souvenir s\'efface, doucement.';
       },
-      DREAM: () => generateNightlyDream() || 'Le Musée est vide — rien à rêver, pour l\'instant.'
+      DREAM: () => generateNightlyDream() || 'Le Musée est vide — rien à rêver, pour l\'instant.',
+      // V0.8.0 — saisie manuelle des pas IRL (règle 4: opt-in total, aucun capteur requis pour
+      // progresser). Délègue à RealWalkSystem.recordSteps(), point d'entrée unique et déterministe.
+      STEPS: (args) => {
+        const n = parseInt(args[0], 10);
+        if (!Number.isFinite(n) || n <= 0) return 'Usage: STEPS <nombre positif>. Ex: STEPS 500';
+        recordSteps(n);
+        return `👟 ${n.toLocaleString('fr-FR')} pas enregistrés — ${totalChiralKm()} km chiraux parcourus au total.`;
+      }
     };
 
 export const TERMINAL_COMMAND_LIST = Object.keys(COMMANDS);
 
 // Traite une commande textuelle tapée dans TerminalConsole.js — retourne toujours une réponse
-// affichable (jamais d'erreur non gérée).
+// affichable (jamais d'erreur non gérée). Le premier mot est la commande, le reste ses arguments
+// (ex: "STEPS 500" -> cmd="STEPS", args=["500"]).
 export function processTerminalCommand(raw) {
-      const cmd = (raw || '').trim().toUpperCase();
+      const parts = (raw || '').trim().split(/\s+/).filter(Boolean);
+      const cmd = (parts[0] || '').toUpperCase();
+      const args = parts.slice(1);
       const handler = COMMANDS[cmd];
       if (!handler) return `Commande inconnue: "${raw}". Essaie: ${TERMINAL_COMMAND_LIST.join(', ')}.`;
-      return handler();
+      return handler(args);
     }

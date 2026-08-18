@@ -45,19 +45,35 @@ globalThis.window = globalThis;
 const SRC = 'file://' + path.join(ROOT, 'src') + '/';
 const SEED = parseInt(process.argv[2] || '777001', 10);
 const DAYS = parseInt(process.argv[3] || '50', 10);
+const INJECT_STEPS = parseInt(process.argv[4] || '0', 10); // V0.8.0 — total de pas simulés répartis sur DAYS jours
 
 const { game } = await import(SRC + 'core/GameState.js');
 const { RNG } = await import(SRC + 'core/RNG.js');
 const { newGame } = await import(SRC + 'persistence/SaveManager.js');
 const { advanceDay } = await import(SRC + 'engine/DeliveryEngine.js');
 const { hireRaw } = await import(SRC + 'systems/PorterSystem.js');
+const { createMockMotionAdapter } = await import(SRC + 'sensors/MockMotionAdapter.js');
+const { recordSteps } = await import(SRC + 'systems/RealWalkSystem.js');
 
 RNG.setSeed(SEED);
 newGame(false);
 game.money = 20000;
 ['scout', 'hauler', 'driver', 'dooms'].forEach(s => hireRaw(s));
 
-for (let i = 0; i < DAYS; i++) advanceDay();
+// V0.8.0 — passe systématiquement par le pipeline MockMotionAdapter -> StepDetector plutôt que
+// d'appeler recordSteps() directement: exerce le même chemin de code qu'un vrai capteur (règle 1),
+// avec des timestamps synthétiques (jamais Date.now()) donc instantané et 100% reproductible.
+const mockAdapter = createMockMotionAdapter({ onStep: (n) => recordSteps(n) });
+const stepsPerDay = DAYS > 0 ? Math.floor(INJECT_STEPS / DAYS) : 0;
+let stepsInjected = 0;
+
+for (let i = 0; i < DAYS; i++) {
+  if (stepsPerDay > 0) stepsInjected += mockAdapter.simulateSteps(stepsPerDay);
+  advanceDay();
+}
+// reliquat de la division (ex: 10000/100 tombe juste, mais reste générique pour tout DAYS/INJECT_STEPS)
+const remainder = INJECT_STEPS - stepsInjected;
+if (remainder > 0) mockAdapter.simulateSteps(remainder);
 
 const d = game.mapsData[game.currentMap];
 const result = {
@@ -83,7 +99,12 @@ const result = {
   telemetry: game.telemetry || null,
   convoysActive: (game.convoys || []).length,
   // V0.5.0 — couvre le déterminisme de l'identité procédurale (porterSeed) et du journal de bord
-  porterIdentities: game.porters.map(p => ({ porterSeed: p.porterSeed, background: p.background, phobia: p.phobia, joy: p.joy, doomsLevel: p.doomsLevel, journalCount: (p.journal || []).length, acquiredTraitIds: p.acquiredTraitIds || [] }))
+  porterIdentities: game.porters.map(p => ({ porterSeed: p.porterSeed, background: p.background, phobia: p.phobia, joy: p.joy, doomsLevel: p.doomsLevel, journalCount: (p.journal || []).length, acquiredTraitIds: p.acquiredTraitIds || [] })),
+  // V0.8.0 — couvre le déterminisme de la conversion pas IRL -> ressources (RealWalkSystem.js)
+  totalSteps: game.totalSteps || 0,
+  bbPodStress: (game.bbPod && game.bbPod.stress) || 0,
+  gratitudeTrace: game.gratitudeTrace || 0,
+  chiralCrystal: (game.materials && game.materials.chiral_crystal) || 0
 };
 
 process.stdout.write(JSON.stringify(result));

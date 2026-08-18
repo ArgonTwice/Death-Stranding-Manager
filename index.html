@@ -51,6 +51,7 @@
       <div class="hdr-pill"><span class="hdr-pill-ico">◷</span><span class="hdr-pill-val" id="sbMonth">1/60</span><span class="hdr-pill-ico" style="margin-left:2px;">J</span><span class="hdr-pill-val" id="sbDay">0/30</span></div>
       <div class="hdr-pill"><span class="hdr-pill-ico">★</span><span class="hdr-pill-val" id="sbRep">50</span></div>
       <div class="hdr-pill"><span class="hdr-pill-ico">🏅</span><span class="hdr-pill-val" id="sbRank">Freelance</span></div>
+      <div class="hdr-pill" onclick="toggleWalkDrawer()" style="cursor:pointer;"><span class="hdr-pill-ico">👟</span><span class="hdr-pill-val" id="sbSteps">0</span></div>
     </div>
   </header>
 
@@ -420,6 +421,17 @@
     </div>
   </div>
 
+  <!-- Porteur IRL / Podomètre Chiral (V0.8.0) — tiroir dédié: statut du capteur, statistiques de
+       marche, boosts manuels. Opt-in total (règle 4): fermé par défaut, aucune activation auto. -->
+  <div class="ds-drawer state-collapsed" id="walkDrawer">
+    <div class="ds-drawer-handle"></div>
+    <div class="quest-drawer-panel">
+      <button class="modal-close" onclick="closeWalkDrawer()">✕</button>
+      <h2>◆ PORTEUR IRL</h2>
+      <div id="walkDrawerBody"></div>
+    </div>
+  </div>
+
   <!-- Fond assombri commun à tous les tiroirs (V0.7.0) — tapoter dessus ferme le tiroir actif,
        jamais de logique de jeu ici (DrawerManager.js délègue toujours au close du contrôleur). -->
   <div id="drawerBackdrop" class="ds-drawer-backdrop" onclick="closeAllDrawersUI()"></div>
@@ -465,6 +477,7 @@
         <button id="telemetryDrawerToggle" class="map-action-btn" onclick="toggleTelemetryDrawer()" aria-label="Télémétrie">📡</button>
         <button id="portersDrawerToggle" class="map-action-btn" onclick="togglePortersDrawer()" aria-label="Porteurs">🎒</button>
         <button id="networkDrawerToggle" class="map-action-btn" onclick="toggleNetworkDrawer()" aria-label="Réseau">📊</button>
+        <button id="walkDrawerToggle" class="map-action-btn" onclick="toggleWalkDrawer()" aria-label="Porteur IRL">👟</button>
       </div>
     </div>
   </div>

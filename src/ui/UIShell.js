@@ -12,6 +12,7 @@ import { closeNetworkDrawer, closePortersDrawer, closeTelemetryDrawer } from './
 import { closePorterDrawer } from './PorterDrawer.js';
 import { closeQuestPanel } from './QuestPanel.js';
 import { closeTerminalConsole } from './TerminalConsole.js';
+import { closeWalkDrawer } from './WalkDrawer.js';
 
 const BOTTOM_SHEET_DRAWERS = [
       ['questDrawer', closeQuestPanel],
@@ -21,7 +22,8 @@ const BOTTOM_SHEET_DRAWERS = [
       ['terminalDrawer', closeTerminalConsole],
       ['telemetryDrawer', closeTelemetryDrawer],
       ['portersDrawer', closePortersDrawer],
-      ['networkDrawer', closeNetworkDrawer]
+      ['networkDrawer', closeNetworkDrawer],
+      ['walkDrawer', closeWalkDrawer]
     ];
 
 export function initUIShell() {

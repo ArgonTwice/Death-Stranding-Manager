@@ -26,6 +26,7 @@ import { tickMemoryStormCycle } from '../systems/MemoryStormCycle.js';
 import { checkLeaguePromotion, generateVipContract } from '../systems/PorterLeague.js';
 import { acquiredTraitStressMult, applyPsychologyDailyEffects, doomsDetectionMult, recordJournalEntry } from '../systems/PorterStorySystem.js';
 import { regionalNetworkRewardMult, regionalNetworkRiskCut } from '../systems/RegionalNetwork.js';
+import { realWalkSpeedBonusMult } from '../systems/RealWalkSystem.js';
 import { applyAdvancedShelterRepairs } from '../systems/ShelterSystem.js';
 import { timefallSpeedMult } from '../systems/TimefallSystem.js';
 import { tickWeatherSystem } from '../systems/WeatherSystem.js';
@@ -459,6 +460,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       if (cargoType === 'heavy' && !porter.equipment.vehicle) timeMultiplier *= B.heavyCargoNoVehicleTimeMult;
       if (overload > B.overloadThreshold) timeMultiplier *= 1 + (overload - B.overloadThreshold) * B.overloadTimeMult; // surcharge ralentit
       timeMultiplier *= TRAITS[porter.trait].time_mult || 1; // trait Lève-tôt etc.
+      timeMultiplier *= realWalkSpeedBonusMult(); // V0.8.0: bonus IRL — fonction pure de game.totalSteps, jamais du temps réel
 
       // Terrain canon: relief accidenté ralentit (véhicule inefficace en montagne/rivière)
       const destTerrain = game.terrain[cellKey(destX, destY)];

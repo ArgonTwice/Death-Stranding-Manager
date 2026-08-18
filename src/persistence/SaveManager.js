@@ -136,7 +136,8 @@ export function serializeGame() {
         terminalLastSeen: Date.now(), // V0.6.0 — horodatage réel (pas déterministe, jamais lu par tests/run-once.mjs)
         bbPod: game.bbPod || { connection: 0, stress: 0, stage: 'pod' },
         absenceMuseum: game.absenceMuseum || [],
-        gratitudeTrace: game.gratitudeTrace || 0
+        gratitudeTrace: game.gratitudeTrace || 0,
+        totalSteps: game.totalSteps || 0
       };
     }
 
@@ -196,6 +197,7 @@ export function deserializeGame(s) {
       game.bbPod = s.bbPod || { connection: 0, stress: 0, stage: 'pod' };
       game.absenceMuseum = s.absenceMuseum || [];
       game.gratitudeTrace = s.gratitudeTrace || 0;
+      game.totalSteps = s.totalSteps || 0;
       runtime.activeCampEvents = s.activeCampEventIds ? CAMP_EVENTS.filter(e => s.activeCampEventIds.includes(e.id)) : CAMP_EVENTS;
       runtime.activeVisitorOffers = s.activeVisitorOfferIds ? VISITOR_OFFERS.filter(o => s.activeVisitorOfferIds.includes(o.id)) : VISITOR_OFFERS;
       runtime.activeFestivalsPool = s.activeFestivalIds ? FESTIVALS.filter(f => s.activeFestivalIds.includes(f.id)) : FESTIVALS;
@@ -241,7 +243,7 @@ export function newGame(confirmFirst, slot) {
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';
       const startMoney = DIFFICULTIES[difficulty].startMoney;
-      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null });
+      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null, totalSteps: 0 });
       Object.keys(game.equipBought).forEach(k => game.equipBought[k] = 0);
       game.gameEnded = false;
       runtime.announcedRank = 0;

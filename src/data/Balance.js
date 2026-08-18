@@ -537,5 +537,22 @@ export const BALANCE = {
   },
   narrativeLog: {
     telemetryChancePerTick: 0.06 // par tick de livraison solo (hors raid/convoi/quête), chance d'une ligne poétique
+  },
+  realWalk: {
+    // V0.8.0 — conversion EXCLUSIVEMENT arithmétique (aucun RNG.js) des pas IRL validés en
+    // ressources de jeu: franchissements de seuils sur game.totalSteps, jamais de valeur aléatoire.
+    stepsPerChiralKm: 1250,
+    stressReductionStepInterval: 500,
+    stressReductionPct: 5, // points fixes retirés au stress BB Pod (échelle 0-100), pas un pourcentage multiplicatif
+    chiraliumStepInterval: 5000,
+    chiraliumPerInterval: 1,
+    gratitudeStepInterval: 10000,
+    gratitudePerInterval: 1,
+    speedBonusPerChiralKm: 0.002, // -0.2% de temps de trajet par km chiral marché IRL, cumulatif
+    speedBonusCap: 0.15, // jamais plus de -15% de temps, quel que soit le total de pas
+    milestoneStepInterval: 100, // émet walk:milestone (toast UI) tous les 100 pas
+    checkpointSaveStepInterval: 100, // sauvegarde silencieuse tous les 100 pas, jamais à chaque pas
+    stepCooldownMs: 300, // anti-triche: délai minimal entre deux pas validés (StepDetector.js)
+    maxPlausibleStepsPerMinute: 220 // au-delà: secouage frénétique, pas ignorés (StepDetector.js)
   }
 };
