@@ -13,6 +13,23 @@ import { migratePrepperKnot } from '../persistence/SaveMigrations.js';
 import { markMapDirty } from '../ui/MapRenderer.js';
 import { timefallPrepperDemandMult } from './TimefallSystem.js';
 
+// V1.4.0 — "Brumes de guerre": filtre de RENDU pur (jamais de mutation, aucun nouvel état persisté —
+// même principe que systems/raid/ChiralNetworkSystem.js#revealedRoutes), réutilisé par tous les menus
+// qui listent des Preppers/villes principales (ui/HUD.js#renderMainKnots/renderDashboardSynthesis,
+// ui/DeliveryPlanningPanel.js). Un territoire garde ses mainKnots déjà raccordés visibles + EXACTEMENT
+// LE PLUS PROCHE mainKnot non raccordé (distance euclidienne au QG actif) — jamais tous les non-
+// raccordés en même temps. Entièrement dérivé de d.mainKnots/d.routes/d.branches: aucun champ
+// "revealed" à sérialiser.
+export function revealedMainKnots(d) {
+      const knots = d.mainKnots || [];
+      const connected = knots.filter(k => d.routes.has(cellKey(k.x, k.y)));
+      const hidden = knots.filter(k => !d.routes.has(cellKey(k.x, k.y)));
+      if (!hidden.length) return knots;
+      const hq = d.branches[d.activeBranch] || d.branches[0];
+      const next = hidden.reduce((a, b) => (Math.hypot(a.x - hq.x, a.y - hq.y) <= Math.hypot(b.x - hq.x, b.y - hq.y) ? a : b));
+      return knots.filter(k => d.routes.has(cellKey(k.x, k.y)) || k === next);
+    }
+
 export function pickPrepperArchetype() {
       const keys = Object.keys(PREPPER_ARCHETYPES);
       return keys[Math.floor(RNG.next() * keys.length)];

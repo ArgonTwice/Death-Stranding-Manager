@@ -16,10 +16,13 @@ import { eventBus } from '../core/EventBus.js';
 import { CARGO_TYPES, ROUTE_TYPES } from '../data/Constants.js';
 import { dispatchDeliveryManually } from '../engine/DeliveryEngine.js';
 import { registerView, mountView, destroyView } from '../core/ViewLifecycle.js';
+import { revealedMainKnots } from '../systems/PrepperSystem.js';
 
 function porterDispatchRowHtml(p) {
       const d = game.mapsData[p.map];
-      const knots = (d && d.mainKnots) || [];
+      // V1.4.0 — "Brumes de guerre": le menu de dispatch ne propose que les villes déjà révélées,
+      // jamais tout le territoire d'un coup (cf. systems/PrepperSystem.js#revealedMainKnots).
+      const knots = d ? revealedMainKnots(d) : [];
       if (!knots.length) return '';
       const destOptions = knots.map(k => `<option value="${k.x},${k.y}">${k.name}</option>`).join('');
       const cargoOptions = Object.entries(CARGO_TYPES).map(([key, c]) => `<option value="${key}">${c.name}</option>`).join('');

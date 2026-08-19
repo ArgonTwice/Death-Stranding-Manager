@@ -22,7 +22,7 @@
 // suivant): aucun risque de dérive cumulative après plusieurs redimensionnements successifs.
 import { game } from '../core/GameState.js';
 import { routesForMap, DIFFICULTY_COLORS } from '../data/Routes.js';
-import { routeStatus, ROUTE_STATUS } from '../systems/raid/ChiralNetworkSystem.js';
+import { routeStatus, ROUTE_STATUS, revealedRoutes } from '../systems/raid/ChiralNetworkSystem.js';
 import { openRaidSelectionModal } from './RaidSelectionModal.js';
 import { openContractBoardModal } from './ContractBoardModal.js';
 
@@ -158,7 +158,9 @@ export function renderBridgesMap(canvasId) {
       const mapD = game.mapsData[mapKey];
       const branch = mapD.branches[mapD.activeBranch] || mapD.branches[0];
       const hq = worldToScreen(branch.x, branch.y, transform);
-      const routes = routesForMap(mapKey);
+      // V1.4.0 — "Brumes de guerre": ne dessine que les relais révélés (déjà débloqués + le prochain
+      // à débloquer), jamais tout le territoire d'un coup (cf. ChiralNetworkSystem.js#revealedRoutes).
+      const routes = revealedRoutes(routesForMap(mapKey));
       const newHitNodes = [{ x: hq.x, y: hq.y, r: 14, kind: 'hq' }];
 
       const activeRaid = game.activeRaid && game.activeRaid.status === 'active' ? game.activeRaid : null;

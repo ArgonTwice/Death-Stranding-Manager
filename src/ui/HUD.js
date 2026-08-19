@@ -17,7 +17,7 @@ import { setAutomationThreshold, toggleAutomation } from '../systems/AutomationM
 import { buildStructure, computeLogisticsDashboard, infraCost, investInfrastructure, shopDiscountMult, signSponsor } from '../systems/EconomySystem.js';
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { beachJump, equipSlots, equippedCount, forceRest, hire, porterTitle, repairGear, retirePorter } from '../systems/PorterSystem.js';
-import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel } from '../systems/PrepperSystem.js';
+import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel, revealedMainKnots } from '../systems/PrepperSystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
 import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
@@ -194,7 +194,10 @@ export function renderDashboardSynthesis() {
       const el = document.getElementById('dashboardSynthesisStrip');
       if (!el) return;
       const d = game.mapsData[game.currentMap];
-      const knots = (d && d.mainKnots) || [];
+      // V1.4.0 — "Brumes de guerre": le dénominateur reflète les Preppers RÉVÉLÉS (raccordés + le
+      // plus proche non raccordé), pas le total réel du territoire — sinon "2/4 raccordés" annoncerait
+      // 2 villes que le panneau Réseau (renderMainKnots) ne montre pas encore.
+      const knots = d ? revealedMainKnots(d) : [];
       const connectedCount = d ? knots.filter(k => d.routes.has(cellKey(k.x, k.y))).length : 0;
       const camps = game.muleCamps || [];
       const hostileCount = camps.filter(c => c.status === 'hostile').length;
@@ -651,7 +654,10 @@ export function renderMainKnots() {
       const d = game.mapsData[game.currentMap];
       if (!d || !d.mainKnots || !d.mainKnots.length) { el.innerHTML = ''; return; }
       const idlePorters = game.porters.filter(p => p.map === game.currentMap && p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100);
-      el.innerHTML = d.mainKnots.map((k, i) => prepperCardHtml(d, k, i, idlePorters)).join('');
+      // V1.4.0 — "Brumes de guerre": ne rend que les Preppers révélés (raccordés + le plus proche non
+      // raccordé). L'index `i` passé à prepperCardHtml() DOIT rester l'index RÉEL dans d.mainKnots
+      // (connectKnot(i)/les <select> générés en dépendent) — jamais l'index dans le tableau filtré.
+      el.innerHTML = revealedMainKnots(d).map(k => prepperCardHtml(d, k, d.mainKnots.indexOf(k), idlePorters)).join('');
     }
 
 export function renderSideQuests() {

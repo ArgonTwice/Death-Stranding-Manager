@@ -5,7 +5,7 @@
 import { game } from '../core/GameState.js';
 import { RAID_ROUTES, DIFFICULTY_COLORS } from '../data/Routes.js';
 import { HQ } from '../data/Balance.js';
-import { ROUTE_STATUS, isRouteAvailable, routeStatus } from '../systems/raid/ChiralNetworkSystem.js';
+import { ROUTE_STATUS, isRouteAvailable, routeStatus, revealedRoutes } from '../systems/raid/ChiralNetworkSystem.js';
 import { launchRaid } from '../systems/raid/RaidSystem.js';
 import { closePanel, pushPanel } from '../core/NavigationManager.js';
 import { terminalCardHtml } from './components/TerminalCard.js';
@@ -82,11 +82,22 @@ function routeCardHtml(route) {
       });
     }
 
+// V1.4.0 — "Brumes de guerre": ne s'applique QU'au territoire actif (game.currentMap) — cette vue
+// mondiale des Raids IRL montre délibérément les AUTRES continents pas encore débloqués (LOCKED,
+// "Réseau insuffisant sur ce territoire"), une vue d'ensemble volontaire distincte de la Carte
+// Holographique locale (ui/BridgesMap.js), pas un territoire à masquer au même titre.
+function visibleRaidRoutes() {
+      const local = revealedRoutes(RAID_ROUTES.filter(r => r.mapKey === game.currentMap));
+      const others = RAID_ROUTES.filter(r => r.mapKey !== game.currentMap);
+      return [...local, ...others];
+    }
+
 export function renderRaidSelectionModal() {
       const el = document.getElementById('raidSelectionModalBody');
       if (!el) return;
-      el.innerHTML = RAID_ROUTES.map(routeCardHtml).join('');
-      for (const route of RAID_ROUTES) {
+      const routes = visibleRaidRoutes();
+      el.innerHTML = routes.map(routeCardHtml).join('');
+      for (const route of routes) {
         const canvas = document.getElementById(`raidCanvas-${route.id}`);
         if (canvas) drawRouteCanvas(canvas, route, isRouteAvailable(route));
       }

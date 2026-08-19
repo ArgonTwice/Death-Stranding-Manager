@@ -25,3 +25,18 @@ export function routeStatus(route) {
 export function isRouteAvailable(route) {
       return routeStatus(route) === ROUTE_STATUS.NETWORKED;
     }
+
+// V1.4.0 — "Brumes de guerre": filtre de RENDU pur (jamais de mutation, jamais de nouvel état
+// persisté) réutilisé par tous les menus qui listent des routes (ui/BridgesMap.js,
+// ui/RaidSelectionModal.js). Un territoire garde TOUJOURS ses routes NETWORKED/ACTIVE_RAID visibles
+// (déjà débloquées, rien à cacher) + EXACTEMENT UNE route LOCKED révélée: celle dont
+// minRouteCoverage est le plus proche d'être atteint (la "prochaine" sur le chemin de progression),
+// jamais toutes les LOCKED en même temps. Entièrement dérivé de `routes` (déjà filtré par
+// data/Routes.js#routesForMap): aucun champ "revealed" à sérialiser, donc aucun changement de
+// SaveManager.js/serializeGame — la visibilité se recalcule à l'identique à chaque rendu.
+export function revealedRoutes(routes) {
+      const locked = routes.filter(r => routeStatus(r) === ROUTE_STATUS.LOCKED);
+      if (!locked.length) return routes;
+      const next = locked.reduce((a, b) => (a.minRouteCoverage <= b.minRouteCoverage ? a : b));
+      return routes.filter(r => routeStatus(r) !== ROUTE_STATUS.LOCKED || r.id === next.id);
+    }

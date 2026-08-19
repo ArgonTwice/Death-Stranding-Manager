@@ -23,6 +23,7 @@ import { triggerBeachSequence } from '../systems/TheBeachEngine.js';
 import { tickChiralTraceDaily } from '../systems/ChiralTraceSystem.js';
 import { historicRouteMuleAttentionAdd, historicRouteRewardMult, recordRouteUsage, tickWorldAgingMonthly } from '../systems/WorldAgingSystem.js';
 import { tickMemoryStormCycle } from '../systems/MemoryStormCycle.js';
+import { rollDeliveryEvent } from '../systems/RandomEventEngine.js';
 import { checkLeaguePromotion, generateVipContract } from '../systems/PorterLeague.js';
 import { acquiredTraitStressMult, applyPsychologyDailyEffects, doomsDetectionMult, recordJournalEntry } from '../systems/PorterStorySystem.js';
 import { regionalNetworkRewardMult, regionalNetworkRiskCut } from '../systems/RegionalNetwork.js';
@@ -416,12 +417,9 @@ export function generateEvent(porter, distance, destX, destY, riskMod = 0) {
       // Tirage événement: `risk` détermine DIRECTEMENT la probabilité d'un événement négatif
       // (avant: un simple seuil à 0.3 plafonnait à 50% de bad event même au plancher — toute réduction
       // de risque au-delà de ce seuil était gaspillée. Corrigé pour que le risque compte vraiment.)
-      const badEvents = EVENTS.filter(e => e.risk >= 0);
-      const goodEvents = EVENTS.filter(e => e.risk < 0);
-      const pool = RNG.next() < risk ? badEvents : goodEvents;
-      const event = pool[Math.floor(RNG.next() * pool.length)];
-
-      return event;
+      // V1.4.0 — tirage délégué à systems/RandomEventEngine.js (fonction pure, headless-testable):
+      // RNG (flux partagé) lui est passé pour préserver l'ordre de tirage existant bit-à-bit.
+      return rollDeliveryEvent(EVENTS, risk, RNG);
     }
 
 export function sendDelivery(porterIdx) {
