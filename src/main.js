@@ -44,6 +44,7 @@ import { renderMissionsPanel } from './ui/MissionsPanel.js';
 import { initTutorial, skipTutorial } from './ui/TutorialManager.js';
 import { toggleTutorialCompact } from './ui/TutorialOverlay.js';
 import { initAudioManager } from './audio/AudioManager.js';
+import { renderVersionBadge } from './ui/VersionBadge.js';
 import { closePorterDrawer, openPorterDrawer, setPorterDrawerTab } from './ui/PorterDrawer.js';
 import { acceptUrgentQuestFromUI, closeQuestPanel, setQuestPanelTab, toggleQuestPanel } from './ui/QuestPanel.js';
 import { closeTerminalConsole, sendTerminalCommandUI, sendTerminalInput, toggleTerminalConsole } from './ui/TerminalConsole.js';
@@ -164,6 +165,7 @@ setInterval(checkTerminalSlowdown, 60000);
       initAudioManager(); // V1.0.0 règle 5: AudioContext silencieux dès la 1ère interaction, aucune lecture auto
       initUIShell(); // V0.7.0: pile de navigation (bouton Retour) + physique des tiroirs — indépendant du GameState
       initSplash();
+      renderVersionBadge(); // V1.0.6 GOLD: badge de version de l'écran d'accueil, jamais codé en dur (config/version.js)
       const mapCanvas = document.getElementById('gameMap');
       if (mapCanvas) mapCanvas.addEventListener('click', (evt) => {
         const cell = canvasClickToCell(evt);

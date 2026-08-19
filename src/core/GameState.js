@@ -3,6 +3,7 @@
 
 import { RANKS } from '../data/Balance.js';
 import { CAMP_EVENTS, FESTIVALS, RELICS, VISITOR_OFFERS } from '../data/Constants.js';
+import { VERSION } from '../config/version.js';
 import { eventBus } from './EventBus.js';
 
 export function currentRankIndex() {
@@ -73,7 +74,7 @@ export const game = {
       activeExpedition: null, // V0.9.5 — expédition multi-étapes en cours (ExpeditionSystem.js), orchestre plusieurs Raids successifs
       expeditionHistory: [], // V0.9.5 — historique borné des expéditions multi-étapes achevées
       tutorial: { step: 0, completed: false, skipped: false, rewardsGranted: false }, // V1.0.1 — tutoriel guidé Die-Hardman (TutorialManager.js), skipable, jamais de RNG
-      meta: { counters: { muleCampId: 0 } }, // V1.0.3 — compteurs globaux persistés (ex: engine/MapEngine.js#generateMuleCamps): isole le RuntimeState d'une variable module-scope qui ne survivait pas à un reload (collision d'ids déterministe entre deux territoires débloqués dans des sessions différentes)
+      meta: { counters: { muleCampId: 0 }, version: VERSION }, // V1.0.3 — compteurs globaux persistés (ex: engine/MapEngine.js#generateMuleCamps). V1.0.6 GOLD — meta.version reflète config/version.js (source de vérité unique), jamais lu par RNG.js/la simulation, purement descriptif.
       // --- Propriétés repliées depuis d'anciennes variables top-level module-scope (refacto ES Modules) ---
       gameEnded: false,
       quarterSnapshot: { completed: 0, deaths: 0, money: 10000 },

@@ -330,6 +330,25 @@ body.cb-reduced-motion .nav-main-content.active, body.cb-reduced-motion .opt-vol
 }
 
 /* ============================================================
+   V1.0.6 GOLD — Badge de version (ui/VersionBadge.js), écran d'accueil. Rempli dynamiquement au
+   boot (jamais de texte codé en dur dans index.html) depuis l'unique source de vérité
+   src/config/version.js. Taille adaptative (clamp) + letter-spacing modeste: reste sur une seule
+   ligne centrée sous le titre à toute largeur, du Cover Screen Z Fold (340px) au desktop/tablette
+   déplié (1024px+), sans jamais chevaucher le tagline "KEEP ON KEEPING ON." en dessous.
+   ============================================================ */
+.version-badge {
+  display: block;
+  margin-top: 8px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(10px, 1.5vw, 14px);
+  letter-spacing: 1px;
+  color: #2BB1E6;
+  opacity: 0.9;
+  text-shadow: 0 0 5px rgba(43, 177, 230, 0.5);
+  text-align: center;
+}
+
+/* ============================================================
    V1.0.3 — ModalService (ui/ModalService.js): remplace les confirm() natifs. Même langage visuel
    glassmorphic que .left/.ds-drawer-backdrop, mais toujours au-dessus de TOUT le reste (z-index 400 >
    Modales/Overlays 200 > Tutoriel 300... en pratique la confirmation peut être déclenchée DEPUIS

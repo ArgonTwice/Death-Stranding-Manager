@@ -22,10 +22,13 @@
     <canvas id="splashCanvas" style="position:absolute; inset:0; width:100%; height:100%;"></canvas>
     <div style="position:absolute; width:280px; height:280px; border:1px solid rgba(255,140,43,0.4); border-radius:50%; animation:splash-ring 3.5s ease-out infinite;"></div>
     <div style="position:absolute; width:280px; height:280px; border:1px solid rgba(74,217,224,0.3); border-radius:50%; animation:splash-ring 3.5s ease-out infinite 1.75s;"></div>
-    <div style="position:relative; z-index:2; text-align:center; padding:20px;">
+    <div class="title-container" style="position:relative; z-index:2; text-align:center; padding:20px;">
       <div style="font-size:10px; letter-spacing:6px; color:#ff8c2b;">BRIDGES — UCA CHIRAL LOGISTICS DIVISION</div>
       <h1 style="font-family:'Bebas Neue',sans-serif; font-size:min(11vw,68px); letter-spacing:12px; margin:14px 0 0; line-height:0.95; background:linear-gradient(180deg,#f5e6c8,#ff8c2b 55%,#8a5a2b); -webkit-background-clip:text; background-clip:text; color:transparent; animation:splash-glow 4s ease-in-out infinite;">DEATH STRANDING</h1>
       <h1 style="font-family:'Bebas Neue',sans-serif; font-size:min(7vw,42px); letter-spacing:18px; margin:0 0 0 6px; color:#d8d2c4;">MANAGER</h1>
+      <!-- V1.0.6 GOLD — rempli dynamiquement par ui/VersionBadge.js (jamais de version codée en dur
+           ici), source de vérité unique: src/config/version.js. -->
+      <div id="versionBadge" class="version-badge"></div>
       <div style="font-size:10px; letter-spacing:4px; color:#8a8474; margin-top:16px;">KEEP ON KEEPING ON.</div>
 
       <div style="height:16px; margin-top:22px; font-size:9px; letter-spacing:1px; color:#5a5648; position:relative;">
