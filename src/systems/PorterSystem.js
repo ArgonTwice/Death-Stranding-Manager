@@ -8,6 +8,7 @@ import { BALANCE, DIFFICULTIES } from '../data/Balance.js';
 import { FIRST_NAMES, GRADES, GRADE_TITLES, LAST_NAMES, RELICS, SKILLS, TRAITS, VEHICLE_CAPACITY, countryInfo, gradeLevel, rollTrait } from '../data/Constants.js';
 import { recordLegendIfEligible } from './LegacySystem.js';
 import { acquiredTraitDmgResist, applyIdentityToPorter } from './PorterStorySystem.js';
+import { hasTalent } from './PorterTalentTree.js';
 
 export function gearEffectiveness(p) {
       const wear = p.gearWear || 0;
@@ -31,7 +32,8 @@ export function porterCapacity(p) {
       return BALANCE.porter.capacityBase + p.equipment.exo * BALANCE.porter.capacityExoBonus + p.equipment.boots * BALANCE.porter.capacityBootsBonus
         + (SKILLS[p.skill].carry || 0) * BALANCE.porter.capacitySkillCarryMult
         + (VEHICLE_CAPACITY[p.equipment.vehicle] || 0)
-        + gradeLevel(p, 'portage') * BALANCE.porter.capacityGradePortageMult; // Porter Grade Portage (#4)
+        + gradeLevel(p, 'portage') * BALANCE.porter.capacityGradePortageMult // Porter Grade Portage (#4)
+        + (hasTalent(p, 'heavyCarry') ? BALANCE.talents.heavyCarryCapacityBonus : 0); // V1.7.0 — Talent "Charge Lourde" (portage au niveau max)
     }
 
 export function pickPorterName() {

@@ -10,6 +10,7 @@ import { closePanel, pushPanel } from '../core/NavigationManager.js';
 import { collapseDrawer, openDrawer } from './DrawerManager.js';
 import { giftEquipmentToPorter } from '../systems/PorterAiEngine.js';
 import { BALANCE } from '../data/Balance.js';
+import { porterTalents, TALENTS } from '../systems/PorterTalentTree.js';
 
 let openPorterId = null;
 let activeTab = 'resume';
@@ -95,6 +96,9 @@ function psychologyTabHtml(p) {
       const phobia = PORTER_PHOBIAS[p.phobia];
       const joy = PORTER_JOYS[p.joy];
       const traits = (p.acquiredTraitIds || []).map(id => JOURNAL_MILESTONES[id]);
+      // V1.7.0 — Arbre de compétences: talents débloqués au niveau max d'un grade déjà investi
+      // (systems/PorterTalentTree.js), jamais un état stocké — recalculé à chaque rendu.
+      const unlockedTalents = porterTalents(p);
       return `
         <div class="qp-card">
           <div class="qp-card-head">${phobia ? phobia.icon : '❓'} Phobie</div>
@@ -107,6 +111,10 @@ function psychologyTabHtml(p) {
         <div class="qp-card">
           <div class="qp-card-head">📖 Traits Acquis</div>
           ${traits.length ? traits.map(t => `<div class="qp-card-meta">✦ ${t.acquiredTraitName}</div>`).join('') : '<div class="qp-empty">Aucun trait acquis pour l\'instant.</div>'}
+        </div>
+        <div class="qp-card">
+          <div class="qp-card-head">🌳 Talents</div>
+          ${unlockedTalents.length ? unlockedTalents.map(id => `<div class="qp-card-meta">${TALENTS[id].icon} ${TALENTS[id].name} — ${TALENTS[id].desc}</div>`).join('') : `<div class="qp-empty">Aucun talent débloqué — atteignez le niveau ${BALANCE.talents.minGradeLevelForTalent} d'un Grade (Portage/Discrétion/Service).</div>`}
         </div>`;
     }
 

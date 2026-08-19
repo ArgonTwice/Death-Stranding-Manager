@@ -7,6 +7,7 @@ import { RNG } from '../core/RNG.js';
 import { BALANCE } from '../data/Balance.js';
 import { degradePCCOnMap } from '../systems/NetworkSystem.js';
 import { isPorterSheltered } from '../systems/ShelterSystem.js';
+import { hasTalent } from '../systems/PorterTalentTree.js';
 
 export function setMapWeather(mapKey, type) {
       const d = game.mapsData[mapKey];
@@ -47,7 +48,10 @@ export function triggerTimefall() {
       for (const p of game.porters) {
         if (p.status === 'dead' || p.status === 'left') continue;
         if (isPorterSheltered(p)) { sheltered++; continue; } // V0.3.0: Abri Anti-Timefall protège de l'usure
-        p.gearWear = Math.min(100, (p.gearWear || 0) + BALANCE.weather.timefallGearWearBase + Math.floor(RNG.next() * BALANCE.weather.timefallGearWearRandRange));
+        // V1.7.0 — Talent "Résistance Timefall" (service au niveau max): atténue CETTE usure précise,
+        // même ordre d'appel RNG.next() qu'avant (la formule change, pas le nombre/ordre de tirages).
+        const timefallResistMult = hasTalent(p, 'timefallResist') ? BALANCE.talents.timefallResistWearMult : 1;
+        p.gearWear = Math.min(100, (p.gearWear || 0) + (BALANCE.weather.timefallGearWearBase + Math.floor(RNG.next() * BALANCE.weather.timefallGearWearRandRange)) * timefallResistMult);
         if (p.gearWear >= 100) corroded++;
       }
       if (sheltered > 0) logEvent(`⛺ ${sheltered} porteur(s) protégé(s) de la corrosion par un Abri Anti-Timefall`, 'good');

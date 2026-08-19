@@ -613,5 +613,14 @@ export const BALANCE = {
     hazardSpawnChance: 0.05, // chance/jour qu'une route NETWORKED subisse un aléa de terrain DS2 (éboulement/inondation)
     hazardBlockDaysMin: 2,
     hazardBlockDaysMax: 5
+  },
+  // V1.7.0 — Arbre de compétences (Talents) par porteur, systems/PorterTalentTree.js. Débloqués au
+  // niveau MAXIMUM d'un grade existant (gradeLevel, data/Constants.js — jamais un nouveau système de
+  // progression parallèle): un bonus supplémentaire au sommet d'une spécialisation déjà investie.
+  talents: {
+    minGradeLevelForTalent: 4, // niveau max de gradeLevel() (grade >= 100) — le "sommet" d'une branche
+    muleStealthRiskMult: 0.5, // Furtivité MULE (discretion): -50% supplémentaires sur muleCampRiskAdd
+    timefallResistWearMult: 0.4, // Résistance Timefall (service): -60% d'usure gear pendant une Frappe Temporelle
+    heavyCarryCapacityBonus: 15 // Charge Lourde (portage): +15kg de capacité fixe, en plus du bonus par grade déjà existant
   }
 };

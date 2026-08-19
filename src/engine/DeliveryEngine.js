@@ -9,6 +9,7 @@ import { CARGO_TYPES, CRISIS_FLAVORS, EVENTS, ORDER_ACTIONS, ORDER_CONTEXTS, ORD
 import { checkMuleCamps, generateCatcherEncounter } from './CombatEngine.js';
 import { dominantStructure, isBTZone, isNearHostileMuleCamp, isOnRoute, loadMapData, networkExpansionCandidates } from './MapEngine.js';
 import { checkTerrainHazards, tickPioneerMissions } from '../systems/ReconnaissanceSystem.js';
+import { hasTalent } from '../systems/PorterTalentTree.js';
 import { weatherRiskMod } from './WeatherEngine.js';
 import { checkGameEnd, saveGame } from '../persistence/SaveManager.js';
 import { runAutomation } from '../systems/AutomationManager.js';
@@ -392,7 +393,9 @@ export function generateEvent(porter, distance, destX, destY, riskMod = 0) {
 
       // Zone BT double le risque, route réduit -15%
       if (isBTZone(destX, destY)) risk += B.btZoneRiskAdd;
-      if (isNearHostileMuleCamp(destX, destY)) risk += B.muleCampRiskAdd; // interception par un camp MULE actif
+      // V1.7.0 — Talent "Furtivité MULE" (discretion au niveau max): réduit fortement CETTE
+      // contribution précise, jamais le risque total (cohérent avec le reste des modificateurs ici).
+      if (isNearHostileMuleCamp(destX, destY)) risk += B.muleCampRiskAdd * (hasTalent(porter, 'muleStealth') ? BALANCE.talents.muleStealthRiskMult : 1);
       if (isOnRoute(destX, destY)) risk -= B.onRouteRiskCut;
       risk += historicRouteMuleAttentionAdd(porter.map, destX, destY); // V0.6.0: Route Historique — plus fréquentée, plus surveillée
       risk += weatherRiskMod(); // Timefall/Duststorm persistants: visibilité réduite (#Phase5)
