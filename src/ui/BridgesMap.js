@@ -1,13 +1,25 @@
-// ui/BridgesMap.js (V1.0.0) — Carte Holographique Bridges: rendu Canvas des nœuds de Relais du
-// territoire actif (data/Routes.js), reliés au QG par des connexions néon dont la couleur reflète le
-// statut réseau réel (ChiralNetworkSystem.js — LOCKED/NETWORKED/ACTIVE_RAID), avec une icône mobile
-// interpolée le long de la connexion pour matérialiser un Raid/Expédition IRL en cours. Remplace la
-// grille abstraite 10x10 comme support visuel de l'onglet [Missions].
+// ui/BridgesMap.js (V1.0.0, Canvas responsive refondu V1.0.5) — Carte Holographique Bridges: rendu
+// Canvas des nœuds de Relais du territoire actif (data/Routes.js), reliés au QG par des connexions
+// néon dont la couleur reflète le statut réseau réel (ChiralNetworkSystem.js —
+// LOCKED/NETWORKED/ACTIVE_RAID), avec une icône mobile interpolée le long de la connexion pour
+// matérialiser un Raid/Expédition IRL en cours.
 //
 // RÈGLE D'ISOLATION (V1.0.0 règle 1): module PUREMENT présentationnel — lecture seule de game.*,
 // aucun RNG.next(), aucune mutation d'état. Le clic sur un nœud ne fait qu'OUVRIR une modale UI
 // existante (RaidSelectionModal.js/ContractBoardModal.js) — jamais d'appel direct à launchRaid()/
 // startExpedition() depuis ce fichier.
+//
+// V1.0.5 — Canvas véritablement responsive (tablette/Galaxy Z Fold déplié): le buffer PHYSIQUE du
+// canvas (canvas.width/height, en pixels device réels) est désormais séparé de ses dimensions
+// LOGIQUES CSS (taille réellement affichée à l'écran) via syncCanvasBuffer(), synchronisé sur
+// devicePixelRatio pour un rendu net à toute densité d'écran. worldToScreen()/screenToWorld() sont
+// l'UNIQUE endroit qui connaît la conversion entre la grille logique 0..9 (data/Balance.js
+// MAP_WIDTH/MAP_HEIGHT) et l'espace écran en pixels CSS — une simple mise à l'échelle UNIQUE
+// (Math.min, jamais x/y indépendants: un nœud ne devient jamais une ellipse) + décalage de
+// centrage, strictement inverses l'une de l'autre par construction. rebuildTransform() recalcule
+// entièrement cette transformation à chaque frame plutôt que de l'empiler (ctx.setTransform()
+// REMPLACE toujours la matrice courante — jamais ctx.scale(), qui la multiplierait au resize
+// suivant): aucun risque de dérive cumulative après plusieurs redimensionnements successifs.
 import { game } from '../core/GameState.js';
 import { routesForMap, DIFFICULTY_COLORS } from '../data/Routes.js';
 import { routeStatus, ROUTE_STATUS } from '../systems/raid/ChiralNetworkSystem.js';
@@ -20,33 +32,116 @@ const STATUS_COLOR = {
       [ROUTE_STATUS.ACTIVE_RAID]: '43, 177, 230' // Chiral Blue — raid IRL en transit sur cette route
     };
 
-// Nœuds hit-testés au dernier rendu (recalculés à chaque frame, consommés par le clic) — pas d'état
-// métier, uniquement les coordonnées écran nécessaires à l'interaction tactile.
+// La composition (grille 0..9, marges, losanges QG/Relais) est authorée pour une "toile de
+// référence" 800x420 — c'est la même disposition que l'habillage V1.0.0 d'origine, jamais changée
+// ici. Le monde logique (WORLD_GRID) est mappé vers cette toile de référence par worldToReference();
+// rebuildTransform() calcule ensuite l'unique mise à l'échelle qui fait tenir CETTE toile entière
+// dans le canvas réel SANS JAMAIS LA DÉFORMER — exactement le principe CSS "object-fit: contain".
+const REFERENCE_W = 800, REFERENCE_H = 420;
+const WORLD_GRID = 9; // grille logique 0..9 (MAP_WIDTH/MAP_HEIGHT = 10, data/Balance.js)
+const REF_MARGIN_X = 0.12, REF_MARGIN_Y = 0.18; // marges de la composition de référence, inchangées depuis V1.0.0
+
+function worldToReference(gx, gy) {
+      return {
+        x: REFERENCE_W * REF_MARGIN_X + (gx / WORLD_GRID) * (REFERENCE_W * (1 - REF_MARGIN_X * 2)),
+        y: REFERENCE_H * REF_MARGIN_Y + (gy / WORLD_GRID) * (REFERENCE_H * (1 - REF_MARGIN_Y * 2))
+      };
+    }
+
+function referenceToWorld(rx, ry) {
+      return {
+        gx: ((rx - REFERENCE_W * REF_MARGIN_X) / (REFERENCE_W * (1 - REF_MARGIN_X * 2))) * WORLD_GRID,
+        gy: ((ry - REFERENCE_H * REF_MARGIN_Y) / (REFERENCE_H * (1 - REF_MARGIN_Y * 2))) * WORLD_GRID
+      };
+    }
+
+// Reconstruit la transformation référence->écran à partir des dimensions LOGIQUES courantes du
+// canvas réel. Échelle UNIQUE — Math.min(largeur du canvas / largeur de la toile de référence,
+// hauteur du canvas / hauteur de la toile de référence) — jamais deux facteurs x/y indépendants: un
+// nœud ne devient jamais une ellipse, quel que soit le ratio réel du conteneur (large paysage
+// historique, presque carré sur tablette/Z Fold déplié, étroit sur mobile portrait). Sur le ratio
+// de référence exact (800:420, le cas actuel le plus courant), scale=1 et offset=0: rendu
+// PIXEL-IDENTIQUE à l'ancienne implémentation — aucune régression visuelle sur le cas déjà en
+// production, seuls les ratios qui en dévient gagnent un léger "letterboxing" plutôt qu'une
+// déformation ou un débordement.
+function rebuildTransform(dims) {
+      const scale = Math.min(dims.width / REFERENCE_W, dims.height / REFERENCE_H);
+      return { scale, offsetX: (dims.width - REFERENCE_W * scale) / 2, offsetY: (dims.height - REFERENCE_H * scale) / 2 };
+    }
+
+function worldToScreen(gx, gy, transform) {
+      const ref = worldToReference(gx, gy);
+      return { x: transform.offsetX + ref.x * transform.scale, y: transform.offsetY + ref.y * transform.scale };
+    }
+
+// Strict inverse de worldToScreen() — non utilisé en interne aujourd'hui (le hit-test du clic
+// compare directement des coordonnées écran à hitNodes, déjà en repère écran), mais exposé pour
+// toute future interaction qui aurait besoin de repartir d'un point écran vers une case logique
+// (ex: prévisualisation au survol) sans dupliquer la formule de conversion.
+export function screenToWorld(sx, sy, transform) {
+      const rx = (sx - transform.offsetX) / transform.scale;
+      const ry = (sy - transform.offsetY) / transform.scale;
+      return referenceToWorld(rx, ry);
+    }
+
+function logicalSize(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      // Filet de sécurité: un canvas pas encore mis en page (display:none, environnement de test sans
+      // vraie mise en page) peut renvoyer 0 — retombe sur les attributs width/height bruts plutôt que
+      // de tenter de dessiner dans une surface nulle.
+      const width = rect.width > 0 ? rect.width : (canvas.width || 800);
+      const height = rect.height > 0 ? rect.height : (canvas.height || 420);
+      return { width, height };
+    }
+
+// Synchronise le buffer PHYSIQUE (canvas.width/height, pixels device réels) sur les dimensions
+// LOGIQUES CSS courantes x devicePixelRatio — jamais l'inverse. Ne réaffecte canvas.width/height que
+// si la taille a réellement changé: dans un vrai navigateur, toute affectation (même à la valeur
+// déjà en place) réinitialise silencieusement tout le contenu du buffer, coûteux et inutile à
+// chaque frame si rien n'a bougé.
+function syncCanvasBuffer(canvas, logical) {
+      const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+      const pw = Math.max(1, Math.round(logical.width * dpr));
+      const ph = Math.max(1, Math.round(logical.height * dpr));
+      if (canvas.width !== pw) canvas.width = pw;
+      if (canvas.height !== ph) canvas.height = ph;
+      return dpr;
+    }
+
+// Nœuds hit-testés au dernier rendu (recalculés à chaque frame, consommés par le clic) — coordonnées
+// LOGIQUES (pixels CSS), pas d'état métier, uniquement les coordonnées écran nécessaires à
+// l'interaction tactile.
 let hitNodes = []; // [{ x, y, r, kind: 'hq'|'relay', route? }]
 let boundCanvasId = null;
-
-function layoutPoint(w, h, gx, gy) {
-      return { x: w * 0.12 + (gx / 9) * (w * 0.76), y: h * 0.18 + (gy / 9) * (h * 0.64) };
-    }
+let lastLogicalW = 0, lastLogicalH = 0;
 
 export function renderBridgesMap(canvasId) {
       const canvas = document.getElementById(canvasId);
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      const w = canvas.width, h = canvas.height;
+
+      const logical = logicalSize(canvas);
+      const dpr = syncCanvasBuffer(canvas, logical);
+      // Dessiner en coordonnées CSS logiques ci-dessous, avec cette transformation appliquée, produit
+      // un rendu net à n'importe quel devicePixelRatio — setTransform() REMPLACE toujours la matrice
+      // courante (jamais de scale() cumulatif d'un appel à l'autre).
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const w = logical.width, h = logical.height;
+      const transform = rebuildTransform(logical);
       const now = performance.now();
 
       ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = 'rgba(10, 10, 10, 0.92)';
       ctx.fillRect(0, 0, w, h);
 
-      // Grille de points holographique — texture discrète, jamais de grille pleine (V1.0.0 règle 3:
-      // ce n'est plus une grille de jeu, purement décoratif pour l'ambiance "hologramme").
+      // Grille de points holographique — texture discrète, jamais une grille de jeu (V1.0.0 règle 3:
+      // purement décoratif pour l'ambiance "hologramme").
       ctx.fillStyle = 'rgba(43, 177, 230, 0.08)';
-      for (let gx = 0; gx <= 9; gx += 1) {
-        for (let gy = 0; gy <= 9; gy += 1) {
-          const p = layoutPoint(w, h, gx, gy);
+      for (let gx = 0; gx <= WORLD_GRID; gx += 1) {
+        for (let gy = 0; gy <= WORLD_GRID; gy += 1) {
+          const p = worldToScreen(gx, gy, transform);
           ctx.beginPath(); ctx.arc(p.x, p.y, 1, 0, Math.PI * 2); ctx.fill();
         }
       }
@@ -54,7 +149,7 @@ export function renderBridgesMap(canvasId) {
       const mapKey = game.currentMap;
       const mapD = game.mapsData[mapKey];
       const branch = mapD.branches[mapD.activeBranch] || mapD.branches[0];
-      const hq = layoutPoint(w, h, branch.x, branch.y);
+      const hq = worldToScreen(branch.x, branch.y, transform);
       const routes = routesForMap(mapKey);
       const newHitNodes = [{ x: hq.x, y: hq.y, r: 14, kind: 'hq' }];
 
@@ -62,7 +157,7 @@ export function renderBridgesMap(canvasId) {
 
       for (const route of routes) {
         const status = routeStatus(route);
-        const target = layoutPoint(w, h, route.toX, route.toY);
+        const target = worldToScreen(route.toX, route.toY, transform);
         const rgb = STATUS_COLOR[status] || STATUS_COLOR[ROUTE_STATUS.LOCKED];
         const isRgbTriplet = /^\d/.test(rgb);
         const pulse = status === ROUTE_STATUS.LOCKED ? 0 : 0.35 + Math.sin(now / 500 + route.toX) * 0.25;
@@ -125,14 +220,18 @@ export function renderBridgesMap(canvasId) {
       ctx.fillText('QG', hq.x, hq.y - 16);
 
       hitNodes = newHitNodes;
+      lastLogicalW = w; lastLogicalH = h;
       bindInteraction(canvasId);
     }
 
 function handleCanvasClick(evt) {
       const canvas = evt.currentTarget;
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
-      const cx = (evt.clientX - rect.left) * scaleX, cy = (evt.clientY - rect.top) * scaleY;
+      // V1.0.5 — hitNodes vit désormais en repère LOGIQUE (pixels CSS), le même que rect: une simple
+      // soustraction suffit. L'ancien calcul (canvas.width / rect.width) supposait à tort que le
+      // buffer physique et la taille CSS affichée coïncidaient toujours — faux dès que
+      // devicePixelRatio != 1, ce qui décalait silencieusement chaque hit-test sur écran haute densité.
+      const cx = evt.clientX - rect.left, cy = evt.clientY - rect.top;
       for (const node of hitNodes) {
         const d = Math.hypot(cx - node.x, cy - node.y);
         if (d <= node.r) {
@@ -143,12 +242,30 @@ function handleCanvasClick(evt) {
       }
     }
 
-// Idempotent: un seul écouteur par canvas, jamais réattaché à chaque frame (renderBridgesMap tourne
-// à chaque ouverture/mise à jour de l'onglet Missions).
+// Idempotent: un seul écouteur 'click' + un seul ResizeObserver par canvas, jamais réattachés à
+// chaque frame (renderBridgesMap tourne à chaque ouverture/mise à jour de l'onglet Missions).
 function bindInteraction(canvasId) {
       if (boundCanvasId === canvasId) return;
       const canvas = document.getElementById(canvasId);
       if (!canvas) return;
       canvas.addEventListener('click', handleCanvasClick);
       boundCanvasId = canvasId;
+
+      // V1.0.5 — observe le conteneur PARENT (pas le canvas lui-même: un canvas en width:100%/
+      // aspect-ratio se redimensionne EN RÉACTION à son parent, l'observer directement dessus
+      // créerait un couplage inutile) pour redessiner net à chaque changement de mise en page
+      // (rotation, dépliage du Z Fold, redimensionnement fenêtre). Garde défensive typeof (même motif
+      // que TutorialManager.js#ensureHighlightObserver): ResizeObserver n'existe pas dans
+      // l'environnement de test Node (tests/resilience/_stubEnv.mjs), jamais de RNG/mutation
+      // GameState ici, un simple nouveau rendu à partir de l'état déjà lu par render().
+      if (typeof ResizeObserver === 'function' && canvas.parentElement) {
+        new ResizeObserver(() => {
+          const next = logicalSize(canvas);
+          // Ignore les micro-variations sub-pixel (dont le premier déclenchement systématique de
+          // ResizeObserver juste après observe(), même sans changement réel) — évite un re-rendu en
+          // boucle pour rien.
+          if (Math.abs(next.width - lastLogicalW) < 0.5 && Math.abs(next.height - lastLogicalH) < 0.5) return;
+          renderBridgesMap(canvasId);
+        }).observe(canvas.parentElement);
+      }
     }

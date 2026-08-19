@@ -1,54 +1,53 @@
-/* css/responsive.css (V0.9.8) — Structure adaptative "Cyber-Bridges 2.0": Mobile garde la Tab-bar
-   du bas (V0.7.0, inchangée en dessous de 900px) ; Tablette/Desktop bascule la même barre
-   (.mtab-bar, déjà position:fixed et hors du flux de grille #app-shell) en Sidebar verticale à
-   gauche — un pur changement de position/flex-direction en media query, sans toucher au DOM ni au
-   JS (ui/NavigationManager.js restent identiques quel que soit le point de rupture).
-   Complète css/theme.css (tokens/typo/cartes) avec la mise en page uniquement. */
+/* css/responsive.css (V0.9.8, révisé V1.0.5) — Structure adaptative "Cyber-Bridges 2.0". V0.9.8
+   basculait .mtab-bar en sidebar verticale à gauche dès 768px ; V1.0.5 (tablette/Galaxy Z Fold
+   déplié, ratio ~4:3) est revenu sur ce choix: la Bottom Navigation Kairosoft reste identique à
+   toute largeur (règle "Navigation Unifiée"), seulement recentrée/plafonnée en largeur — jamais de
+   changement de position/flex-direction selon le point de rupture. #app-shell (déjà racine unique
+   de l'app, direct enfant de <body>: pas besoin d'un wrapper supplémentaire) joue le rôle du
+   "conteneur applicatif centré" de la mission, plafonné en largeur sur grand écran pour éviter
+   l'étirement du Canvas/des menus. Complète css/theme.css (tokens/typo/cartes) avec la mise en page
+   uniquement — ui/NavigationManager.js reste identique quel que soit le point de rupture. */
 
 /* ============================================================
-   TABLETTE — >= 768px (résolution de recette officielle de la
-   mission) : Sidebar Navigation à gauche, carte agrandie (plus de
-   bandeau d'onglets en bas qui grignote la hauteur), grilles 2
-   colonnes pour les listes de cartes. Volontairement DÉCOUPLÉ du
-   point de rupture historique 900px de style.css/layout.css (qui
-   ne gère que la densité typographique mobile, "!important",
-   toujours actif jusqu'à 900px): responsive.css se charge après
-   et gagne la cascade à spécificité égale sur les propriétés qu'il
+   TABLETTE / GALAXY Z FOLD DÉPLIÉ — >= 768px (V1.0.5): conteneur applicatif centré et plafonné
+   (#app-shell), Bottom Navigation centrée (jamais de sidebar), modales/tiroirs/fiches plafonnés à
+   520px. Volontairement DÉCOUPLÉ du point de rupture historique 900px de style.css/layout.css (qui
+   ne gère que la densité typographique mobile, "!important", toujours actif jusqu'à 900px):
+   responsive.css se charge après et gagne la cascade à spécificité égale sur les propriétés qu'il
    redéfinit (padding-bottom, etc.).
    ============================================================ */
 @media (min-width: 768px) {
   body {
     padding-bottom: 0 !important;
-    padding-left: 84px;
   }
 
+  /* Conteneur applicatif centré (V1.0.5) — évite l'étirement excessif du Canvas/des menus sur
+     grand écran, quelle que soit la largeur réelle du viewport (tablette 1024px, desktop, Z Fold
+     déplié ~4:3). Bordure néon + lueur cohérentes avec le reste du langage visuel Cyber-Bridges. */
+  #app-shell {
+    max-width: 800px;
+    margin: 0 auto;
+    border-left: 1px solid var(--cb-orange);
+    border-right: 1px solid var(--cb-orange);
+    box-shadow: var(--cb-glow-orange);
+  }
+
+  /* Bottom Navigation Kairosoft (V1.0.5 règle "Navigation Unifiée") — reste en bas, horizontale,
+     identique au mobile: seulement recentrée et plafonnée en largeur plutôt que basculée en
+     sidebar verticale. */
   .mtab-bar {
-    left: 0; right: auto; top: 48px; bottom: 0;
-    width: 84px;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: var(--cb-space-2);
-    padding: var(--cb-space-4) var(--cb-space-1);
-    background: rgba(26, 26, 26, 0.72);
-    backdrop-filter: blur(var(--cb-glass-blur)); -webkit-backdrop-filter: blur(var(--cb-glass-blur));
-    border-top: none;
-    border-right: 1px solid var(--ds-border-strong);
+    max-width: 600px;
+    margin: 0 auto;
   }
-  .mtab-btn { flex: 0 0 auto; width: 100%; }
 
-  /* Bannière tutoriel (V1.0.1) — même logique que .left/.ds-drawer ci-dessous: décalée dans l'espace
-     restant à droite de la sidebar, jamais superposée à ses boutons. */
-  .tutorial-overlay { left: 84px; }
+  /* Modales .left / tiroirs bottom-sheet / fiches (Porteurs, Preppers, Case) — plafonnés à 520px et
+     centrés (V1.0.5), plus besoin de décalage pour une sidebar qui n'existe plus. */
+  .left .panel { max-width: 520px; }
+  .ds-drawer { max-width: 520px; }
 
-  /* Modales .left — panneau centré plus large, la sidebar ne le recouvre jamais (z-index modales
-     200 > sidebar 20 de toute façon, mais on laisse un vrai espace de respiration à gauche). */
-  .left { padding-left: 84px; }
-  .left .panel { max-width: 620px; }
-
-  /* Tiroirs bottom-sheet (V0.7.0) — restent centrés (max-width déjà posé par style.css), mais dans
-     l'espace RESTANT à droite de la sidebar (left décalé, pas juste un padding interne) afin qu'ils
-     ne s'ouvrent jamais dessous. */
-  .ds-drawer { left: 84px; }
+  /* Bannière tutoriel (V1.0.1) — alignée sur la même largeur plafonnée que #app-shell (V1.0.5),
+     jamais un bandeau pleine largeur qui déborde du conteneur applicatif centré. */
+  .tutorial-overlay { max-width: 800px; margin: 0 auto; }
 
   /* Listes de cartes pures (Contrats/Loadout/Construction/Sélection de Raid) — grille fluide en
      colonnes plutôt qu'un empilement vertical qui gaspille la largeur disponible. Les lignes
@@ -78,23 +77,11 @@
 }
 
 /* ============================================================
-   DESKTOP — >= 1280px : Sidebar élargie avec libellés en ligne,
-   grilles 3 colonnes, panneaux modaux encore plus larges.
+   DESKTOP — >= 1280px : grilles 3 colonnes plus généreuses. Le conteneur applicatif (#app-shell) et
+   la Bottom Navigation restent plafonnés exactement comme à 768px (V1.0.5 règle "Navigation
+   Unifiée") — plus de sidebar élargie à réafficher ici.
    ============================================================ */
 @media (min-width: 1280px) {
-  body { padding-left: 220px; }
-  .mtab-bar { width: 220px; padding: var(--cb-space-5) var(--cb-space-3); gap: var(--cb-space-2); }
-  .mtab-btn {
-    flex-direction: row; justify-content: flex-start; gap: var(--cb-space-2);
-    padding: 12px var(--cb-space-3); font-size: 12px;
-  }
-  .mtab-btn .ico { font-size: 18px; }
-
-  .left { padding-left: 220px; }
-  .left .panel { max-width: 760px; }
-  .ds-drawer { left: 220px; max-width: 780px; }
-  .tutorial-overlay { left: 220px; }
-
   #contractBoardModalBody, #loadoutPanelModalBody, #buildActionDrawerBody, #raidSelectionModalBody {
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   }
