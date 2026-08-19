@@ -124,6 +124,20 @@ button:not(.modal-close):not(.minimap-expand-btn):not(.term-stepper-btn),
 .mtab-btn { min-height: var(--ds-tap-min); }
 
 /* ============================================================
+   V1.1 LOT 2 — LOGISTIQUE: boutons rétro-éclairés néon orange (#FF9F1C), Réseau & Preppers: étoiles/
+   statut de connexion néon bleu (#2BB1E6). Additif, scopé par data-main pour ne jamais changer
+   l'apparence des boutons des autres onglets (Livraisons/Options/Dashboard inchangés).
+   ============================================================ */
+[data-main="logistique"] button:not(.nav-back-btn):not(.modal-close):not(.nav-sub-item) {
+  box-shadow: inset 0 0 0 1px rgba(255, 159, 28, 0.35), 0 0 6px var(--ds-neon-orange-glow);
+}
+[data-main="logistique"] button:not(.nav-back-btn):not(.modal-close):not(.nav-sub-item):active {
+  box-shadow: inset 0 0 0 1px var(--ds-neon-orange), 0 0 10px var(--ds-neon-orange-glow);
+}
+.neon-blue-star { color: var(--ds-neon-blue); text-shadow: 0 0 4px var(--ds-neon-blue-glow); }
+.neon-blue-connected { color: var(--ds-neon-blue); }
+
+/* ============================================================
    ANIMATIONS — transitions douces entre vues (règle 4).
    ============================================================ */
 @keyframes cb-fade-in { from { opacity: 0; } to { opacity: 1; } }

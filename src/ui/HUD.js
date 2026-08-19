@@ -104,6 +104,7 @@ export function render() {
       renderAutomationPanel();
       renderLogisticsDashboard();
       renderWeatherForecast();
+      renderDashboardSynthesis();
       renderMiniMap();
       renderQuestPanel();
       renderConvoyPanel();
@@ -183,6 +184,27 @@ export function renderWeatherForecast() {
       const forecast = forecastFor(game.currentMap);
       el.innerHTML = `<span class="voyant">${current.icon} ${current.name}</span>` +
         forecast.map((f, i) => `<span class="voyant wf-forecast">J+${i + 1} ${f.icon}</span>`).join('');
+    }
+
+// V1.1 LOT 2 — Dashboard: "Vue synthétique en lecture seule" (alertes MULE/BT, statut du Réseau
+// Chiral, résumé d'expédition). Purement dérivé de game.* déjà lu ailleurs (renderMainKnots/
+// renderMuleCamps/RaidTrackingDrawer) — aucun nouvel état, aucune action possible depuis ce bandeau
+// (lecture seule, conforme à la règle du brief). Toujours à jour via render() (dirty-check inclus).
+export function renderDashboardSynthesis() {
+      const el = document.getElementById('dashboardSynthesisStrip');
+      if (!el) return;
+      const d = game.mapsData[game.currentMap];
+      const knots = (d && d.mainKnots) || [];
+      const connectedCount = d ? knots.filter(k => d.routes.has(cellKey(k.x, k.y))).length : 0;
+      const camps = game.muleCamps || [];
+      const hostileCount = camps.filter(c => c.status === 'hostile').length;
+      const catcherCount = (game.catchers || []).length;
+      const enRoute = (game.deliveries || []).filter(x => x.status !== 'delivered' && x.status !== 'failed').length;
+      const raidActive = game.activeRaid && game.activeRaid.status === 'active';
+      setInnerHtmlIfChanged(el,
+        `<span class="voyant"><span class="dot${connectedCount > 0 ? '' : ' dot-amber'}"></span> RÉSEAU CHIRAL: ${connectedCount}/${knots.length} raccordés</span>` +
+        `<span class="voyant"><span class="dot${(hostileCount > 0 || catcherCount > 0) ? ' dot-purple' : ''}"></span> ${hostileCount > 0 ? `⚠️ ${hostileCount} camp(s) MULE hostile(s)` : '✅ Aucune menace MULE'}${catcherCount > 0 ? ` · 👹 BT: ${catcherCount} Catcher` : ''}</span>` +
+        `<span class="voyant">🚚 ${enRoute} livraison(s) en cours${raidActive ? ' · 🎯 Raid en cours' : ''}</span>`);
     }
 
 // HUD DE DEBUG — overlay discret (coin bas-droit), actif uniquement avec ?debug=1 dans l'URL.
@@ -383,8 +405,13 @@ export function renderSponsor() {
     }
 
 export function renderCampInfo() {
+      // V1.1 LOT 2 — campHeader a migré de l'ex-onglet Camp vers Logistique > Archives & Sponsors;
+      // muleCampsPanel/pccStatusPanel/catcherPanel ont migré ailleurs (Réseau/Boutique). Ce libellé
+      // reste cohérent avec le nouveau sous-onglet (index.html "◆ ARCHIVES & SPONSORS"). renderMuleCamps/
+      // renderPccStatus/renderCatcherPanel restent appelés inconditionnellement (comme avant) — ce sont
+      // renderMainKnots()/render() (V1.1 LOT 2) qui gardent muleCampsPanel à jour côté Réseau.
       const headerEl = document.getElementById('campHeader');
-      setInnerHtmlIfChanged(headerEl, `CAMP${game.visitor ? '<span class="notif-badge">🔔</span>' : ''}`);
+      setInnerHtmlIfChanged(headerEl, `◆ ARCHIVES &amp; SPONSORS${game.visitor ? '<span class="notif-badge">🔔</span>' : ''}`);
       renderMuleCamps();
       renderPccStatus();
       renderCatcherPanel();
@@ -508,6 +535,14 @@ export function updateUnlocks() {
         const show = currentRankIndex() >= 2; // Porteur Certifié
         knotsEl.style.display = show ? 'block' : 'none';
       }
+      // V1.1 LOT 2 — sideQuests a migré de l'onglet Camp (où il partageait unlock-knots avec
+      // mainKnots) vers l'onglet Livraisons: même condition de déblocage, second élément séparé
+      // (deux ids ne peuvent pas partager le même wrapper une fois sur 2 onglets différents).
+      const sideQuestsEl = document.getElementById('unlock-sidequests');
+      if (sideQuestsEl) {
+        const show = currentRankIndex() >= 2; // Porteur Certifié
+        sideQuestsEl.style.display = show ? 'block' : 'none';
+      }
       const rank2El = document.getElementById('unlock-rank2gear');
       if (rank2El) {
         const show = currentRankIndex() >= 2;
@@ -597,8 +632,8 @@ export function prepperCardHtml(d, k, i, idlePorters) {
         </div>`).join('');
       return `<div class="item" style="margin-bottom:6px;">
         <div style="display:flex; justify-content:space-between; align-items:baseline;">
-          <b>${arch.icon} ${k.name}</b>
-          <span style="font-size:9px; color:var(--gold);">${prepperStarsLabel(k.relation)}</span>
+          <b>${arch.icon} ${k.name} <span class="neon-blue-connected" style="font-size:8px;">🔵 Connecté</span></b>
+          <span class="neon-blue-star" style="font-size:9px;">${prepperStarsLabel(k.relation)}</span>
         </div>
         <div style="font-size:9px; color:var(--chiral);">${arch.name} — ${arch.perkDesc}</div>
         <div class="gauge-row" style="margin-top:4px;">

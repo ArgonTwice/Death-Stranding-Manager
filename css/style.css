@@ -594,7 +594,7 @@
 
     /* MOBILE — layout empilé, cibles tactiles élargies */
     @media (max-width: 900px), (pointer: coarse) {
-      body { padding-bottom: 76px !important; }
+      body { padding-bottom: 80px !important; } /* V1.1 LOT 2 — cf. layout.css, valeur canonique */
       #app-header { padding: 0 8px !important; gap: 8px !important; }
       #statBar { font-size: 9px !important; gap: 8px !important; }
       .panel { font-size: 13px !important; line-height: 1.5; }

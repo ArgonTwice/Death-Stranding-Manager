@@ -49,19 +49,22 @@ for (let i = 0; i < DAYS; i++) advanceDay();
 const runA = snapshotWithoutWallClock();
 
 // Run B — navigation frénétique entrecoupée entre chaque jour simulé: bascule les 5 onglets
-// principaux, ouvre/ferme le sous-menu Gestion, change de volet Options, force un rendu répété de
-// BridgesMap.js (via renderMissionsPanel) — rien de tout cela ne doit consommer RNG.js ni muter game.*.
+// principaux (V1.1 LOT 2: Dashboard/Livraisons/Réseau/Logistique/Options), ouvre/ferme le sous-menu
+// Logistique, change de volet Options, force un rendu répété de BridgesMap.js (via
+// renderMissionsPanel) — rien de tout cela ne doit consommer RNG.js ni muter game.*.
 setupCommonFixture();
 for (let i = 0; i < DAYS; i++) {
-  setMainTab('gestion');
+  setMainTab('logistique');
   renderManagementSubMenu();
   setSubTab('porters');
   closeSubTab();
   setSubTab('shop');
   closeSubTab();
+  setSubTab('archives');
+  closeSubTab();
   closeMainNav();
 
-  setMainTab('missions');
+  setMainTab('livraisons');
   renderMissionsPanel();
   renderMissionsPanel(); // double rendu délibéré: exerce aussi le bindInteraction() idempotent de BridgesMap.js
   closeMainNav();
@@ -73,7 +76,7 @@ for (let i = 0; i < DAYS; i++) {
   renderOptionsPanel();
   closeMainNav();
 
-  setMainTab('camp');
+  setMainTab('reseau');
   closeMainNav();
 
   advanceDay();

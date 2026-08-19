@@ -33,6 +33,14 @@
 
   --ds-tap-min: 48px;
 
+  /* V1.1 LOT 2 — Cyber-Bridges 2.0: néons additifs pour Réseau & Preppers (étoiles/statut connexion)
+     et Logistique (boutons rétro-éclairés). Additifs comme le reste de ce fichier: jamais de
+     redéfinition d'un --ds-* existant, jamais de --amber/--chiral/--gold de style.css touchés. */
+  --ds-neon-blue: #2bb1e6;
+  --ds-neon-blue-glow: rgba(43, 177, 230, 0.5);
+  --ds-neon-orange: #ff9f1c;
+  --ds-neon-orange-glow: rgba(255, 159, 28, 0.45);
+
   /* Safe area (V0.7.5 règle 5) — jamais de fallback à 0 seul: toujours max() avec un plancher */
   --ds-safe-bottom: env(safe-area-inset-bottom, 0px);
 }

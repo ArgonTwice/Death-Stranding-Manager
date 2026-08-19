@@ -1,14 +1,17 @@
-// ui/ManagementPanel.js (V1.0.0) — sous-menu [Gestion] Kairosoft: liste tactile aérée (Porteurs /
-// Boutique & Ressources / Flotte de Véhicules), point d'entrée vers les 3 vues de contenu existantes
-// (déplacées telles quelles depuis l'ancien onglet "gestion" V0.7.0-V0.9.8 — mêmes ids DOM, mêmes
-// onclick, aucune logique changée). Purement présentationnel.
+// ui/ManagementPanel.js (V1.1 LOT 2, ex-V1.0.0) — sous-menu [Logistique] Kairosoft (ex-[Gestion]):
+// liste tactile aérée (Porteurs / Boutique & Ressources / Flotte de Véhicules / Archives & Sponsors),
+// point d'entrée vers les vues de contenu existantes (mêmes ids DOM, mêmes onclick, aucune logique
+// changée — seul le 4e sous-onglet "archives" est nouveau, regroupant sponsor/infra/Hall of
+// Fame/Musée/Plate Gate, déplacés depuis l'ancien onglet Camp — cf. index.html). Purement
+// présentationnel.
 import { game } from '../core/GameState.js';
 import { setSubTab } from './NavigationManager.js';
 
 const SUB_ITEMS = [
       { id: 'porters', icon: '🎒', label: 'Porteurs', desc: 'Recrutement, équipement individuel' },
       { id: 'shop', icon: '🛒', label: 'Boutique & Ressources', desc: 'Chaudron chiral, installations, PCC' },
-      { id: 'fleet', icon: '🚚', label: 'Flotte de Véhicules', desc: 'Camions, motos, trikes' }
+      { id: 'fleet', icon: '🚚', label: 'Flotte de Véhicules', desc: 'Camions, motos, trikes' },
+      { id: 'archives', icon: '🏆', label: 'Archives & Sponsors', desc: 'Sponsors, Hall of Fame, Musée, Plate Gate' }
     ];
 
 export function renderManagementSubMenu() {

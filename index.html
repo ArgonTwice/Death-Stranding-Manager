@@ -70,13 +70,13 @@
     <div class="panel">
     <button class="modal-close" onclick="closeMainNavUI()">✕</button>
 
-    <!-- ===== GESTION — sous-menu ===== -->
-    <div class="nav-sub-menu" data-main="gestion">
-      <h2>◆ GESTION</h2>
+    <!-- ===== LOGISTIQUE (ex-GESTION) — sous-menu ===== -->
+    <div class="nav-sub-menu" data-main="logistique">
+      <h2>◆ LOGISTIQUE</h2>
       <div id="managementSubMenu"></div>
     </div>
 
-    <div class="nav-sub-content" data-main="gestion" data-sub="porters">
+    <div class="nav-sub-content" data-main="logistique" data-sub="porters">
       <button class="nav-back-btn" onclick="closeSubTabUI()">← Retour</button>
       <h2>◆ PORTEURS</h2>
       <button class="success" onclick="hire()">Recruter porteur (scaling $)</button>
@@ -129,7 +129,7 @@
       </div>
     </div>
 
-    <div class="nav-sub-content" data-main="gestion" data-sub="fleet">
+    <div class="nav-sub-content" data-main="logistique" data-sub="fleet">
       <button class="nav-back-btn" onclick="closeSubTabUI()">← Retour</button>
       <h2>◆ FLOTTE DE VÉHICULES</h2>
       <div class="term-card term-card-epic">
@@ -159,7 +159,7 @@
       </div>
     </div>
 
-    <div class="nav-sub-content" data-main="gestion" data-sub="shop">
+    <div class="nav-sub-content" data-main="logistique" data-sub="shop">
       <button class="nav-back-btn" onclick="closeSubTabUI()">← Retour</button>
       <h2>◆ BOUTIQUE &amp; RESSOURCES</h2>
       <h3>INSTALLATIONS</h3>
@@ -175,31 +175,8 @@
       <button onclick="cancelPlacingPCC()" class="danger">✕ Annuler le placement</button>
       <div id="pccModeHint" style="font-size:9px; color:var(--amber); margin-top:2px;"></div>
 
-      <h3>CHAUDRON CHIRAL</h3>
-      <div id="materialsDisplay" style="font-size:9px; color:var(--text-dim); margin-bottom:4px;"></div>
-      <div id="cauldronPanel"></div>
-    </div>
-
-    <!-- ===== MISSIONS — Carte Holographique Bridges + Raids/Expéditions (contenu direct) ===== -->
-    <div class="nav-main-content" data-main="missions">
-      <h2>◆ MISSIONS</h2>
-      <canvas id="missionsMapCanvas" width="800" height="420" class="bridges-map-canvas"></canvas>
-      <div id="missionsPanelBody"></div>
-    </div>
-
-    <!-- ===== CAMP — contenu direct, inchangé ===== -->
-    <div class="nav-main-content" data-main="camp">
-      <h2>◆ CAMP</h2>
-      <h3 id="campHeader">CAMP</h3>
-      <div id="sponsorDisplay" style="font-size:9px; margin-bottom:4px;"></div>
-      <div id="infraDisplay" style="font-size:9px; margin-bottom:4px;"></div>
-      <div id="campTraitDisplay" style="font-size:9px; color:var(--chiral); margin-bottom:4px;"></div>
-      <div id="festivalDisplay" style="font-size:9px; color:var(--amber); margin-bottom:4px;"></div>
-      <div id="visitorDisplay" style="font-size:9px; margin-bottom:4px;"></div>
-
-      <h3>CAMPS MULES — TERRITOIRE ACTIF</h3>
-      <div id="muleCampsPanel" style="font-size:9px;"></div>
-
+      <!-- V1.1 LOT 2 — déplacé depuis l'ex-onglet Camp: mêmes ids DOM (ui/HUD.js#renderPccStatus/
+           renderCatcherPanel n'ont pas changé), regroupé ici avec la pose de PCC/ateliers. -->
       <h3 id="pccHeader">PCC POSÉES — ÉTAT</h3>
       <div id="pccStatusPanel" style="font-size:9px;"></div>
 
@@ -207,6 +184,22 @@
       <div id="catcherPanel" style="font-size:9px;"></div>
       <button onclick="buyConsumable('blood_grenades')" style="font-size:9px;">🩸 Grenade hématique ($200)</button>
       <button onclick="buyConsumable('blood_bags')" style="font-size:9px;">💉 Poche de sang ($150)</button>
+
+      <h3>CHAUDRON CHIRAL</h3>
+      <div id="materialsDisplay" style="font-size:9px; color:var(--text-dim); margin-bottom:4px;"></div>
+      <div id="cauldronPanel"></div>
+    </div>
+
+    <!-- ===== LOGISTIQUE — ARCHIVES & SPONSORS (nouveau sous-onglet V1.1 LOT 2, contenu déplacé
+         depuis l'ex-onglet Camp — mêmes ids DOM, aucune logique changée) ===== -->
+    <div class="nav-sub-content" data-main="logistique" data-sub="archives">
+      <button class="nav-back-btn" onclick="closeSubTabUI()">← Retour</button>
+      <h2 id="campHeader">◆ ARCHIVES &amp; SPONSORS</h2>
+      <div id="sponsorDisplay" style="font-size:9px; margin-bottom:4px;"></div>
+      <div id="infraDisplay" style="font-size:9px; margin-bottom:4px;"></div>
+      <div id="campTraitDisplay" style="font-size:9px; color:var(--chiral); margin-bottom:4px;"></div>
+      <div id="festivalDisplay" style="font-size:9px; color:var(--amber); margin-bottom:4px;"></div>
+      <div id="visitorDisplay" style="font-size:9px; margin-bottom:4px;"></div>
 
       <details style="font-size:9px; color:var(--text-dim);">
         <summary style="cursor:pointer;">🏆 Hall of Fame</summary>
@@ -221,7 +214,35 @@
         <button onclick="buildExpansion('subsidiary')">🏢 Plate Gate — Filiale indépendante (-30% coût, subvention Maison-Mère, +XP héritage)</button>
         <button onclick="foundBranch()">🏢 Fonder une antenne (ici)</button>
       </div>
-      
+    </div>
+
+    <!-- ===== LIVRAISONS (ex-MISSIONS) — Commandes Principales (dispatch manuel), Contrats
+         Secondaires, Carte Holographique Bridges + Historique Raids/Expéditions (V1.1 LOT 2) ===== -->
+    <div class="nav-main-content" data-main="livraisons">
+      <h2>◆ LIVRAISONS</h2>
+      <h3>🎯 COMMANDES PRINCIPALES</h3>
+      <div id="deliveryPlanningPanel" style="font-size:9px;"></div>
+
+      <!-- Contrats secondaires — déplacé depuis l'ex-onglet Camp (mêmes ids DOM, même condition de
+           déblocage que mainKnots, cf. ui/HUD.js#updateUnlocks -> #unlock-sidequests). -->
+      <div id="unlock-sidequests" style="display:none;">
+        <h3 id="questsHeader">CONTRATS SECONDAIRES</h3>
+        <div id="sideQuests"></div>
+      </div>
+
+      <h3>EXPÉDITIONS &amp; HISTORIQUE</h3>
+      <canvas id="missionsMapCanvas" width="800" height="420" class="bridges-map-canvas"></canvas>
+      <div id="missionsPanelBody"></div>
+    </div>
+
+    <!-- ===== RÉSEAU & PREPPERS (ex-CAMP, contenu recentré) — V1.1 LOT 2: alertes MULE/PCC/Catcher/
+         Hall of Fame/Musée/Plate Gate déplacés vers Dashboard (synthèse) et Logistique (Ateliers PCC/
+         Archives), cf. commentaires ci-dessus. ===== -->
+    <div class="nav-main-content" data-main="reseau">
+      <h2>◆ RÉSEAU &amp; PREPPERS</h2>
+      <h3>CAMPS MULES — TERRITOIRE ACTIF</h3>
+      <div id="muleCampsPanel" style="font-size:9px;"></div>
+
       <h3>RÉSEAU CHIRAL</h3>
       <button onclick="buildRoute()">Étendre le réseau ($600)</button>
       <div style="font-size: 9px; color: var(--text-dim); margin-top: 2px;">-30% temps / +50% XP sur trajets connectés au réseau.</div>
@@ -230,9 +251,6 @@
         <h3>PREPPERS — VILLES PRINCIPALES</h3>
         <div id="mainKnots"></div>
         <div style="font-size: 9px; color: var(--text-dim); margin: 2px 0 6px;">Raccordez-les toutes pour ouvrir la Plate Gate. Livrez leurs requêtes pour faire monter la relation et débloquer leurs perks.</div>
-
-        <h3 id="questsHeader">QUÊTES ANNEXES</h3>
-        <div id="sideQuests"></div>
       </div>
     </div>
 
@@ -547,6 +565,10 @@
       </div>
       <!-- Chiral Forecast (V0.3.0): météo du territoire actif + prévision à N jours, toujours exacte -->
       <div id="weatherForecastStrip" class="map-status-strip" aria-label="Prévision météo chirale"></div>
+      <!-- V1.1 LOT 2 — Dashboard: synthèse lecture seule (alertes MULE/BT, statut Réseau Chiral,
+           résumé d'expédition), cf. ui/HUD.js#renderDashboardSynthesis. Toujours visible (le
+           Dashboard EST la carte, jamais un onglet-modale), jamais d'action possible depuis ici. -->
+      <div id="dashboardSynthesisStrip" class="map-status-strip" aria-label="Synthèse Dashboard"></div>
       <div id="mapToggle" style="display: flex; gap: 6px; margin-bottom: 6px;"></div>
       <canvas id="gameMap" width="800" height="400"></canvas>
       <div id="voidoutBanner">
@@ -587,14 +609,16 @@
   </div>
   </div>
 
-  <!-- V1.0.0 — Barre principale Kairosoft à 5 onglets (règle 2). [Dashboard] referme tout et révèle
-       la Carte (elle EST le tableau de bord); les 4 autres ouvrent #mainNavModal sur leur contenu
-       (ui/NavigationManager.js gère l'état 2 niveaux + le bouton Retour physique). -->
+  <!-- V1.1 LOT 2 — Barre principale Kairosoft "Cyber-Bridges 2.0" à 5 onglets (ex-V1.0.0 règle 2,
+       inchangée dans son principe): [Dashboard] referme tout et révèle la Carte (elle EST le tableau
+       de bord, enrichi V1.1 LOT 2 d'un bandeau de synthèse lecture seule); les 4 autres ouvrent
+       #mainNavModal sur leur contenu (ui/NavigationManager.js gère l'état 2 niveaux + le bouton
+       Retour physique). Ex-Gestion/Missions/Camp -> Logistique/Livraisons/Réseau & Preppers. -->
   <div class="mtab-bar">
     <button class="mtab-btn active" data-tab="dashboard" onclick="setMainTabUI('dashboard')"><span class="ico">📊</span>Dashboard</button>
-    <button class="mtab-btn" data-tab="gestion" onclick="setMainTabUI('gestion')"><span class="ico">🚚</span>Gestion</button>
-    <button class="mtab-btn" data-tab="missions" onclick="setMainTabUI('missions')"><span class="ico">🧭</span>Missions</button>
-    <button class="mtab-btn" data-tab="camp" onclick="setMainTabUI('camp')"><span class="ico">🏕️</span>Camp</button>
+    <button class="mtab-btn" data-tab="livraisons" onclick="setMainTabUI('livraisons')"><span class="ico">🚚</span>Livraisons</button>
+    <button class="mtab-btn" data-tab="reseau" onclick="setMainTabUI('reseau')"><span class="ico">🌐</span>Réseau</button>
+    <button class="mtab-btn" data-tab="logistique" onclick="setMainTabUI('logistique')"><span class="ico">📦</span>Logistique</button>
     <button class="mtab-btn" data-tab="options" onclick="setMainTabUI('options')"><span class="ico">⚙️</span>Options</button>
   </div>
 

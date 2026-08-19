@@ -9,16 +9,16 @@
 export const TUTORIAL_STEPS = [
       {
         id: 'recruit',
-        dieHardman: 'Porteur. Bridges a besoin de bras. Recrutez votre premier employé dans l\'onglet Gestion.',
-        targetSelector: '.mtab-btn[data-tab="gestion"]',
-        nudge: 'Non, Porteur. L\'onglet GESTION, en bas de l\'écran — c\'est là que vous recrutez.',
+        dieHardman: 'Porteur. Bridges a besoin de bras. Recrutez votre premier employé dans l\'onglet Logistique.',
+        targetSelector: '.mtab-btn[data-tab="logistique"]',
+        nudge: 'Non, Porteur. L\'onglet LOGISTIQUE, en bas de l\'écran — c\'est là que vous recrutez.',
         isStepSatisfied: (state) => state.porters.length >= 1
       },
       {
         id: 'network',
-        dieHardman: 'Bien. Maintenant étendez le Réseau Chiral depuis l\'onglet Camp — sans réseau, pas de raccourcis.',
-        targetSelector: '.mtab-btn[data-tab="camp"]',
-        nudge: 'L\'onglet CAMP, Porteur. Le réseau ne s\'étend pas tout seul.',
+        dieHardman: 'Bien. Maintenant étendez le Réseau Chiral depuis l\'onglet Réseau — sans réseau, pas de raccourcis.',
+        targetSelector: '.mtab-btn[data-tab="reseau"]',
+        nudge: 'L\'onglet RÉSEAU, Porteur. Le réseau ne s\'étend pas tout seul.',
         isStepSatisfied: (state) => {
           const d = state.mapsData[state.currentMap];
           return !!d && d.routes.size >= 2;

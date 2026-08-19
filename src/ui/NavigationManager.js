@@ -1,23 +1,27 @@
-// ui/NavigationManager.js (V1.0.0) — Routeur UI Kairosoft à 2 niveaux (onglet PRINCIPAL: Dashboard/
-// Gestion/Missions/Camp/Options, puis SOUS-onglet pour les principaux qui en ont un: Gestion ouvre une
-// liste tactile Porteurs/Boutique/Flotte). Construit AU-DESSUS de core/NavigationManager.js (pile
-// history.pushState pour le bouton Retour physique, INCHANGÉE, réutilisée telle quelle: pushPanel()
-// reste le seul point d'entrée qui touche history.*, ce module ne fait qu'enregistrer ses propres
-// callbacks apply()).
+// ui/NavigationManager.js (V1.1 LOT 2, ex-V1.0.0) — Routeur UI Kairosoft à 2 niveaux, refonte "Cyber-
+// Bridges 2.0" à 5 onglets: Dashboard / Livraisons / Réseau & Preppers / Logistique / Options (ex-
+// Dashboard/Gestion/Missions/Camp/Options — mêmes 5 emplacements, contenu réorganisé, cf. index.html
+// et les commentaires "V1.1 LOT 2" qui y marquent chaque bloc déplacé). Logistique ouvre une liste
+// tactile Porteurs/Boutique/Flotte/Archives (ex-Gestion). Construit AU-DESSUS de
+// core/NavigationManager.js (pile history.pushState pour le bouton Retour physique, INCHANGÉE,
+// réutilisée telle quelle: pushPanel() reste le seul point d'entrée qui touche history.*, ce module
+// ne fait qu'enregistrer ses propres callbacks apply()).
 //
-// RÈGLE D'ISOLATION (V1.0.0 règle 1): ce module ne touche JAMAIS game.*, ne consomme JAMAIS
-// RNG.next(), ne déclenche JAMAIS advanceDay()/tick(). Purement de la plomberie d'affichage
-// (classes CSS + historique UI) — au même titre que core/NavigationManager.js.
+// RÈGLE D'ISOLATION (V1.0.0 règle 1, toujours en vigueur): ce module ne touche JAMAIS game.*, ne
+// consomme JAMAIS RNG.next(), ne déclenche JAMAIS advanceDay()/tick(). Purement de la plomberie
+// d'affichage (classes CSS + historique UI) — au même titre que core/NavigationManager.js. C'est
+// précisément cette propriété que tests/resilience/NavigationInvariance.test.js vérifie par preuve
+// d'égalité d'état (100 cycles de bascule des 5 onglets, GameState/seed RNG inchangés).
 import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
 import { eventBus } from '../core/EventBus.js';
 
-export const MAIN_TABS = ['dashboard', 'gestion', 'missions', 'camp', 'options'];
+export const MAIN_TABS = ['dashboard', 'livraisons', 'reseau', 'logistique', 'options'];
 
 // Onglets principaux qui s'ouvrent d'abord sur une liste de sous-menu (V1.0.0 règle 2) plutôt que
-// directement sur du contenu. Missions/Camp/Options affichent leur contenu directement (Options gère
-// ses 2 volets Système/Gestion en interne, cf. OptionsPanel.js — un simple filtre, pas une navigation
-// à historiser).
-const SUBMENU_TABS = new Set(['gestion']);
+// directement sur du contenu. Livraisons/Réseau/Options affichent leur contenu directement (Options
+// gère ses 2 volets Système/Gestion en interne, cf. OptionsPanel.js — un simple filtre, pas une
+// navigation à historiser).
+const SUBMENU_TABS = new Set(['logistique']);
 
 let currentMain = 'dashboard';
 let currentSub = null;

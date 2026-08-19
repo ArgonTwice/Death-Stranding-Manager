@@ -53,5 +53,8 @@ body {
   padding-bottom: calc(58px + var(--ds-safe-bottom)) !important;
 }
 @media (max-width: 900px), (pointer: coarse) {
-  body { padding-bottom: calc(76px + var(--ds-safe-bottom)) !important; }
+  /* V1.1 LOT 2 — 80px demandé explicitement (marge anti-chevauchement .mtab-bar) ; 76px->80px est
+     une augmentation pure (jamais un rétrécissement), donc strictement sans risque de régression de
+     clipping — seulement 4px d'air supplémentaire sous le contenu scrollable. */
+  body { padding-bottom: calc(80px + var(--ds-safe-bottom)) !important; }
 }
