@@ -8,7 +8,9 @@ import { eventBus } from '../core/EventBus.js';
 import { game } from '../core/GameState.js';
 import { BALANCE } from '../data/Balance.js';
 
-function gainConnection(porterId, amount) {
+// V1.5.0 — exportée pour systems/PorterAiEngine.js#giftEquipmentToPorter: un cadeau augmente
+// directement le Lien du porteur, même primitive que toutes les contributions ci-dessous.
+export function gainConnection(porterId, amount) {
       if (porterId == null) return;
       const p = game.porters.find(x => x.id === porterId);
       if (!p) return;

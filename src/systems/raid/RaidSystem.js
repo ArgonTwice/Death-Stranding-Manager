@@ -12,7 +12,7 @@ import { isRouteAvailable } from './ChiralNetworkSystem.js';
 import { resolveCheckpointEvent, releaseRaidGenerator } from './RaidEventResolver.js';
 import { resolveRaidReward } from './RaidRewardResolver.js';
 import { recordJournalEntry } from '../PorterStorySystem.js';
-import { loadoutCargoDamageReduction, loadoutStepEfficiencyMult } from '../player/PlayerLoadout.js';
+import { loadoutCargoDamageReduction, loadoutStepEfficiencyMult, loadoutTimefallResistMult } from '../player/PlayerLoadout.js';
 
 export function activeRaid() { return game.activeRaid; }
 
@@ -71,9 +71,17 @@ export function abandonRaid() {
 function applyCheckpointEvent(raid, fraction) {
       const event = resolveCheckpointEvent(raid.raidSeed, fraction);
       raid.events.push(event);
+      let appliedDetour = 0;
       if (event.detourSteps > 0) {
-        raid.targetDistanceSteps += event.detourSteps;
-        raid.totalDetourSteps += event.detourSteps;
+        // V1.5.0 — les Bottes équipées atténuent SPÉCIFIQUEMENT un détour Timefall (résistance à la
+        // pluie chirale qui ralentit la marche), jamais les autres events (éboulement/BT/embuscade
+        // MULE: aucun rapport avec une protection anti-pluie) — RaidEventResolver.js reste pur/
+        // déterministe, seul RaidSystem.js combine son résultat brut avec le modificateur de loadout
+        // (même principe que loadoutCargoDamageReduction ci-dessous pour le Corps).
+        const detourMit = event.id === 'timefall' ? 1 - loadoutTimefallResistMult() : 1;
+        appliedDetour = Math.round(event.detourSteps * detourMit);
+        raid.targetDistanceSteps += appliedDetour;
+        raid.totalDetourSteps += appliedDetour;
       }
       if (event.cargoDamage > 0) {
         // V0.9.5: le corps équipé (Exosquelette) atténue les dégâts cargo — RaidEventResolver.js reste
@@ -83,7 +91,7 @@ function applyCheckpointEvent(raid, fraction) {
       }
       const pct = Math.round(fraction * 100);
       if (event.bad) {
-        logEvent(`⚠️ Raid — ${pct}%: ${event.label} (+${event.detourSteps} pas, cargo ${Math.round(raid.cargoState * 100)}%)`, 'warn');
+        logEvent(`⚠️ Raid — ${pct}%: ${event.label} (+${appliedDetour} pas, cargo ${Math.round(raid.cargoState * 100)}%)`, 'warn');
       } else {
         logEvent(`✅ Raid — ${pct}%: ${event.label} — aucun contretemps.`, 'good');
       }

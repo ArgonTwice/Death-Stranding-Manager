@@ -8,45 +8,59 @@ import { SPONSORS, STRUCTURES } from '../data/Constants.js';
 import { festivalValue } from '../engine/DeliveryEngine.js';
 import { dominantStructure } from '../engine/MapEngine.js';
 import { equipSlots, equippedCount, targetPorter } from './PorterSystem.js';
-import { prepperPerkBonus } from './PrepperSystem.js';
+import { maxPrepperStars, prepperPerkBonus } from './PrepperSystem.js';
+import { EQUIP_MIN_STARS, VEHICLE_MIN_STARS } from '../data/UnlockTree.js';
 
 export function shopDiscountMult() {
       return (1 - (dominantStructure() === 'depot' ? BALANCE.economy.depotDominantDiscount : 0)) * (1 - festivalValue('shopDiscount')) * DIFFICULTIES[game.difficulty || 'normal'].costMult;
     }
 
-export function buyEquip(type) {
+// V1.5.0 — porterId optionnel: cible un porteur précis au lieu de targetPorter() (runtime.
+// selectedPorterId, piloté par l'UI Boutique) — utilisé par systems/PorterAiEngine.js pour l'achat
+// autonome et le don d'équipement, qui n'ont aucun rapport avec la sélection courante du joueur. Tous
+// les appels existants (buyEquip(type), sans 2e/3e argument) gardent EXACTEMENT le même comportement.
+// `silent`: n'émet aucun logEvent d'ÉCHEC (le succès reste toujours loggé) — utilisé par
+// PorterAiEngine.js#autoBuyEquipForIdlePorters() qui sonde plusieurs types dans l'ordre jusqu'à en
+// trouver un accessible: sans ce mode, chaque type déjà possédé/inaccessible spammerait le journal.
+export function buyEquip(type, porterId, silent) {
       const base = BALANCE.economy.equipBaseCosts;
-      const target = targetPorter();
-      if (!target) { logEvent('❌ Aucun porteur actif'); return; }
-      if (target.equipment[type] >= BALANCE.economy.equipMaxPerType) { logEvent(`❌ ${target.name} déjà au max (${type})`); return; }
-      if ((EQUIP_MIN_RANK[type] || 0) > currentRankIndex()) { logEvent('❌ Rang Bridges insuffisant'); return; }
+      const target = porterId != null ? game.porters.find(p => p.id === porterId) : targetPorter();
+      if (!target) { if (!silent) logEvent('❌ Aucun porteur actif'); return false; }
+      if (target.equipment[type] >= BALANCE.economy.equipMaxPerType) { if (!silent) logEvent(`❌ ${target.name} déjà au max (${type})`); return false; }
+      if ((EQUIP_MIN_RANK[type] || 0) > currentRankIndex()) { if (!silent) logEvent('❌ Rang Bridges insuffisant'); return false; }
+      // V1.5.0 — data/UnlockTree.js: ADDITIF au gate de rang ci-dessus, jamais un remplacement.
+      if ((EQUIP_MIN_STARS[type] || 0) > maxPrepperStars(game.currentMap)) { if (!silent) logEvent(`❌ Confiance Prepper insuffisante (${EQUIP_MIN_STARS[type]}⭐ requis) — raccordez et livrez un Prepper d'abord`, 'warn'); return false; }
       // Harness AUGMENTE les slots, il n'en consomme pas — tout le reste doit tenir dans equipSlots()
       if (type !== 'harness' && equippedCount(target) >= equipSlots(target)) {
-        logEvent(`❌ ${target.name}: slots pleins (${equippedCount(target)}/${equipSlots(target)}) — achetez un Sac de portage`);
-        return;
+        if (!silent) logEvent(`❌ ${target.name}: slots pleins (${equippedCount(target)}/${equipSlots(target)}) — achetez un Sac de portage`);
+        return false;
       }
       const cost = Math.ceil(base[type] * (1 + game.equipBought[type] * BALANCE.economy.equipCostScalingPerBought) * (1 - (game.structures.depot || 0) * BALANCE.economy.depotStructureDiscountPerLevel) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
-      if (game.money < cost) { logEvent(`❌ Budget ($${cost})`); return; }
+      if (game.money < cost) { if (!silent) logEvent(`❌ Budget ($${cost})`); return false; }
       game.money -= cost;
       game.equipBought[type]++;
       target.equipment[type]++;
       logEvent(`🔧 ${target.name} +${type} (-$${cost})`);
       eventBus.emit('render:request');
+      return true;
     }
 
 export function buyVehicle(type) {
       const base = BALANCE.economy.vehicleBaseCosts;
       const target = targetPorter();
-      if (!target) { logEvent('❌ Aucun porteur actif'); return; }
-      if (target.equipment.vehicle) { logEvent(`❌ ${target.name} a déjà un véhicule`); return; }
-      if ((VEHICLE_MIN_RANK[type] || 0) > currentRankIndex()) { logEvent('❌ Rang Bridges insuffisant'); return; }
+      if (!target) { logEvent('❌ Aucun porteur actif'); return false; }
+      if (target.equipment.vehicle) { logEvent(`❌ ${target.name} a déjà un véhicule`); return false; }
+      if ((VEHICLE_MIN_RANK[type] || 0) > currentRankIndex()) { logEvent('❌ Rang Bridges insuffisant'); return false; }
+      // V1.5.0 — data/UnlockTree.js: ADDITIF au gate de rang ci-dessus, jamais un remplacement.
+      if ((VEHICLE_MIN_STARS[type] || 0) > maxPrepperStars(game.currentMap)) { logEvent(`❌ Confiance Prepper insuffisante (${VEHICLE_MIN_STARS[type]}⭐ requis) — raccordez et livrez un Prepper d'abord`, 'warn'); return false; }
       const cost = Math.ceil(base[type] * (1 + game.equipBought[type] * BALANCE.economy.vehicleCostScalingPerBought) * (1 - (game.structures.depot || 0) * BALANCE.economy.depotStructureDiscountPerLevel) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
-      if (game.money < cost) { logEvent(`❌ Budget ($${cost})`); return; }
+      if (game.money < cost) { logEvent(`❌ Budget ($${cost})`); return false; }
       game.money -= cost;
       game.equipBought[type]++;
       target.equipment.vehicle = type;
       logEvent(`🚚 ${target.name} +${type} (-$${cost})`);
       eventBus.emit('render:request');
+      return true;
     }
 
 export function infraCost() { return Math.ceil(BALANCE.economy.infraCostBase * Math.pow(BALANCE.economy.infraCostGrowth, game.infraInvestments)); }

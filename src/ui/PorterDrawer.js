@@ -8,6 +8,8 @@ import { porterQuickSummary } from '../systems/PorterStorySystem.js';
 import { dispatchDeliveryManually } from '../engine/DeliveryEngine.js';
 import { closePanel, pushPanel } from '../core/NavigationManager.js';
 import { collapseDrawer, openDrawer } from './DrawerManager.js';
+import { giftEquipmentToPorter } from '../systems/PorterAiEngine.js';
+import { BALANCE } from '../data/Balance.js';
 
 let openPorterId = null;
 let activeTab = 'resume';
@@ -59,6 +61,20 @@ function manualDispatchHtml(p) {
         </div>`;
     }
 
+// V1.5.0 — "Offrir Équipement" (fiche Logistique du porteur): achète l'objet choisi POUR ce porteur
+// précis via systems/PorterAiEngine.js#giftEquipmentToPorter — mêmes coûts/gates que la Boutique
+// (rang + étoiles Prepper, data/UnlockTree.js), PLUS le bonus de cadeau (Lien + Likes instantané).
+function giftEquipmentHtml(p) {
+      const options = Object.keys(BALANCE.economy.equipBaseCosts).map(type => `<option value="${type}">${type} ($${BALANCE.economy.equipBaseCosts[type]})</option>`).join('');
+      return `
+        <div class="qp-card">
+          <div class="qp-card-head">🎁 Offrir Équipement</div>
+          <div class="qp-card-meta">Un cadeau augmente le Lien de ${p.name} et lui donne des Likes instantanés.</div>
+          <select id="gift-type-${p.id}" class="qp-select">${options}</select>
+          <button class="term-card-action success" onclick="giftEquipmentToPorterUI(${p.id})">🎁 Offrir</button>
+        </div>`;
+    }
+
 function summaryTabHtml(p) {
       const advice = porterQuickSummary(p);
       const bg = PORTER_BACKGROUNDS[p.background];
@@ -71,7 +87,8 @@ function summaryTabHtml(p) {
           <div class="convoy-preview-row"><span>😰 Stress</span><span class="${p.stress > 80 ? 'convoy-risk-high' : ''}">${p.stress}/100</span></div>
           <div class="convoy-preview-row"><span>🔧 Usure équip.</span><span>${p.gearWear || 0}%</span></div>
         </div>
-        ${manualDispatchHtml(p)}`;
+        ${manualDispatchHtml(p)}
+        ${giftEquipmentHtml(p)}`;
     }
 
 function psychologyTabHtml(p) {
@@ -135,5 +152,14 @@ export function dispatchDeliveryManuallyUI(porterId) {
       const porterIdx = game.porters.findIndex(x => x.id === porterId);
       if (porterIdx === -1) return;
       dispatchDeliveryManually(porterIdx, destX, destY, { cargoType: cargoEl ? cargoEl.value : undefined, route: routeEl ? routeEl.value : undefined });
+      renderPorterDrawer();
+    }
+
+// V1.5.0 — pont UI de l'action "Offrir Équipement": lit le <select> au moment du clic (jamais un état
+// intermédiaire conservé), délègue tout à systems/PorterAiEngine.js#giftEquipmentToPorter.
+export function giftEquipmentToPorterUI(porterId) {
+      const typeEl = document.getElementById(`gift-type-${porterId}`);
+      if (!typeEl || !typeEl.value) return;
+      giftEquipmentToPorter(porterId, typeEl.value);
       renderPorterDrawer();
     }

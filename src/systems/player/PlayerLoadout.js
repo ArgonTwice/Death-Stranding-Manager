@@ -75,3 +75,11 @@ export function hasPccKitEquipped() {
       const item = itemFor('pcc', state().pcc);
       return !!(item && item.enablesBuild);
     }
+
+// Résistance Timefall du Raid IRL: atténue les détours d'un événement 'timefall' spécifiquement (les
+// Bottes protègent la marche, pas le cargo — cf. loadoutCargoDamageReduction ci-dessus pour le Corps).
+// Consommé exclusivement par RaidSystem.js#applyCheckpointEvent, jamais par RaidEventResolver.js.
+export function loadoutTimefallResistMult() {
+      const item = itemFor('boots', state().boots);
+      return (item && item.timefallResistMult) || 0;
+    }

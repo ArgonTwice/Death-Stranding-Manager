@@ -355,6 +355,9 @@ export function renderAutomationPanel() {
         <label style="display:flex; align-items:center; gap:8px; font-size:9px; margin:6px 0;">
           <input type="checkbox" ${a.autoReturn ? 'checked' : ''} onchange="toggleAutomation('autoReturn')"> Auto-Retour au dépôt (porteurs disponibles)
         </label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:9px; margin:6px 0;">
+          <input type="checkbox" ${a.autoBuyEquip ? 'checked' : ''} onchange="toggleAutomation('autoBuyEquip')"> Achats autonomes à la Boutique (porteurs au repos)
+        </label>
         <div style="font-size:8px; color:var(--text-dim); margin-top:2px;">Appliqués en fin de mois, coûts identiques aux actions manuelles.</div>`;
     }
 

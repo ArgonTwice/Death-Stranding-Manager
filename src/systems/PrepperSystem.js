@@ -37,6 +37,21 @@ export function pickPrepperArchetype() {
 
 export function prepperStars(relation) { return Math.max(1, Math.min(BALANCE.prepper.starsMax, Math.ceil((relation || 0) / BALANCE.prepper.starsRelationDivisor))); }
 
+// V1.5.0 — "state.world.preppers[id].stars" du brief n'existe pas (aucun namespace game.world.preppers
+// dans ce codebase — game.world est un système SÉPARÉ de structures de terrain pour le Raid IRL, cf.
+// systems/expedition/*). Le vrai concept d'étoiles est PAR PREPPER (prepperStars(k.relation) ci-
+// dessus), jamais stocké. data/UnlockTree.js gate sur le MEILLEUR lien social atteint: le MAX des
+// étoiles parmi les Preppers déjà RACCORDÉS du territoire actif — un seul ami de confiance suffit à
+// vous introduire à l'atelier, pas besoin d'avoir choyé tout le monde. 0 si aucun Prepper raccordé
+// (comportement de tout début de partie, avant le premier connectKnot()).
+export function maxPrepperStars(mapKey) {
+      const d = game.mapsData[mapKey];
+      if (!d) return 0;
+      const connected = (d.mainKnots || []).filter(k => d.routes.has(cellKey(k.x, k.y)));
+      if (!connected.length) return 0;
+      return Math.max(...connected.map(k => prepperStars(k.relation)));
+    }
+
 export function prepperStarsLabel(relation) { return '⭐'.repeat(prepperStars(relation)) + '☆'.repeat(BALANCE.prepper.starsMax - prepperStars(relation)); }
 
 // V1.1 — "trust" est déjà porté par k.relation (0-100, existant depuis V0.x): il n'y a jamais eu
@@ -52,6 +67,23 @@ export function checkPrepperStarMilestone(k, relationBefore) {
       if (after > before) {
         eventBus.emit('prepper:starReached', { name: k.name, archetype: k.archetype, stars: after, relation: k.relation });
         logEvent(`🌟 ${k.name} atteint ${after} étoile${after > 1 ? 's' : ''} de confiance !`, 'good');
+        // V1.5.0 — data/UnlockTree.js gate sur le MAX global des Preppers raccordés (maxPrepperStars
+        // ci-dessus), jamais un prepper individuel: ne recalcule/émet que si CE franchissement fait
+        // réellement progresser le meilleur lien social du territoire (sinon un prepper déjà en retrait
+        // sur les autres franchirait un palier "pour lui" sans jamais rien débloquer de nouveau).
+        const mapKey = Object.keys(game.mapsData).find(key => (game.mapsData[key].mainKnots || []).includes(k));
+        if (mapKey) {
+          const d = game.mapsData[mapKey];
+          const connected = (d.mainKnots || []).filter(kn => d.routes.has(cellKey(kn.x, kn.y)));
+          const othersMax = connected.filter(kn => kn !== k).reduce((m, kn) => Math.max(m, prepperStars(kn.relation)), 0);
+          const wasConnected = d.routes.has(cellKey(k.x, k.y)); // toujours vrai ici en pratique (relation ne monte que via un contrat, qui exige déjà un raccordement), gardé explicite par prudence
+          const maxBefore = wasConnected ? Math.max(othersMax, before) : othersMax;
+          const maxAfter = Math.max(othersMax, after);
+          if (maxAfter > maxBefore) {
+            eventBus.emit('tech:planUnlocked', { stars: maxAfter, mapKey });
+            logEvent(`🔬 Nouveaux plans débloqués à l'Atelier — confiance du réseau: ${maxAfter}⭐`, 'good');
+          }
+        }
       }
     }
 

@@ -599,5 +599,11 @@ export const BALANCE = {
     legCountMultiStopMin: 2,
     legCountMultiStopMax: 3,
     rewardMultPerExtraLeg: 0.15 // bonus cumulatif de récompense finale d'expédition par étape au-delà de la première
+  },
+  // V1.5.0 — Arbre Tech Prepper & Économie de Porteurs style DV2 (systems/PorterAiEngine.js)
+  porterAi: {
+    giftConnectionGain: 6, // Lien (systems/MemoryEngine.js#gainConnection) — même échelle que connectionGainMinor/Major
+    giftLikesGain: 10, // bonus +Likes instantané du porteur qui reçoit le cadeau
+    autoBuyMaxPerTick: 1 // au plus 1 achat automatique par porteur idle par jour — jamais une rafale qui viderait le budget d'un coup
   }
 };
