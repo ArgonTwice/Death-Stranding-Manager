@@ -15,26 +15,30 @@ import { game } from '../core/GameState.js';
 import { eventBus } from '../core/EventBus.js';
 import { CARGO_TYPES, ROUTE_TYPES } from '../data/Constants.js';
 import { dispatchDeliveryManually } from '../engine/DeliveryEngine.js';
+import { dispatchPioneer } from '../systems/ReconnaissanceSystem.js';
 import { registerView, mountView, destroyView } from '../core/ViewLifecycle.js';
 import { revealedMainKnots } from '../systems/PrepperSystem.js';
+import { BALANCE } from '../data/Balance.js';
 
 function porterDispatchRowHtml(p) {
       const d = game.mapsData[p.map];
       // V1.4.0 — "Brumes de guerre": le menu de dispatch ne propose que les villes déjà révélées,
       // jamais tout le territoire d'un coup (cf. systems/PrepperSystem.js#revealedMainKnots).
       const knots = d ? revealedMainKnots(d) : [];
-      if (!knots.length) return '';
-      const destOptions = knots.map(k => `<option value="${k.x},${k.y}">${k.name}</option>`).join('');
-      const cargoOptions = Object.entries(CARGO_TYPES).map(([key, c]) => `<option value="${key}">${c.name}</option>`).join('');
-      const routeOptions = Object.entries(ROUTE_TYPES).map(([key, r]) => `<option value="${key}">${r.icon} ${r.name}</option>`).join('');
+      const dispatchBlock = knots.length ? `
+          <select id="dp-dest-${p.id}" class="qp-select">${knots.map(k => `<option value="${k.x},${k.y}">${k.name}</option>`).join('')}</select>
+          <select id="dp-cargo-${p.id}" class="qp-select">${Object.entries(CARGO_TYPES).map(([key, c]) => `<option value="${key}">${c.name}</option>`).join('')}</select>
+          <select id="dp-route-${p.id}" class="qp-select">${Object.entries(ROUTE_TYPES).map(([key, r]) => `<option value="${key}">${r.icon} ${r.name}</option>`).join('')}</select>
+          <button class="term-card-action success" onclick="dispatchDeliveryPlanningUI(${p.id})">🚚 Envoyer</button>` : '';
+      // V1.6.0 — Dispatch Pionnier: gratuit en argent, mobilise ce porteur BALANCE.reconnaissance.
+      // pioneerMissionDays jours pour étendre le Réseau Chiral d'une case (systems/
+      // ReconnaissanceSystem.js#dispatchPioneer) — toujours proposé, indépendant des villes révélées.
       return `
         <div class="qp-card">
           <div class="qp-card-head">🎯 ${p.name}</div>
           <div class="qp-card-meta">❤️‍🩹 ${Math.ceil(p.health)}/100 · 🔧 usure ${p.gearWear || 0}%</div>
-          <select id="dp-dest-${p.id}" class="qp-select">${destOptions}</select>
-          <select id="dp-cargo-${p.id}" class="qp-select">${cargoOptions}</select>
-          <select id="dp-route-${p.id}" class="qp-select">${routeOptions}</select>
-          <button class="term-card-action success" onclick="dispatchDeliveryPlanningUI(${p.id})">🚚 Envoyer</button>
+          ${dispatchBlock}
+          <button class="term-card-action" onclick="dispatchPioneerUI(${p.id})">🧭 Dispatch Pionnier (${BALANCE.reconnaissance.pioneerMissionDays}j, gratuit)</button>
         </div>`;
     }
 
@@ -56,6 +60,11 @@ export function dispatchDeliveryPlanningUI(porterId) {
       const porterIdx = game.porters.findIndex(x => x.id === porterId);
       if (porterIdx === -1) return;
       dispatchDeliveryManually(porterIdx, destX, destY, { cargoType: cargoEl ? cargoEl.value : undefined, route: routeEl ? routeEl.value : undefined });
+      renderDeliveryPlanningPanel();
+    }
+
+export function dispatchPioneerUI(porterId) {
+      dispatchPioneer(porterId);
       renderDeliveryPlanningPanel();
     }
 

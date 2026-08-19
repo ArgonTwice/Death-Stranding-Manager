@@ -204,6 +204,32 @@ export function isOnRoute(x, y) {
       return game.routes.has(cellKey(x, y));
     }
 
+// V1.6.0 — extrait de engine/DeliveryEngine.js#buildRoute(): les cases adjacentes à une cellule déjà
+// connectée, pas encore couvertes, en excluant les cratères (infranchissables). Fonction PURE
+// réutilisée par buildRoute() ET systems/ReconnaissanceSystem.js (Dispatch Pionnier + progression
+// RealWalk) — vit ici plutôt que dans DeliveryEngine.js pour éviter un cycle d'import
+// (ReconnaissanceSystem.js -> DeliveryEngine.js -> ReconnaissanceSystem.js, puisque DeliveryEngine.js
+// doit aussi appeler tickPioneerMissions()/checkTerrainHazards() depuis son tick quotidien).
+export function networkExpansionCandidates(mapKey) {
+      const d = game.mapsData[mapKey];
+      if (!d) return { candidates: [], blockedByCrater: 0 };
+      const connected = Array.from(d.routes);
+      const candidates = [];
+      let blockedByCrater = 0;
+      for (let key of connected) {
+        const [cx, cy] = key.split(',').map(Number);
+        for (let [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || nx >= MAP_WIDTH || ny < 0 || ny >= MAP_HEIGHT) continue;
+          const nkey = cellKey(nx, ny);
+          if (d.routes.has(nkey)) continue;
+          if (d.craters.has(nkey)) { blockedByCrater++; continue; }
+          candidates.push(nkey);
+        }
+      }
+      return { candidates, blockedByCrater };
+    }
+
 export function generateMainKnots() {
       const knots = [];
       const usedNames = [];

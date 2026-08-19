@@ -66,6 +66,7 @@ function routeCardHtml(route) {
         ? idlePorters.map(p => `<option value="${p.id}">${p.name} (Lv${p.level})</option>`).join('')
         : '<option value="">— aucun porteur disponible sur ce territoire —</option>';
       const statusBadge = status === ROUTE_STATUS.LOCKED ? statusBadgeHtml('LOCKED', 'common', '🔒')
+        : status === ROUTE_STATUS.BLOCKED ? statusBadgeHtml('BLOQUÉE', 'common', '⛔')
         : status === ROUTE_STATUS.ACTIVE_RAID ? statusBadgeHtml('RAID EN COURS', 'legendary', '🚩')
         : statusBadgeHtml('RAID DISPONIBLE', 'legendary', '🟢');
 
@@ -77,6 +78,8 @@ function routeCardHtml(route) {
         bodyHtml: `<canvas id="raidCanvas-${route.id}" width="260" height="90" style="width:100%; height:auto; margin-bottom:6px;"></canvas>`
           + (available ? `<select id="raidPorterSelect-${route.id}" class="qp-select">${porterOptions}</select>`
             : status === ROUTE_STATUS.LOCKED ? `<div class="qp-empty">Réseau insuffisant sur ce territoire${route.requireSuperRelay ? ' (Super-Relais requis)' : ''}.</div>`
+            // V1.6.0 — aléa de terrain DS2 temporaire, distinct d'un raid déjà en transit.
+            : status === ROUTE_STATUS.BLOCKED ? '<div class="qp-empty">⛔ Route bloquée par un éboulement/une inondation — patientez quelques jours.</div>'
             : '<div class="qp-empty">Un raid est déjà en cours sur cette route.</div>'),
         actionsHtml: available ? `<button class="term-card-action success" ${idlePorters.length ? '' : 'disabled'} onclick="launchRaidFromUI('${route.id}')">🚩 Lancer Raid IRL</button>` : ''
       });

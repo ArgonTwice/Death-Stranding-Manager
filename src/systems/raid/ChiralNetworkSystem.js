@@ -5,19 +5,34 @@
 import { game } from '../../core/GameState.js';
 import { activeSuperRelayCount } from '../RegionalNetwork.js';
 
-export const ROUTE_STATUS = { LOCKED: 'LOCKED', NETWORKED: 'NETWORKED', ACTIVE_RAID: 'ACTIVE_RAID' };
+// V1.6.0 — BLOCKED: aléa de terrain DS2 (éboulement/inondation, systems/ReconnaissanceSystem.js)
+// bloquant TEMPORAIREMENT une route déjà déverrouillée. État stocké dans game.terrainHazards
+// (routeId -> jour de déblocage), JAMAIS sur l'objet route lui-même (data/Routes.js#RAID_ROUTES est
+// une donnée STATIQUE partagée par toutes les parties du même process — la muter directement
+// affecterait toutes les parties/tous les tests simultanément).
+export const ROUTE_STATUS = { LOCKED: 'LOCKED', NETWORKED: 'NETWORKED', ACTIVE_RAID: 'ACTIVE_RAID', BLOCKED: 'BLOCKED' };
 
 function routeCoverage(mapKey) {
       const d = game.mapsData[mapKey];
       return d && d.routes ? d.routes.size : 0;
     }
 
-// Statut d'une route: LOCKED (réseau insuffisant), ACTIVE_RAID (un raid est DÉJÀ en cours sur cette
-// route précise), ou NETWORKED (déverrouillée, "RAID DISPONIBLE").
+function isHazardBlocked(route) {
+      const hazard = game.terrainHazards && game.terrainHazards[route.id];
+      return !!(hazard && game.month <= hazard.untilMonth);
+    }
+
+// Statut d'une route: LOCKED (réseau insuffisant), BLOCKED (aléa de terrain temporaire, V1.6.0),
+// ACTIVE_RAID (un raid est DÉJÀ en cours sur cette route précise), ou NETWORKED (déverrouillée,
+// "RAID DISPONIBLE"). BLOCKED est vérifié APRÈS LOCKED (une route jamais déverrouillée reste LOCKED,
+// message plus utile pour le joueur) mais AVANT ACTIVE_RAID (un éboulement en cours de route
+// interromprait de toute façon la progression — cf. systems/ReconnaissanceSystem.js pour la décision
+// de ne jamais déclencher un aléa sur la route d'un raid déjà en transit).
 export function routeStatus(route) {
       if (!route) return ROUTE_STATUS.LOCKED;
       if (routeCoverage(route.mapKey) < route.minRouteCoverage) return ROUTE_STATUS.LOCKED;
       if (route.requireSuperRelay && activeSuperRelayCount() < 1) return ROUTE_STATUS.LOCKED;
+      if (isHazardBlocked(route)) return ROUTE_STATUS.BLOCKED;
       if (game.activeRaid && game.activeRaid.status === 'active' && game.activeRaid.routeId === route.id) return ROUTE_STATUS.ACTIVE_RAID;
       return ROUTE_STATUS.NETWORKED;
     }
@@ -39,4 +54,13 @@ export function revealedRoutes(routes) {
       if (!locked.length) return routes;
       const next = locked.reduce((a, b) => (a.minRouteCoverage <= b.minRouteCoverage ? a : b));
       return routes.filter(r => routeStatus(r) !== ROUTE_STATUS.LOCKED || r.id === next.id);
+    }
+
+// V1.6.0 — le complément de revealedRoutes ci-dessus: les routes LOCKED encore plus lointaines, NI
+// masquées entièrement (V1.4.0) NI affichées en détail — dessinées en silhouette holographique
+// (ui/BridgesMap.js: position connue, nom/statut masqués, "?"). Toujours purement dérivé, aucun état
+// "revealed" persisté — les mêmes garanties que revealedRoutes.
+export function silhouetteRoutes(routes) {
+      const revealed = new Set(revealedRoutes(routes));
+      return routes.filter(r => !revealed.has(r));
     }

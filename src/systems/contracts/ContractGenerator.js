@@ -67,11 +67,13 @@ export function contractsForRelay(mapKey) {
     }
 
 // Un contrat n'est lançable que si TOUTES ses étapes sont déjà connectées au Réseau Chiral (règle 1 —
-// une expédition ne saute jamais une étape verrouillée).
+// une expédition ne saute jamais une étape verrouillée) ET non bloquées par un aléa de terrain
+// temporaire (V1.6.0 — un éboulement/une inondation interrompt momentanément une route déjà
+// déverrouillée, distinct de LOCKED: `!== LOCKED` seul laisserait à tort passer BLOCKED).
 export function isContractLaunchable(contract) {
       const routes = routesForMap(contract.mapKey);
       return contract.legRouteIds.every(routeId => {
         const route = routes.find(r => r.id === routeId);
-        return route && routeStatus(route) !== ROUTE_STATUS.LOCKED;
+        return !!route && routeStatus(route) !== ROUTE_STATUS.LOCKED && routeStatus(route) !== ROUTE_STATUS.BLOCKED;
       });
     }

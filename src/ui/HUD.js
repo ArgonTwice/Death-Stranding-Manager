@@ -17,7 +17,7 @@ import { setAutomationThreshold, toggleAutomation } from '../systems/AutomationM
 import { buildStructure, computeLogisticsDashboard, infraCost, investInfrastructure, shopDiscountMult, signSponsor } from '../systems/EconomySystem.js';
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { beachJump, equipSlots, equippedCount, forceRest, hire, porterTitle, repairGear, retirePorter } from '../systems/PorterSystem.js';
-import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel, revealedMainKnots } from '../systems/PrepperSystem.js';
+import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel, revealedMainKnots, silhouetteMainKnots } from '../systems/PrepperSystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
 import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
@@ -660,7 +660,13 @@ export function renderMainKnots() {
       // V1.4.0 — "Brumes de guerre": ne rend que les Preppers révélés (raccordés + le plus proche non
       // raccordé). L'index `i` passé à prepperCardHtml() DOIT rester l'index RÉEL dans d.mainKnots
       // (connectKnot(i)/les <select> générés en dépendent) — jamais l'index dans le tableau filtré.
-      el.innerHTML = revealedMainKnots(d).map(k => prepperCardHtml(d, k, d.mainKnots.indexOf(k), idlePorters)).join('');
+      // V1.6.0 — silhouettes: les villes encore plus lointaines gagnent une carte "?" minimale (aucun
+      // nom/archétype révélé) au lieu de disparaître totalement du panneau.
+      const silhouetteCardHtml = () => `<div class="item" style="margin-bottom:5px; opacity:0.5;">
+        <span>🔍 Ville non découverte — envoyez un Pionnier ou marchez pour la localiser</span>
+      </div>`;
+      el.innerHTML = revealedMainKnots(d).map(k => prepperCardHtml(d, k, d.mainKnots.indexOf(k), idlePorters)).join('')
+        + silhouetteMainKnots(d).map(silhouetteCardHtml).join('');
     }
 
 export function renderSideQuests() {

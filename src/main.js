@@ -47,7 +47,7 @@ import { toggleTutorialCompact } from './ui/TutorialOverlay.js';
 import { initAudioManager } from './audio/AudioManager.js';
 import { renderVersionBadge } from './ui/VersionBadge.js';
 import { closePorterDrawer, dispatchDeliveryManuallyUI, giftEquipmentToPorterUI, openPorterDrawer, setPorterDrawerTab } from './ui/PorterDrawer.js';
-import { dispatchDeliveryPlanningUI } from './ui/DeliveryPlanningPanel.js';
+import { dispatchDeliveryPlanningUI, dispatchPioneerUI } from './ui/DeliveryPlanningPanel.js';
 import { acceptUrgentQuestFromUI, closeQuestPanel, setQuestPanelTab, toggleQuestPanel } from './ui/QuestPanel.js';
 import { closeTerminalConsole, sendTerminalCommandUI, sendTerminalInput, toggleTerminalConsole } from './ui/TerminalConsole.js';
 import { checkTerminalSlowdown } from './systems/TerminalSoul.js';
@@ -269,6 +269,7 @@ window.setMainTabUI = (id) => {
     };
 window.closeMainNavUI = closeMainNav;
 window.dispatchDeliveryPlanningUI = dispatchDeliveryPlanningUI;
+window.dispatchPioneerUI = dispatchPioneerUI;
 window.setManagementSubTab = setManagementSubTab;
 window.closeSubTabUI = closeSubTab;
 window.skipTutorialUI = () => { skipTutorial(); render(); };

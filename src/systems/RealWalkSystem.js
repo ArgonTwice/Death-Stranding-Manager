@@ -11,6 +11,7 @@ import { game, logEvent } from '../core/GameState.js';
 import { BALANCE } from '../data/Balance.js';
 import { bbPodState } from './BBPodSystem.js';
 import { saveGame } from '../persistence/SaveManager.js';
+import { extendNetworkDeterministic } from './ReconnaissanceSystem.js';
 
 // Nombre de multiples de `interval` franchis entre `before` (exclu) et `after` (inclus) — gère
 // correctement les injections en rafale (ex: STEPS 10000 d'un coup) comme les pas un par un.
@@ -44,6 +45,16 @@ export function recordSteps(n) {
       const gratitudeCrossings = crossedThresholds(before, after, B.gratitudeStepInterval);
       if (gratitudeCrossings > 0) {
         game.gratitudeTrace = (game.gratitudeTrace || 0) + gratitudeCrossings * B.gratitudePerInterval;
+      }
+
+      // V1.6.0 — "Deux voies de déblocage: Dispatch Pionnier manuel OU Session RealWalk": la marche
+      // IRL étend aussi le Réseau Chiral, tous les BALANCE.reconnaissance.realWalkNetworkStepInterval
+      // pas franchis. extendNetworkDeterministic() (systems/ReconnaissanceSystem.js) ne consomme
+      // JAMAIS RNG.js (règle 2 ci-dessus, déterminisme absolu) — un franchissement de seuil sur
+      // game.totalSteps reste une fonction pure, comme toutes les conversions de ce module.
+      const networkCrossings = crossedThresholds(before, after, BALANCE.reconnaissance.realWalkNetworkStepInterval);
+      if (networkCrossings > 0) {
+        for (let i = 0; i < networkCrossings; i++) extendNetworkDeterministic(game.currentMap);
       }
 
       const milestoneCrossings = crossedThresholds(before, after, B.milestoneStepInterval);

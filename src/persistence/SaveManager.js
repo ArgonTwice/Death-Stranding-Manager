@@ -148,7 +148,12 @@ export function serializeGame() {
         expeditionHistory: game.expeditionHistory || [],
         tutorial: game.tutorial || { step: 0, completed: false, skipped: false, rewardsGranted: false },
         meta: game.meta || { counters: { muleCampId: 0 } },
-        progression: game.progression || { realWalk: { unlocked: false } }
+        progression: game.progression || { realWalk: { unlocked: false } },
+        terrainHazards: game.terrainHazards || {}
+        // V1.6.0 — game.pioneerMissions n'est PAS persisté, exactement comme game.deliveries/
+        // game.convoys ci-dessus ("Livraisons en cours non persistées: simplification"): un porteur
+        // en Dispatch Pionnier repart 'idle' au chargement (deserializeGame, règle déjà établie), donc
+        // la mission associée n'aurait plus de sens si elle survivait — vidée à chaque chargement.
       };
     }
 
@@ -245,6 +250,11 @@ export function deserializeGame(s) {
       // peut légitimement être encore false si son premier raccordement réseau n'a jamais eu lieu).
       game.progression = s.progression || { realWalk: { unlocked: true } };
       game.progression.realWalk = game.progression.realWalk || { unlocked: true };
+      // V1.6.0 — terrainHazards survit au chargement (état purement temporel, untilMonth); jamais
+      // pioneerMissions (cf. serializeGame ci-dessus: vidé à chaque chargement, même règle que
+      // game.deliveries/game.convoys — les porteurs concernés repartent 'idle' juste au-dessus).
+      game.terrainHazards = s.terrainHazards || {};
+      game.pioneerMissions = [];
       // V1.3.0 fix — .map(id => ...find...).filter(Boolean) PRÉSERVE l'ordre de tirage stocké dans
       // s.activeCampEventIds (pickN() à la création de partie, cf. newGame() plus bas: un tirage
       // ALÉATOIRE, jamais l'ordre canonique de CAMP_EVENTS/VISITOR_OFFERS/FESTIVALS). L'ancien
@@ -302,7 +312,7 @@ export async function newGame(confirmFirst, slot) {
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';
       const startMoney = DIFFICULTIES[difficulty].startMoney;
-      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false, autoBuyEquip: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null, totalSteps: 0, activeRaid: null, raidHistory: [], playerLoadout: { boots: 'none', body: 'none', vehicle: 'none', pcc: 'none' }, world: { structures: [], nextStructureId: 0 }, activeExpedition: null, expeditionHistory: [], tutorial: { step: 0, completed: false, skipped: false, rewardsGranted: false } });
+      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false, autoBuyEquip: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null, totalSteps: 0, activeRaid: null, raidHistory: [], playerLoadout: { boots: 'none', body: 'none', vehicle: 'none', pcc: 'none' }, world: { structures: [], nextStructureId: 0 }, activeExpedition: null, expeditionHistory: [], tutorial: { step: 0, completed: false, skipped: false, rewardsGranted: false }, pioneerMissions: [], terrainHazards: {} });
       Object.keys(game.equipBought).forEach(k => game.equipBought[k] = 0);
       game.gameEnded = false;
       runtime.announcedRank = 0;

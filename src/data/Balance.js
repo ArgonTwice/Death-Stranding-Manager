@@ -605,5 +605,13 @@ export const BALANCE = {
     giftConnectionGain: 6, // Lien (systems/MemoryEngine.js#gainConnection) — même échelle que connectionGainMinor/Major
     giftLikesGain: 10, // bonus +Likes instantané du porteur qui reçoit le cadeau
     autoBuyMaxPerTick: 1 // au plus 1 achat automatique par porteur idle par jour — jamais une rafale qui viderait le budget d'un coup
+  },
+  // V1.6.0 — Reconnaissance & Brumes de Guerre DS2 (systems/ReconnaissanceSystem.js)
+  reconnaissance: {
+    pioneerMissionDays: 5, // durée de mobilisation d'un porteur en Dispatch Pionnier (gratuit en argent, coûte du temps)
+    realWalkNetworkStepInterval: 2000, // pas IRL entre 2 extensions réseau automatiques (RealWalkSystem.js#recordSteps)
+    hazardSpawnChance: 0.05, // chance/jour qu'une route NETWORKED subisse un aléa de terrain DS2 (éboulement/inondation)
+    hazardBlockDaysMin: 2,
+    hazardBlockDaysMax: 5
   }
 };

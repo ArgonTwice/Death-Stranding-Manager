@@ -22,7 +22,7 @@
 // suivant): aucun risque de dérive cumulative après plusieurs redimensionnements successifs.
 import { game } from '../core/GameState.js';
 import { routesForMap, DIFFICULTY_COLORS } from '../data/Routes.js';
-import { routeStatus, ROUTE_STATUS, revealedRoutes } from '../systems/raid/ChiralNetworkSystem.js';
+import { routeStatus, ROUTE_STATUS, revealedRoutes, silhouetteRoutes } from '../systems/raid/ChiralNetworkSystem.js';
 import { openRaidSelectionModal } from './RaidSelectionModal.js';
 import { openContractBoardModal } from './ContractBoardModal.js';
 
@@ -37,7 +37,8 @@ const STATUS_COLOR = {
       // "raid en transit", qui reste une information utile au joueur.
       [ROUTE_STATUS.LOCKED]: '255, 85, 85', // #FF5555 — hors réseau
       [ROUTE_STATUS.NETWORKED]: '255, 159, 28', // Bridges Orange — connexion active mais aucun raid en cours
-      [ROUTE_STATUS.ACTIVE_RAID]: '43, 177, 230' // Chiral Blue #2BB1E6 — raid IRL en transit sur cette route
+      [ROUTE_STATUS.ACTIVE_RAID]: '43, 177, 230', // Chiral Blue #2BB1E6 — raid IRL en transit sur cette route
+      [ROUTE_STATUS.BLOCKED]: '201, 162, 39' // V1.6.0 — #c9a227 (--ds-gold existant, tokens.css): aléa de terrain DS2 temporaire, distinct du rouge LOCKED (jamais désynchronisé du réseau, juste impraticable pour quelques jours)
     };
 
 // La composition (grille 0..9, marges, losanges QG/Relais) est authorée pour une "toile de
@@ -164,6 +165,35 @@ export function renderBridgesMap(canvasId) {
       const newHitNodes = [{ x: hq.x, y: hq.y, r: 14, kind: 'hq' }];
 
       const activeRaid = game.activeRaid && game.activeRaid.status === 'active' ? game.activeRaid : null;
+
+      // V1.6.0 — silhouettes holographiques: les relais encore plus lointains que le prochain révélé
+      // (ChiralNetworkSystem.js#silhouetteRoutes) ne sont plus totalement invisibles (V1.4.0) mais
+      // dessinés comme une position connue sans détail — jamais ajoutés à hitNodes (pas cliquables:
+      // une silhouette n'est pas encore une cible d'action valide).
+      for (const route of silhouetteRoutes(routesForMap(mapKey))) {
+        const target = worldToScreen(route.toX, route.toY, transform);
+        ctx.strokeStyle = 'rgba(43, 177, 230, 0.25)';
+        ctx.setLineDash([2, 6]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(hq.x, hq.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = 'rgba(43, 177, 230, 0.18)';
+        ctx.strokeStyle = 'rgba(43, 177, 230, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(target.x, target.y - 9); ctx.lineTo(target.x + 9, target.y);
+        ctx.lineTo(target.x, target.y + 9); ctx.lineTo(target.x - 9, target.y);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = 'rgba(43, 177, 230, 0.55)';
+        ctx.textAlign = 'center';
+        ctx.fillText('?', target.x, target.y + 3);
+      }
 
       for (const route of routes) {
         const status = routeStatus(route);

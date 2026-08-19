@@ -30,6 +30,14 @@ export function revealedMainKnots(d) {
       return knots.filter(k => d.routes.has(cellKey(k.x, k.y)) || k === next);
     }
 
+// V1.6.0 — le complément de revealedMainKnots ci-dessus: les villes principales encore plus
+// lointaines, dessinées en silhouette holographique sur ui/BridgesMap.js (position connue, nom/
+// archétype masqués, "?") plutôt que totalement invisibles. Toujours purement dérivé.
+export function silhouetteMainKnots(d) {
+      const revealed = new Set(revealedMainKnots(d));
+      return (d.mainKnots || []).filter(k => !revealed.has(k));
+    }
+
 export function pickPrepperArchetype() {
       const keys = Object.keys(PREPPER_ARCHETYPES);
       return keys[Math.floor(RNG.next() * keys.length)];

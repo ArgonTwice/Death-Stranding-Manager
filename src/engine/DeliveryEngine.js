@@ -7,7 +7,8 @@ import { RNG } from '../core/RNG.js';
 import { BALANCE, DAYS_PER_MONTH, DIFFICULTIES, HQ, MAP_HEIGHT, MAP_WIDTH, RANKS, VEHICLE_MAINTENANCE_COST } from '../data/Balance.js';
 import { CARGO_TYPES, CRISIS_FLAVORS, EVENTS, ORDER_ACTIONS, ORDER_CONTEXTS, ORDER_SUBJECTS, QUEST_OBJECTS, QUEST_REASONS, QUEST_SUBJECTS, QUEST_VERBS, RECIPES, ROUTE_TYPES, SKILLS, SQUAD_SYNERGIES, TITLES, TRAITS, VEHICLE_SPEED, cellKey, gradeLevel, pickCargoType } from '../data/Constants.js';
 import { checkMuleCamps, generateCatcherEncounter } from './CombatEngine.js';
-import { dominantStructure, isBTZone, isNearHostileMuleCamp, isOnRoute, loadMapData } from './MapEngine.js';
+import { dominantStructure, isBTZone, isNearHostileMuleCamp, isOnRoute, loadMapData, networkExpansionCandidates } from './MapEngine.js';
+import { checkTerrainHazards, tickPioneerMissions } from '../systems/ReconnaissanceSystem.js';
 import { weatherRiskMod } from './WeatherEngine.js';
 import { checkGameEnd, saveGame } from '../persistence/SaveManager.js';
 import { runAutomation } from '../systems/AutomationManager.js';
@@ -87,22 +88,7 @@ export function sampleBTExposure(x0, y0, x1, y1) {
 export function buildRoute() {
       const cost = Math.ceil(BALANCE.delivery.buildRouteBaseCost * (1 + game.routes.size * BALANCE.delivery.buildRouteCostPerRouteCell)); // scale avec taille réseau
       if (game.money < cost) { logEvent(`❌ Budget ($${cost})`); return; }
-      // Étend depuis une cellule déjà connectée vers une voisine non connectée
-      // Les cratères sont infranchissables: le réseau doit les contourner
-      const connected = Array.from(game.routes);
-      const candidates = [];
-      let blockedByCrater = 0;
-      for (let key of connected) {
-        const [cx, cy] = key.split(',').map(Number);
-        for (let [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-          const nx = cx + dx, ny = cy + dy;
-          if (nx < 0 || nx >= MAP_WIDTH || ny < 0 || ny >= MAP_HEIGHT) continue;
-          const nkey = cellKey(nx, ny);
-          if (game.routes.has(nkey)) continue;
-          if (game.craters.has(nkey)) { blockedByCrater++; continue; }
-          candidates.push(nkey);
-        }
-      }
+      const { candidates, blockedByCrater } = networkExpansionCandidates(game.currentMap);
       if (candidates.length === 0) {
         logEvent(blockedByCrater > 0 ? "❌ Cratères bloquent l'extension — réseau encerclé" : "❌ Réseau complet");
         return;
@@ -820,6 +806,8 @@ export function advanceDay() {
         }
       }
       tick();
+      tickPioneerMissions(); // V1.6.0 — Dispatch Pionnier: décompte quotidien, résout les missions arrivées à échéance
+      checkTerrainHazards(); // V1.6.0 — aléas de terrain DS2 (éboulement/inondation), chance QUOTIDIENNE
       tickWeatherSystem(); // V0.3.0: météo dynamique par territoire + avance du Chiral Forecast, tous les jours
       tickUrgentQuestSpawns(); // V0.3.0: chance quotidienne de quête urgente indépendante de la météo (réputation)
       clearExpiredUrgentQuests();
