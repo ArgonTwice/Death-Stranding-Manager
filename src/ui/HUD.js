@@ -39,6 +39,24 @@ import { terminalCardHtml } from './components/TerminalCard.js';
 import { terminalStepperHtml } from './components/TerminalStepper.js';
 import { rarityBadgeHtml, statusBadgeHtml } from './components/StatusBadge.js';
 
+// V1.0.7 — dirty-check anti-flickering: render() tourne jusqu'à 1x/seconde (chaque jour simulé,
+// core/GameLoop.js#startGameClock émet 'render:request'), donc les panneaux de l'onglet Camp
+// (structures/sponsors/camps/ressources) étaient réinjectés via innerHTML même quand RIEN n'avait
+// changé — détruisant puis recréant les nœuds DOM, ce qui relance leurs animations CSS d'entrée
+// (.term-card { animation: cb-slide-up }) et se voit comme un clignotement. setInnerHtmlIfChanged()
+// compare le HTML final déjà calculé (jamais une approximation de ses dépendances internes — donc
+// aucun risque d'oubli qui laisserait un panneau figé sur du contenu périmé) et n'écrit dans le DOM
+// que s'il a réellement changé depuis le dernier appel. Clé = l'élément DOM lui-même (Map), jamais
+// une chaîne d'id à maintenir en synchro.
+const lastRenderedHtml = new WeakMap();
+function setInnerHtmlIfChanged(el, html) {
+      if (!el) return false;
+      if (lastRenderedHtml.get(el) === html) return false;
+      lastRenderedHtml.set(el, html);
+      el.innerHTML = html;
+      return true;
+    }
+
 // V0.7.5 — pont Stepper: même mutation que l'ancien input[type=number] (setAutomationThreshold),
 // juste un delta relatif au lieu d'une saisie libre. Purement UI, aucun impact RNG/simulation.
 export function adjustAutomationThreshold(key, delta) {
@@ -212,9 +230,9 @@ export function renderPccStatus() {
       const installs = game.pccInstalls || [];
       const headerEl = document.getElementById('pccHeader');
       const critical = installs.filter(p => !p.ghost && (p.durability ?? 100) < 40).length;
-      if (headerEl) headerEl.innerHTML = `PCC POSÉES — ÉTAT${critical > 0 ? `<span class="notif-badge">⚠️${critical}</span>` : ''}`;
-      if (!installs.length) { el.innerHTML = 'Aucune PCC posée sur ce territoire.'; return; }
-      el.innerHTML = installs.map(p => {
+      setInnerHtmlIfChanged(headerEl, `PCC POSÉES — ÉTAT${critical > 0 ? `<span class="notif-badge">⚠️${critical}</span>` : ''}`);
+      if (!installs.length) { setInnerHtmlIfChanged(el, 'Aucune PCC posée sur ce territoire.'); return; }
+      setInnerHtmlIfChanged(el, installs.map(p => {
         const dur = p.durability ?? 100;
         const isGhost = p.ghost;
         const color = dur >= 60 ? 'var(--chiral)' : dur >= 30 ? 'var(--amber)' : 'var(--blood)';
@@ -223,7 +241,7 @@ export function renderPccStatus() {
           <span style="color:${color};">${dur}%</span>
           ${!isGhost && dur < 100 ? `<button onclick="repairPCC(${p.x},${p.y})" style="font-size:8px; padding:1px 5px; margin-left:4px;">Réparer ($${Math.ceil((100 - dur) * 4)})</button>` : ''}
         </div>`;
-      }).join('');
+      }).join(''));
     }
 
 export function renderCatcherPanel() {
@@ -232,23 +250,23 @@ export function renderCatcherPanel() {
       const catchers = game.catchers || [];
       const grenades = game.materials.blood_grenades || 0, bags = game.materials.blood_bags || 0;
       if (!catchers.length) {
-        el.innerHTML = `Aucun Catcher détecté. Stock: 🩸${grenades} 💉${bags}`;
+        setInnerHtmlIfChanged(el, `Aucun Catcher détecté. Stock: 🩸${grenades} 💉${bags}`);
         return;
       }
-      el.innerHTML = catchers.map(c => `
+      setInnerHtmlIfChanged(el, catchers.map(c => `
         <div class="alert-threat" style="border-left:2px solid var(--bt-purple); padding-left:6px; margin-bottom:6px;">
           👹 Catcher (${c.x},${c.y}) force ${'⚠️'.repeat(c.strength)}<br>
           Stock: 🩸${grenades} 💉${bags}<br>
           <button onclick="engageCatcher('${c.id}')" style="font-size:8px;">⚔️ Engager le combat (2-4 porteurs)</button>
-        </div>`).join('');
+        </div>`).join(''));
     }
 
 export function renderMuleCamps() {
       const el = document.getElementById('muleCampsPanel');
       if (!el) return;
       const camps = game.muleCamps || [];
-      if (!camps.length) { el.innerHTML = '<div style="font-size:9px; color:var(--text-dim);">Aucun camp détecté sur ce territoire.</div>'; return; }
-      el.innerHTML = camps.map(c => {
+      if (!camps.length) { setInnerHtmlIfChanged(el, '<div style="font-size:9px; color:var(--text-dim);">Aucun camp détecté sur ce territoire.</div>'); return; }
+      setInnerHtmlIfChanged(el, camps.map(c => {
         const strengthBadge = statusBadgeHtml('⚠️'.repeat(c.strength) || 'Force 0', c.strength >= 3 ? 'legendary' : c.strength === 2 ? 'epic' : 'rare');
         if (c.status === 'hostile') {
           return terminalCardHtml({
@@ -279,17 +297,17 @@ export function renderMuleCamps() {
           badgesHtml: strengthBadge + (c.fortified ? statusBadgeHtml('Fortifié', 'epic', '🏰') : ''),
           actionsHtml: !c.fortified ? `<button class="term-card-action" onclick="fortifyRelay('${c.id}')">🏰 Fortifier ($600)</button>` : ''
         });
-      }).join('');
+      }).join(''));
     }
 
 export function renderInfra() {
       const el = document.getElementById('infraDisplay');
       if (!el) return;
-      if (currentRankIndex() < 3) { el.innerHTML = '🔒 Investissement infrastructure (Rang Élite requis)'; return; }
+      if (currentRankIndex() < 3) { setInnerHtmlIfChanged(el, '🔒 Investissement infrastructure (Rang Élite requis)'); return; }
       const cost = infraCost();
       const bonus = (game.infraInvestments * 0.2).toFixed(1);
-      el.innerHTML = `💰 Investissement Bridges: ${game.infraInvestments}x (+${bonus}% reward permanent)<br>
-        <button onclick="investInfrastructure()" ${game.money < cost ? 'disabled' : ''} style="font-size:8px;">Investir ($${cost})</button>`;
+      setInnerHtmlIfChanged(el, `💰 Investissement Bridges: ${game.infraInvestments}x (+${bonus}% reward permanent)<br>
+        <button onclick="investInfrastructure()" ${game.money < cost ? 'disabled' : ''} style="font-size:8px;">Investir ($${cost})</button>`);
     }
 
 export function renderAutomationPanel() {
@@ -344,13 +362,13 @@ export function renderSponsor() {
       const label = LEAGUE_TIERS[tier];
       const leagueLine = `<div style="margin-bottom:4px;">${label.icon} Ligue Porteurs: <b>${label.name}</b>${tier < LEAGUE_TIERS.length - 1 ? ` (prochain palier: rép. ${BALANCE.league.tierThresholds[tier + 1].minReputation}, livraisons ${BALANCE.league.tierThresholds[tier + 1].minCompleted})` : ' — palier maximum'}</div>`;
       if (game.sponsor) {
-        el.innerHTML = leagueLine + terminalCardHtml({
+        setInnerHtmlIfChanged(el, leagueLine + terminalCardHtml({
           title: `🤝 ${game.sponsor.name}`,
           subtitle: game.sponsor.desc,
           rarity: 'legendary',
           badgesHtml: statusBadgeHtml('Sous contrat', 'legendary'),
           bodyHtml: `Revenu: <b>+$${game.sponsor.monthlyIncome}/mois</b>`
-        });
+        }));
         return;
       }
       const cards = SPONSORS.map(s => terminalCardHtml({
@@ -361,12 +379,12 @@ export function renderSponsor() {
         bodyHtml: `Bonus signature: <b>+$${s.signingBonus}</b> · Revenu: <b>+$${s.monthlyIncome}/mois</b>`,
         actionsHtml: `<button class="term-card-action success" onclick="signSponsor('${s.id}')">🤝 Signer</button>`
       })).join('');
-      el.innerHTML = leagueLine + '<div style="font-size:9px; color:var(--text-dim); margin-bottom:4px;">Aucun sponsor actif.</div>' + cards;
+      setInnerHtmlIfChanged(el, leagueLine + '<div style="font-size:9px; color:var(--text-dim); margin-bottom:4px;">Aucun sponsor actif.</div>' + cards);
     }
 
 export function renderCampInfo() {
       const headerEl = document.getElementById('campHeader');
-      if (headerEl) headerEl.innerHTML = `CAMP${game.visitor ? '<span class="notif-badge">🔔</span>' : ''}`;
+      setInnerHtmlIfChanged(headerEl, `CAMP${game.visitor ? '<span class="notif-badge">🔔</span>' : ''}`);
       renderMuleCamps();
       renderPccStatus();
       renderCatcherPanel();
@@ -384,26 +402,26 @@ export function renderCampInfo() {
       const visEl = document.getElementById('visitorDisplay');
       if (visEl) {
         const v = game.visitor;
-        visEl.innerHTML = v
+        setInnerHtmlIfChanged(visEl, v
           ? `${v.name}: ${v.desc}${v.cost ? ` ($${v.cost})` : ''} · expire mois ${v.expiresMonth}<br>
              <button onclick="acceptVisitorOffer()" style="font-size:8px;">✅ Accepter</button>
              <button onclick="dismissVisitor()" style="font-size:8px;">❌ Ignorer</button>`
-          : '';
+          : '');
       }
       const hofEl = document.getElementById('hallOfFamePanel');
       if (hofEl) {
-        hofEl.innerHTML = game.hallOfFame.length
+        setInnerHtmlIfChanged(hofEl, game.hallOfFame.length
           ? game.hallOfFame.map(h => `${h.name} (${SKILLS[h.skill].name}, Lv${h.level}, ❤️${h.likes}) — ${h.cause}, mois ${h.month}`).join('<br>')
-          : 'Aucun départ pour l\'instant.';
+          : 'Aucun départ pour l\'instant.');
       }
       const activeRelics = RELICS.filter(r => game.activeRelicIds.includes(r.id));
       const collCountEl = document.getElementById('collectionCount');
       if (collCountEl) collCountEl.textContent = `${game.collection.length}/${activeRelics.length}`;
       const collEl = document.getElementById('collectionPanel');
       if (collEl) {
-        collEl.innerHTML = activeRelics.map(r => game.collection.includes(r.id)
+        setInnerHtmlIfChanged(collEl, activeRelics.map(r => game.collection.includes(r.id)
           ? `${r.name} — <i>${r.desc}</i>`
-          : `🔒 ???`).join('<br>');
+          : `🔒 ???`).join('<br>'));
       }
     }
 
@@ -422,14 +440,14 @@ export function renderCauldron() {
       if (!matEl || !panelEl) return;
       matEl.textContent = `🔮 Cristaux: ${game.materials.chiral_crystal} · 🔧 Ferraille MULE: ${game.materials.mule_scrap}`;
       if (!game.structures.cauldron) {
-        panelEl.innerHTML = '<div style="font-size:9px; color:var(--text-dim);">🔒 Construisez le Chaudron chiral</div>';
+        setInnerHtmlIfChanged(panelEl, '<div style="font-size:9px; color:var(--text-dim);">🔒 Construisez le Chaudron chiral</div>');
         return;
       }
-      panelEl.innerHTML = RECIPES.map(r => {
+      setInnerHtmlIfChanged(panelEl, RECIPES.map(r => {
         const affordable = Object.keys(r.cost).every(m => (game.materials[m] || 0) >= r.cost[m]);
         const costStr = Object.entries(r.cost).map(([m, v]) => `${v}${m === 'chiral_crystal' ? '🔮' : '🔧'}`).join(' + ');
         return `<button ${affordable ? '' : 'disabled'} onclick="craft('${r.id}')" style="font-size:9px;">${r.name} (${costStr}) — ${r.desc}</button>`;
-      }).join('');
+      }).join(''));
     }
 
 export function renderPorterTarget() {
@@ -450,7 +468,7 @@ export function renderPorterTarget() {
 export function renderStructures() {
       const el = document.getElementById('structuresPanel');
       if (!el) return;
-      el.innerHTML = Object.keys(STRUCTURES).map(type => {
+      setInnerHtmlIfChanged(el, Object.keys(STRUCTURES).map(type => {
         const s = STRUCTURES[type];
         const level = game.structures[type] || 0;
         const maxed = level >= s.maxLevel;
@@ -462,7 +480,7 @@ export function renderStructures() {
         return `<button ${maxed ? 'disabled' : ''} onclick="buildStructure('${type}')" style="font-size:9px;">
           ${label} ${dots} ${maxed ? '(MAX)' : `($${cost})`}
         </button>`;
-      }).join('');
+      }).join(''));
     }
 
 export function updateUnlocks() {

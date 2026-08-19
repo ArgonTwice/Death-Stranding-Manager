@@ -271,6 +271,22 @@ body.cb-reduced-motion .nav-main-content.active, body.cb-reduced-motion .opt-vol
 }
 .tutorial-overlay.open { transform: translateY(0); }
 .tutorial-overlay.nudge { border-bottom-color: var(--cb-blue); box-shadow: 0 4px 24px -8px rgba(43, 177, 230, 0.5); }
+
+/* V1.0.7 — destruction visuelle complète une fois le tutoriel terminé (SKIP ou parcours complet):
+   le transform:translateY(-120%) ci-dessus suffisait déjà à sortir la bannière de l'écran/du hit-test,
+   mais .hidden verrouille explicitement TOUTES les propriétés qui pourraient la faire réapparaître ou
+   intercepter un clic, avec !important pour gagner sur n'importe quelle règle plus spécifique
+   existante ou future (ex: .tutorial-overlay.nudge qui ne s'applique plus jamais après complétion,
+   mais ne doit plus jamais avoir la moindre chance de rendre la bannière visible si un jour combinée
+   par erreur). Posée par ui/TutorialOverlay.js dès que game.tutorial.completed === true, jamais
+   retirée ensuite (aucun réengagement possible — TutorialManager.js bloque déjà toute mutation de
+   game.tutorial.* une fois completed, voir reconcile()). */
+.tutorial-overlay.hidden {
+  display: none !important;
+  height: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
 .tutorial-portrait { font-size: 28px; flex: 0 0 auto; filter: drop-shadow(0 0 6px rgba(255, 159, 28, 0.6)); transition: font-size 0.2s ease; }
 .tutorial-body { flex: 1 1 auto; min-width: 0; }
 .tutorial-name { font-family: var(--cb-font-display); font-size: 11px; letter-spacing: 2px; color: var(--cb-orange); }

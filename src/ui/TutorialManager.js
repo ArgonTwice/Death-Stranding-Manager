@@ -21,11 +21,18 @@ function clearHighlight() {
     }
 
 function applyHighlightForCurrentStep() {
-      clearHighlight();
-      if (game.tutorial.completed) return;
+      if (game.tutorial.completed) { clearHighlight(); return; }
       const step = tutorialStepByIndex(game.tutorial.step);
-      if (!step || !step.targetSelector) return;
+      if (!step || !step.targetSelector) { clearHighlight(); return; }
       const el = document.querySelector(step.targetSelector);
+      // V1.0.7 — la cible déjà correctement surlignée n'a rien à regagner d'un
+      // classList.remove()+add(): ce cycle relance l'animation CSS tutorial-halo-pulse à chaque appel,
+      // et cette fonction est réappelée par le MutationObserver ci-dessous sur CHAQUE mutation DOM du
+      // <body> (donc potentiellement des dizaines de fois par render()). Ne toucher le DOM que quand la
+      // cible a réellement changé (nouvelle étape, ou l'élément a été recréé ailleurs par un innerHTML)
+      // supprime ce clignotement sans perdre la capacité de re-détecter une cible recréée.
+      if (el === currentHighlightEl && el && el.classList.contains('tutorial-highlight')) return;
+      clearHighlight();
       if (el) { el.classList.add('tutorial-highlight'); currentHighlightEl = el; }
     }
 
@@ -68,35 +75,45 @@ export function skipTutorial() {
       finishTutorial();
     }
 
-// V1.0.3 — reconcile(state) rattrape la progression en UNE SEULE passe: contrairement à
-// checkTutorialProgress() (n'avance QUE d'une étape par appel, pensé pour le rythme du render() en
-// jeu), reconcile() boucle tant que l'étape courante est déjà satisfaite par l'état RÉEL de la partie
-// (state.porters/state.mapsData/state.completed — jamais un id ou une référence qui pourrait avoir
-// disparu depuis, toujours une inspection directe des entités qui existent VRAIMENT dans GameState
-// au moment de l'appel). Nécessaire pour un reload/import qui restaure d'un coup un état où plusieurs
-// jalons sont déjà réunis (vieille save migrée, import externe): sans la boucle, il aurait fallu
-// plusieurs render() futurs pour rattraper chaque étape une par une.
+// V1.0.7 règle 1 — reconcile(state) est désormais STRICTEMENT clampée à UNE SEULE transition
+// d'étape par appel (plus de boucle while): un jalon franchi doit toujours rester un événement isolé
+// et visible pour le joueur (réplique de Die-Hardman, halo) — jamais plusieurs étapes "avalées" d'un
+// coup sur un même tick de rendu, ce qui pouvait faire disparaître un message avant que le joueur ne
+// l'ait vu. Une sauvegarde qui restaure plusieurs jalons déjà réunis d'un coup (vieille save migrée)
+// rattrape désormais sa progression sur plusieurs appels successifs (un par render(), soit jusqu'à 1
+// par seconde en jeu réel) plutôt qu'en une seule passe — délai imperceptible, jamais un saut visible.
 // RÈGLE D'ISOLATION (V1.0.1 règle 1, inchangée): aucun accès à RNG.js, ne mute que state.tutorial.*.
+let lastPaintedStep = -1;
+let lastPaintedCompleted = false;
+
 export function reconcile(state) {
-      if (state.tutorial.completed) return;
-      let step = tutorialStepByIndex(state.tutorial.step);
-      if (!step) { finishTutorial(); return; } // index hors-limites (état corrompu/migré) — clôture défensive, comme avant V1.0.3
-      while (step && step.isStepSatisfied(state)) {
+      if (state.tutorial.completed) {
+        // V1.0.7 règle 2 — dirty-check: ne repeint (halo + bannière) que lors de la TRANSITION vers
+        // l'état terminé, jamais à chaque tick de simulation qui ne fait que reconfirmer un état déjà
+        // peint (économise un classList.remove/add + un reflow forcé — cf. TutorialOverlay.js — à
+        // chaque render(), jusqu'à 1x/seconde en jeu réel).
+        if (!lastPaintedCompleted) { applyHighlightForCurrentStep(); renderTutorialOverlay(); lastPaintedCompleted = true; }
+        return;
+      }
+      const step = tutorialStepByIndex(state.tutorial.step);
+      if (!step) { finishTutorial(); return; } // index hors-limites (état corrompu/migré) — clôture défensive
+      if (step.isStepSatisfied(state)) {
         state.tutorial.step++;
         if (state.tutorial.step >= TUTORIAL_STEP_COUNT) { finishTutorial(); return; }
-        step = tutorialStepByIndex(state.tutorial.step);
       }
-      applyHighlightForCurrentStep();
-      renderTutorialOverlay();
+      if (state.tutorial.step !== lastPaintedStep || lastPaintedCompleted) {
+        applyHighlightForCurrentStep();
+        renderTutorialOverlay();
+        lastPaintedStep = state.tutorial.step;
+      }
+      lastPaintedCompleted = false;
     }
 
 // Ré-évaluée à chaque render() (HUD.js) — coût négligeable (une poignée de comparaisons sur des
 // champs déjà en mémoire), et c'est exactement ce qui permet la reprise automatique après reload: au
 // premier appel suivant un chargement de sauvegarde, une étape déjà accomplie dans une session
 // précédente est aussitôt détectée comme satisfaite et l'étape suivante s'affiche sans redemander au
-// joueur une action déjà faite. Délègue à reconcile() (qui ne fait qu'UN tour de boucle la plupart du
-// temps — un seul jalon franchi par jour simulé — donc un comportement inchangé pour tous les appels
-// existants).
+// joueur une action déjà faite. Délègue à reconcile() (UNE seule transition par appel — V1.0.7).
 export function checkTutorialProgress() {
       reconcile(game);
     }

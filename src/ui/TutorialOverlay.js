@@ -47,7 +47,11 @@ export function renderTutorialOverlay() {
       const el = document.getElementById('tutorialOverlay');
       if (!el) return;
       if (game.tutorial.completed) {
+        // V1.0.7 — destruction visuelle complète (SKIP ou parcours complet, même traitement): .hidden
+        // verrouille display/height/visibility/pointer-events en plus du transform déjà hors-écran,
+        // jamais retirée ensuite (TutorialManager.js bloque tout réengagement une fois completed).
         el.classList.remove('open');
+        el.classList.add('hidden');
         updateOverlayHeightVar(el);
         return;
       }
