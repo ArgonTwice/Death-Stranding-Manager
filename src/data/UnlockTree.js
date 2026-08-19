@@ -26,3 +26,9 @@ export const VEHICLE_MIN_STARS = {
       truck: 1,
       trike: 2
     };
+
+// V1.8.0 — Pods Robotiques autonomes ("Robot-Buddies"): recrutement spécial distinct de
+// hire()/scoutCandidate() (systems/RobotBuddySystem.js#recruitRobotBuddy), gate ADDITIF rang +
+// étoiles, même principe que ci-dessus.
+export const ROBOT_BUDDY_MIN_STARS = 3;
+export const ROBOT_BUDDY_MIN_RANK_INDEX = 2; // "Porteur Certifié" (RANKS[2], data/Balance.js)

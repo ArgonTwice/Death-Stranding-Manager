@@ -18,6 +18,7 @@ import { setAutomationThreshold, toggleAutomation } from './systems/AutomationMa
 import { buildStructure, buyEquip, buyVehicle, investInfrastructure, signSponsor } from './systems/EconomySystem.js';
 import { cancelPlacingPCC, canvasClickToCell, placePCCAt, repairPCC, startPlacingPCC } from './systems/NetworkSystem.js';
 import { beachJump, forceRest, hire, repairGear, retirePorter, scoutCandidate } from './systems/PorterSystem.js';
+import { recruitRobotBuddy } from './systems/RobotBuddySystem.js';
 import { assignPrepperContract, connectKnot, negotiatePrepperContract } from './systems/PrepperSystem.js';
 import { negotiateUrgentQuest, refuseUrgentQuest } from './systems/QuestSystem.js';
 import { closeInspector, inspectMapCell } from './ui/CanvasInspector.js';
@@ -296,6 +297,7 @@ window.repairPCC = repairPCC;
 window.retirePorter = retirePorter;
 window.saveGame = saveGame;
 window.scoutCandidate = scoutCandidate;
+window.recruitRobotBuddyUI = recruitRobotBuddy;
 window.sendDelivery = sendDelivery;
 window.sendToIncinerator = sendToIncinerator;
 window.setActiveBranch = setActiveBranch;

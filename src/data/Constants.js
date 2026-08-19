@@ -11,7 +11,12 @@ export const SKILLS = {
       driver: { name: '🚗 Chauffeur', dmg: -0.3, speed: 0.2, equip: 'vehicle' },
       scout: { name: '🗺️ Scout', speed: 0.3, range: 0.25, equip: 'scanner' },
       hauler: { name: '💪 Frappeur', carry: 0.4, dmg_resist: 0.2, equip: 'exo' },
-      dooms: { name: '👁️ DOOMS', dmg: -0.1, sense: 0.35, equip: 'scanner' } // canon: sensibilité aux BT
+      dooms: { name: '👁️ DOOMS', dmg: -0.1, sense: 0.35, equip: 'scanner' }, // canon: sensibilité aux BT
+      // V1.8.0 — Pod Robotique autonome ("Robot-Buddy"): jamais tiré au hasard par hireRaw()/
+      // scoutCandidate() (elles filtrent explicitement cette clé, cf. systems/PorterSystem.js) —
+      // obtenu UNIQUEMENT via systems/RobotBuddySystem.js#recruitRobotBuddy(). dmg_resist élevé (pas
+      // de chair à protéger), aucun equip requis.
+      robot: { name: '🤖 Pod Robotique', dmg: 0.4, dmg_resist: 0.35, equip: null }
     };
 
 export const TRAITS = {

@@ -87,9 +87,17 @@ export function beachJump(porterIdx, destKey) {
       eventBus.emit('render:request');
     }
 
+// V1.8.0 — jamais 'robot' dans le pool aléatoire de hireRaw()/scoutCandidate() ci-dessous: un Pod
+// Robotique s'obtient UNIQUEMENT via systems/RobotBuddySystem.js#recruitRobotBuddy(), jamais un
+// recrutement/scoutisme normal (qui restent 100% skills humains, comportement inchangé). Calculé
+// PARESSEUSEMENT (jamais au niveau module): data/Constants.js importe hireRaw() d'ici (cycle DÉJÀ
+// existant avant V1.8.0) — lire SKILLS au chargement du module échouerait tant que Constants.js n'a
+// pas fini de s'initialiser (TDZ), vérifié empiriquement (ReferenceError avant ce correctif).
+function randomHireSkillKeys() { return Object.keys(SKILLS).filter(k => k !== 'robot'); }
+
 export function hireRaw(skill, trait, rare) {
       const id = game.porters.length;
-      const skillKeys = Object.keys(SKILLS);
+      const skillKeys = randomHireSkillKeys();
       const s = skill || skillKeys[Math.floor(RNG.next() * skillKeys.length)];
       const t = trait || rollTrait();
       const branches = game.mapsData[game.currentMap].branches;
@@ -110,7 +118,7 @@ export function scoutCandidate() {
       const fee = BALANCE.porter.scoutBaseFee + activeCount * BALANCE.porter.scoutFeePerActivePorter;
       if (game.money < fee) { logEvent(`❌ Budget scoutisme ($${fee})`); return; }
       game.money -= fee;
-      const skillKeys = Object.keys(SKILLS);
+      const skillKeys = randomHireSkillKeys();
       const skill = skillKeys[Math.floor(RNG.next() * skillKeys.length)];
       const trait = rollTrait();
       const rare = RNG.next() < BALANCE.porter.scoutRareChance; // Kairosoft: chance de candidat "prometteur"

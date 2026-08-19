@@ -83,6 +83,7 @@
       <div style="font-size: 9px; color: var(--text-dim); margin-top: -2px; margin-bottom: 4px;">+$250 par porteur déjà actif</div>
       <button onclick="scoutCandidate()">🔍 Scouter un candidat ($150+)</button>
       <div id="candidateDisplay" style="font-size:9px; color:var(--chiral); margin: 2px 0 4px;"></div>
+      <div id="robotBuddyPanel" style="margin-bottom:4px;"></div>
 
       <h3>ÉQUIPEMENT</h3>
       <select id="porterTarget" onchange="window.runtime.selectedPorterId = this.value === '' ? null : parseInt(this.value)" style="width:100%; margin-bottom:6px;"></select>

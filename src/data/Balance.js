@@ -622,5 +622,11 @@ export const BALANCE = {
     muleStealthRiskMult: 0.5, // Furtivité MULE (discretion): -50% supplémentaires sur muleCampRiskAdd
     timefallResistWearMult: 0.4, // Résistance Timefall (service): -60% d'usure gear pendant une Frappe Temporelle
     heavyCarryCapacityBonus: 15 // Charge Lourde (portage): +15kg de capacité fixe, en plus du bonus par grade déjà existant
+  },
+  // V1.8.0 — Pods Robotiques autonomes ("Robot-Buddies"), systems/RobotBuddySystem.js
+  robotBuddy: {
+    recruitCost: 4000, // bien au-dessus de hireBaseCost (500): technologie avancée débloquée tard
+    costScalingPerOwned: 0.5, // scale avec le nombre de Pods déjà recrutés, même principe que hireCostPerActivePorter
+    maxOwned: 3 // plafond anti-exploit: pas d'armée de robots gratuits à entretenir
   }
 };

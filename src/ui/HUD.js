@@ -18,6 +18,7 @@ import { buildStructure, computeLogisticsDashboard, infraCost, investInfrastruct
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { beachJump, equipSlots, equippedCount, forceRest, hire, porterTitle, repairGear, retirePorter } from '../systems/PorterSystem.js';
 import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel, revealedMainKnots, silhouetteMainKnots } from '../systems/PrepperSystem.js';
+import { isRobotBuddyUnlocked, robotBuddyCost, robotBuddyCount } from '../systems/RobotBuddySystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
 import { currentWeatherLabel, forecastFor } from '../systems/WeatherSystem.js';
@@ -97,6 +98,7 @@ export function render() {
       if (pccHintEl) pccHintEl.textContent = runtime.placingPCC ? `🏗️ Clique sur la carte pour poser: ${PCC_TYPES[runtime.placingPCC].name}` : '';
       renderCauldron();
       renderCandidate();
+      renderRobotBuddyPanel();
       renderCampInfo();
       renderSponsor();
       renderInfra();
@@ -465,6 +467,19 @@ export function renderCandidate() {
       if (!c) { el.innerHTML = ''; return; }
       el.innerHTML = `${SKILLS[c.skill].name} ${TRAITS[c.trait].name}${c.rare ? ' ⭐ PROMETTEUR (lvl2)' : ''}
         <button onclick="hire(true)" style="font-size:9px; margin-top:2px;">✅ Embaucher ce candidat</button>`;
+    }
+
+// V1.8.0 — Pods Robotiques autonomes: visible seulement une fois débloqué (rang + étoiles Prepper),
+// jamais un bouton disabled qui laisserait deviner le seuil exact avant de l'avoir approché.
+export function renderRobotBuddyPanel() {
+      const el = document.getElementById('robotBuddyPanel');
+      if (!el) return;
+      if (!isRobotBuddyUnlocked()) { el.innerHTML = ''; return; }
+      const count = robotBuddyCount();
+      const cost = robotBuddyCost();
+      const maxed = count >= BALANCE.robotBuddy.maxOwned;
+      el.innerHTML = `<button ${maxed ? 'disabled' : ''} onclick="recruitRobotBuddyUI()">🤖 Recruter un Pod Robotique ($${cost}) — ${count}/${BALANCE.robotBuddy.maxOwned}</button>
+        <div style="font-size:9px; color:var(--text-dim); margin-top:-2px;">Autonome, aucun salaire — résistance dégâts élevée.</div>`;
     }
 
 export function renderCauldron() {
