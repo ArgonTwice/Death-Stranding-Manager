@@ -241,9 +241,16 @@ export function deserializeGame(s) {
       // peut légitimement être encore false si son premier raccordement réseau n'a jamais eu lieu).
       game.progression = s.progression || { realWalk: { unlocked: true } };
       game.progression.realWalk = game.progression.realWalk || { unlocked: true };
-      runtime.activeCampEvents = s.activeCampEventIds ? CAMP_EVENTS.filter(e => s.activeCampEventIds.includes(e.id)) : CAMP_EVENTS;
-      runtime.activeVisitorOffers = s.activeVisitorOfferIds ? VISITOR_OFFERS.filter(o => s.activeVisitorOfferIds.includes(o.id)) : VISITOR_OFFERS;
-      runtime.activeFestivalsPool = s.activeFestivalIds ? FESTIVALS.filter(f => s.activeFestivalIds.includes(f.id)) : FESTIVALS;
+      // V1.3.0 fix — .map(id => ...find...).filter(Boolean) PRÉSERVE l'ordre de tirage stocké dans
+      // s.activeCampEventIds (pickN() à la création de partie, cf. newGame() plus bas: un tirage
+      // ALÉATOIRE, jamais l'ordre canonique de CAMP_EVENTS/VISITOR_OFFERS/FESTIVALS). L'ancien
+      // .filter(e => ids.includes(e.id)) itérait la liste STATIQUE et réordonnait donc silencieusement
+      // le pool actif selon l'ordre canonique à chaque chargement — mêmes éléments, mais
+      // canonical(serialize(deserialize(save))) !== canonical(save) (même défaut que l'ordre
+      // d'équipement corrigé en V1.2.0, cf. game.porters[].equipment ci-dessus).
+      runtime.activeCampEvents = s.activeCampEventIds ? s.activeCampEventIds.map(id => CAMP_EVENTS.find(e => e.id === id)).filter(Boolean) : CAMP_EVENTS;
+      runtime.activeVisitorOffers = s.activeVisitorOfferIds ? s.activeVisitorOfferIds.map(id => VISITOR_OFFERS.find(o => o.id === id)).filter(Boolean) : VISITOR_OFFERS;
+      runtime.activeFestivalsPool = s.activeFestivalIds ? s.activeFestivalIds.map(id => FESTIVALS.find(f => f.id === id)).filter(Boolean) : FESTIVALS;
       runtime.gameSpeed = game.ngPlus ? Math.min(runtime.gameSpeed || 1, 2) : 1;
       const diffEl = document.getElementById('difficultySelect');
       if (diffEl) diffEl.value = game.difficulty;

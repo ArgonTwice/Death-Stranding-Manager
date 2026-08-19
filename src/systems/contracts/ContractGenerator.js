@@ -28,6 +28,19 @@ function legCountFor(gen, type) {
       return type.legCount;
     }
 
+// V1.3.0 — pool de routes pour un type donné: 'any' (types historiques, comportement INCHANGÉ —
+// tirage uniforme sur `routes` tel quel) vs 'low'/'high' (types end-game additifs) qui restreignent
+// le pool à la moitié basse/haute de `routes` triées par regionMult (proxy existant de
+// difficulté/risque réel — data/Routes.js — jamais une nouvelle donnée inventée). Retombe sur `routes`
+// complet si la moitié ciblée est vide (territoire à une seule route connue: jamais un pool vide).
+function routePoolFor(routes, bias) {
+      if (bias === 'any' || routes.length < 2) return routes;
+      const sorted = [...routes].sort((a, b) => a.regionMult - b.regionMult);
+      const mid = Math.ceil(sorted.length / 2);
+      const pool = bias === 'high' ? sorted.slice(sorted.length - mid) : sorted.slice(0, mid);
+      return pool.length ? pool : routes;
+    }
+
 // Tableau de contrats d'un relais pour le mois courant — reflète l'état RÉEL du Réseau Chiral (règle
 // 1 de V0.9.0): un contrat référence toujours des routes existantes de ce territoire, LOCKED ou non
 // (l'UI affiche le statut, cf. ContractBoardModal.js), jamais une route d'un autre territoire.
@@ -40,9 +53,10 @@ export function contractsForRelay(mapKey) {
       for (let i = 0; i < count; i++) {
         const typeId = CONTRACT_TYPE_LIST[gen.nextInt(CONTRACT_TYPE_LIST.length)];
         const type = CONTRACT_TYPES[typeId];
-        const legCount = Math.min(routes.length, legCountFor(gen, type));
+        const pool = routePoolFor(routes, type.routeBias);
+        const legCount = Math.min(pool.length, legCountFor(gen, type));
         const legRouteIds = [];
-        for (let j = 0; j < legCount; j++) legRouteIds.push(routes[gen.nextInt(routes.length)].id);
+        for (let j = 0; j < legCount; j++) legRouteIds.push(pool[gen.nextInt(pool.length)].id);
         contracts.push({
           id: `contract-${mapKey}-${game.month}-${i}`,
           mapKey, typeId, typeName: type.name, icon: type.icon,

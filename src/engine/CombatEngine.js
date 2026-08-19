@@ -92,7 +92,10 @@ export function checkMuleCamps() {
           if (c.status === 'pacified' && c.safeUntilMonth !== null && game.month >= c.safeUntilMonth && !c.needsIncineration) {
             c.status = 'hostile';
             c.safeUntilMonth = null;
-            if (key === game.currentMap) logEvent(`🏴‍☠️ Un camp MULE s'est réinstallé (${c.x},${c.y})`, 'warn');
+            if (key === game.currentMap) {
+              logEvent(`🏴‍☠️ Un camp MULE s'est réinstallé (${c.x},${c.y})`, 'warn');
+              eventBus.emit('mule:campReactivated', { x: c.x, y: c.y }); // V1.3.0 — audio/SoundEngine.js#playAlert()
+            }
           }
           // Non-intervention: un relais resté sous attaque un mois entier sans défense retombe aux MULEs
           if (c.status === 'under_attack') {

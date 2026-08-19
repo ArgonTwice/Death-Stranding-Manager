@@ -499,6 +499,116 @@ export function playConvoyDepartureRumble() {
       if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
     }
 
+// --- V1.3.0 — 4 SFX synthétiques additifs (WebAudio pur, même pattern que tout ce qui précède:
+// initAudio() + resume-si-suspendu, connectés directement à audioCtx.destination comme
+// playCinematicDrum/playValidationChime/etc — jamais via musicGain, cohérent avec le fait que ces SFX
+// contextuels ont TOUJOURS joué indépendamment du bouton "Musique: ON/OFF", cf. règle 5 ci-dessus).
+// RÈGLE D'ISOLATION: aucune de ces 4 fonctions n'accède à game.*/RNG.js — la seule randomisation
+// éventuelle (aucune ici, contrairement à playCinematicDrum/startMusic qui texturent du bruit via
+// Math.random(), jamais RNG.js) resterait de toute façon hors du flux déterministe partagé. ---
+
+// Clic tactile bref — navigation Cyber-Bridges 2.0 uniquement (cf. abonnement nav:mainTabChanged plus
+// bas), jamais sur chaque bouton du jeu: un blip sur CHAQUE clic serait un bruit de fond agressif,
+// pas un "clic tactile futuriste" ponctuel.
+export function playClick() {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1400, now);
+        osc.frequency.exponentialRampToValueAtTime(900, now + 0.04);
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.05, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
+// Jingle néon 3 notes ascendant — livraison réussie / montée d'étoile Prepper. Timbre distinct de
+// playValidationChime (déjà utilisé pour les quêtes urgentes) pour que l'oreille distingue les deux
+// contextes plutôt que de réutiliser exactement le même son partout.
+export function playSuccess() {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const now = audioCtx.currentTime;
+        [659.3, 830.6, 987.8].forEach((freq, i) => { // E5-G#5-B5, triade claire et montante
+          const osc = audioCtx.createOscillator();
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+          const g = audioCtx.createGain();
+          g.gain.value = 0;
+          osc.connect(g);
+          g.connect(audioCtx.destination);
+          const start = now + i * 0.06;
+          osc.start(start);
+          g.gain.linearRampToValueAtTime(0.08, start + 0.015);
+          g.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
+          osc.stop(start + 0.5);
+        });
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
+// Bip d'alerte double, net et carré — proximité BT / Timefall / camp MULE réactivé. Un bip distinct de
+// playRefusalTone (grave, descendant, "refus") et de pulseAlertAmbience (filtre d'ambiance, pas un
+// bip): celui-ci doit se reconnaître même coupé au milieu d'une autre ambiance sonore.
+export function playAlert() {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const now = audioCtx.currentTime;
+        [0, 0.16].forEach(offset => {
+          const osc = audioCtx.createOscillator();
+          osc.type = 'square';
+          osc.frequency.value = 740;
+          const g = audioCtx.createGain();
+          g.gain.setValueAtTime(0.001, now + offset);
+          g.gain.exponentialRampToValueAtTime(0.09, now + offset + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.14);
+          osc.connect(g);
+          g.connect(audioCtx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + 0.15);
+        });
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
+// Balayage ascendant + écho court — synchronisation du Réseau Chiral (nœud Prepper raccordé). Sweep
+// continu (pas des notes discrètes) pour évoquer une poignée de main électronique, pas une mélodie.
+export function playChiralConnect() {
+      initAudio();
+      if (!audioCtx) return;
+      const play = () => {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 900;
+        filter.Q.value = 4;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.001, now);
+        g.gain.exponentialRampToValueAtTime(0.07, now + 0.08);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.connect(filter);
+        filter.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.65);
+      };
+      if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {}); else play();
+    }
+
 // --- Abonnements EventBus : engine/systems ne joue jamais de son directement, il émet un événement
 // et c'est le moteur audio qui décide comment le traduire en son. ---
 eventBus.on('sfx:drum', (type) => playCinematicDrum(type));
@@ -519,3 +629,13 @@ eventBus.on('quest:accepted', () => playValidationChime(1));
 eventBus.on('quest:negotiated', () => playValidationChime(1.25));
 eventBus.on('quest:refused', () => playRefusalTone());
 eventBus.on('shelter:built', () => playConstructionThud());
+
+// V1.3.0 — 4 nouveaux SFX branchés sur des events déjà émis par la simulation mais jusqu'ici
+// silencieux (delivery:resolved/prepper:starReached/network:nodeConnected n'avaient aucun son;
+// mule:campReactivated est un nouvel event ajouté par CombatEngine.js#checkMuleCamps pour cette
+// mission — même pattern que convoy:*/weather:* ci-dessus: la simulation émet, ce module traduit).
+eventBus.on('delivery:resolved', ({ success }) => { if (success) playSuccess(); });
+eventBus.on('prepper:starReached', () => playSuccess());
+eventBus.on('network:nodeConnected', () => playChiralConnect());
+eventBus.on('mule:campReactivated', () => playAlert());
+eventBus.on('nav:mainTabChanged', () => playClick());

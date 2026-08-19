@@ -90,6 +90,51 @@
 }
 
 /* ============================================================
+   V1.3.0 — SPLIT-VIEW LARGE ÉCRAN / Z FOLD DÉPLIÉ (>= 901px, volontairement au-dessus du breakpoint
+   mobile 900px !important de style.css/layout.css plutôt que de réutiliser 768px/1280px déjà pris par
+   les règles ci-dessus). Portée VOLONTAIREMENT restreinte à [data-main="livraisons"]: c'est le SEUL
+   onglet où la Carte Holographique (#missionsMapCanvas) vit réellement dans le DOM aujourd'hui — la
+   rendre visible "à travers" Réseau/Logistique demanderait de la sortir de ce conteneur vers un
+   wrapper global partagé, un changement structurel qui toucherait ui/BridgesMap.js/ViewLifecycle.js
+   et les invariants déjà couverts par tests/resilience/NavigationInvariance.test.js +
+   RngUiOrthogonality.test.js. Ce split-view n'ajoute donc PAS de sidebar de NAVIGATION (la Bottom
+   Navigation Kairosoft reste identique, cf. règle "Navigation Unifiée" ci-dessus, V1.0.5) — seulement
+   une mise en page à 2 colonnes de CONTENU au sein de l'onglet Livraisons: Carte à gauche (persistante
+   tant qu'on reste sur cet onglet, jamais recouverte), reste du contenu à droite. Purement du CSS
+   (aucun changement DOM/JS): les tiroirs/modales restent position:fixed comme partout ailleurs dans
+   l'app — indépendants du flow de cette grille, donc jamais recouverts ni tronqués par elle.
+   ============================================================ */
+@media (min-width: 901px) {
+  /* .nav-main-content[data-main="livraisons"].active (spécificité 0,3,0) — DOIT battre
+     .nav-main-content.active { display: block; ... } (theme.css, spécificité 0,2,0) qui sinon gagne
+     malgré l'ordre de cascade (responsive.css chargé après theme.css dans index.html, mais l'ordre ne
+     compte que si les spécificités sont égales). [data-main="livraisons"] seul (0,1,0) perdait
+     silencieusement contre display:block — vérifié empiriquement via Playwright avant ce correctif. */
+  .nav-main-content[data-main="livraisons"].active {
+    display: grid;
+    grid-template-columns: minmax(260px, 38%) 1fr;
+    gap: var(--cb-space-4);
+    align-items: start;
+  }
+  [data-main="livraisons"] > h2 {
+    grid-column: 1 / -1;
+  }
+  [data-main="livraisons"] > #missionsMapCanvas {
+    grid-column: 1;
+    grid-row: 2 / -1; /* s'étire sur toute la hauteur du panneau droit, jamais écrasée par un contenu plus long */
+    width: 100%;
+    height: auto;
+    aspect-ratio: 800 / 420; /* même toile de référence que ui/BridgesMap.js (REFERENCE_W/REFERENCE_H) */
+    position: sticky;
+    top: var(--cb-space-3);
+    align-self: start;
+  }
+  [data-main="livraisons"] > *:not(h2):not(#missionsMapCanvas) {
+    grid-column: 2;
+  }
+}
+
+/* ============================================================
    V1.0.0 règle 4 — ZÉRO TRONQUAGE, à toute largeur (pas seulement sous un point de rupture):
    box-sizing:border-box est déjà global (style.css:38, * { box-sizing: border-box }); ici on
    renforce explicitement overflow-y:auto + min-height:0 sur tous les conteneurs Flexbox/Grid
