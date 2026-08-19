@@ -27,9 +27,17 @@ import { openRaidSelectionModal } from './RaidSelectionModal.js';
 import { openContractBoardModal } from './ContractBoardModal.js';
 
 const STATUS_COLOR = {
-      [ROUTE_STATUS.LOCKED]: 'rgba(140, 140, 140, 0.35)',
+      // V1.1 — #FF5555 (hors réseau, mission trust/stars): remplace le gris neutre pour signaler plus
+      // clairement qu'une route LOCKED n'a pas assez de couverture réseau. Format "R, G, B" (comme les
+      // deux autres statuts) plutôt qu'une chaîne rgba() toute faite: passe par le même chemin de rendu
+      // (isRgbTriplet ci-dessous) que NETWORKED/ACTIVE_RAID, l'opacité 0.35 déjà en place est préservée
+      // à l'identique. NETWORKED (orange, "raid disponible") et ACTIVE_RAID (#2BB1E6, "raid en cours")
+      // restent inchangés — #2BB1E6 est déjà la couleur "connecté" existante d'ACTIVE_RAID; la
+      // réutiliser aussi pour NETWORKED effacerait la distinction visuelle entre "réseau disponible" et
+      // "raid en transit", qui reste une information utile au joueur.
+      [ROUTE_STATUS.LOCKED]: '255, 85, 85', // #FF5555 — hors réseau
       [ROUTE_STATUS.NETWORKED]: '255, 159, 28', // Bridges Orange — connexion active mais aucun raid en cours
-      [ROUTE_STATUS.ACTIVE_RAID]: '43, 177, 230' // Chiral Blue — raid IRL en transit sur cette route
+      [ROUTE_STATUS.ACTIVE_RAID]: '43, 177, 230' // Chiral Blue #2BB1E6 — raid IRL en transit sur cette route
     };
 
 // La composition (grille 0..9, marges, losanges QG/Relais) est authorée pour une "toile de

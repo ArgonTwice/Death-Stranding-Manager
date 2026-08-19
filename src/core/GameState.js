@@ -75,6 +75,7 @@ export const game = {
       expeditionHistory: [], // V0.9.5 — historique borné des expéditions multi-étapes achevées
       tutorial: { step: 0, completed: false, skipped: false, rewardsGranted: false }, // V1.0.1 — tutoriel guidé Die-Hardman (TutorialManager.js), skipable, jamais de RNG
       meta: { counters: { muleCampId: 0 }, version: VERSION }, // V1.0.3 — compteurs globaux persistés (ex: engine/MapEngine.js#generateMuleCamps). V1.0.6 GOLD — meta.version reflète config/version.js (source de vérité unique), jamais lu par RNG.js/la simulation, purement descriptif.
+      progression: { realWalk: { unlocked: false } }, // V1.1 — RealWalk (systems/WalkSession.js#activateRealWalk) se débloque au premier raccordement réseau réussi (PrepperSystem.js#connectKnot), jamais retiré ensuite. SaveManager.js#deserializeGame() force unlocked:true par défaut pour toute sauvegarde ANTÉRIEURE à V1.1 (sans champ progression du tout) — grandfather clause, jamais de retrait rétroactif d'un accès déjà acquis par un joueur existant.
       // --- Propriétés repliées depuis d'anciennes variables top-level module-scope (refacto ES Modules) ---
       gameEnded: false,
       quarterSnapshot: { completed: 0, deaths: 0, money: 10000 },
@@ -100,7 +101,8 @@ export const runtime = {
       currentSlot: 1,
       activeCampEvents: [], // valeur réelle affectée après la déclaration de CAMP_EVENTS, plus bas
       activeVisitorOffers: [], // idem VISITOR_OFFERS
-      activeFestivalsPool: [] // idem FESTIVALS
+      activeFestivalsPool: [], // idem FESTIVALS
+      deliveryPlanning: { porterId: null, cargoType: null, route: null, destX: null, destY: null } // V1.1 — formulaire de dispatch manuel EN COURS DE SAISIE (ui/PorterDrawer.js): jamais persisté (comme runtime.placingPCC/selectedPorterId), remis à zéro après chaque dispatch confirmé — DeliveryEngine.js#dispatchDeliveryManually() ne lit JAMAIS cet objet directement, il reçoit des valeurs déjà extraites en paramètres (isolation du snapshot de livraison, cf. V1.1 QA règle 3)
     };
 
 runtime.activeFestivalsPool = FESTIVALS;

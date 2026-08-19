@@ -5,7 +5,7 @@
 // l'adaptateur matériel (interface commune MotionAdapter/MockMotionAdapter) et le jeu: délègue
 // systématiquement à RealWalkSystem.recordSteps() pour toute conversion en ressources.
 import { eventBus } from '../core/EventBus.js';
-import { runtime } from '../core/GameState.js';
+import { game, logEvent, runtime } from '../core/GameState.js';
 import { createMotionAdapter } from '../sensors/MotionAdapter.js';
 import { createMockMotionAdapter } from '../sensors/MockMotionAdapter.js';
 import { recordSteps } from './RealWalkSystem.js';
@@ -28,7 +28,18 @@ function handleStep(count) {
 
 // Active le mode "Porteur IRL". useMock=true réservé aux tests/Playwright/environnements sans
 // capteur (règle 1: MockMotionAdapter.js remplace intégralement MotionAdapter.js, même contrat).
+//
+// V1.1 — verrouillée au niveau du moteur (pas seulement de l'UI) tant que
+// game.progression.realWalk.unlocked est false: se débloque au premier raccordement réseau réussi
+// (PrepperSystem.js#connectKnot). Une vieille sauvegarde (antérieure à V1.1) reste débloquée par
+// grandfather clause (SaveManager.js#deserializeGame) — seules les nouvelles parties doivent gagner
+// l'accès. Vérification synchrone AVANT toute permission capteur/activation d'adaptateur: aucun état
+// partiel (adapter créé puis jamais démarré) si le verrou est fermé.
 export async function activateRealWalk(useMock = false) {
+      if (!game.progression || !game.progression.realWalk || !game.progression.realWalk.unlocked) {
+        logEvent('🔒 Mode Porteur IRL verrouillé — raccordez un premier nœud au Réseau Chiral pour le débloquer.', 'warn');
+        return false;
+      }
       const s = state();
       if (adapter) deactivateRealWalk();
       adapter = useMock ? createMockMotionAdapter({ onStep: handleStep }) : createMotionAdapter({ onStep: handleStep });

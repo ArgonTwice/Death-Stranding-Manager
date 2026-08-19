@@ -147,7 +147,8 @@ export function serializeGame() {
         activeExpedition: game.activeExpedition || null,
         expeditionHistory: game.expeditionHistory || [],
         tutorial: game.tutorial || { step: 0, completed: false, skipped: false, rewardsGranted: false },
-        meta: game.meta || { counters: { muleCampId: 0 } }
+        meta: game.meta || { counters: { muleCampId: 0 } },
+        progression: game.progression || { realWalk: { unlocked: false } }
       };
     }
 
@@ -227,6 +228,13 @@ export function deserializeGame(s) {
       game.meta.counters = game.meta.counters || { muleCampId: 0 };
       game.meta.counters.muleCampId = game.meta.counters.muleCampId || 0;
       game.meta.version = VERSION; // V1.0.6 GOLD — reflète toujours le client actuellement chargé (jamais un numéro de version figé provenant d'une vieille sauvegarde), purement descriptif
+      // V1.1 — grandfather clause: une sauvegarde SANS champ progression du tout est forcément
+      // antérieure à V1.1 (RealWalk était alors disponible sans condition depuis V0.8.0) — le joueur
+      // garde donc l'accès (unlocked:true) plutôt que de se le voir retirer rétroactivement. Une
+      // sauvegarde V1.1+ qui a un champ progression garde sa valeur réelle telle quelle (unlocked
+      // peut légitimement être encore false si son premier raccordement réseau n'a jamais eu lieu).
+      game.progression = s.progression || { realWalk: { unlocked: true } };
+      game.progression.realWalk = game.progression.realWalk || { unlocked: true };
       runtime.activeCampEvents = s.activeCampEventIds ? CAMP_EVENTS.filter(e => s.activeCampEventIds.includes(e.id)) : CAMP_EVENTS;
       runtime.activeVisitorOffers = s.activeVisitorOfferIds ? VISITOR_OFFERS.filter(o => s.activeVisitorOfferIds.includes(o.id)) : VISITOR_OFFERS;
       runtime.activeFestivalsPool = s.activeFestivalIds ? FESTIVALS.filter(f => s.activeFestivalIds.includes(f.id)) : FESTIVALS;
@@ -296,6 +304,7 @@ export async function newGame(confirmFirst, slot) {
       resetMuleCampIdCounter(); // repart de mule-0 à chaque nouvelle partie (jamais un compteur qui fuit d'une partie à l'autre dans le même onglet)
       game.meta = game.meta || { counters: { muleCampId: 0 } };
       game.meta.version = VERSION; // V1.0.6 GOLD — lié à la source de vérité unique (config/version.js) à chaque nouvelle partie
+      game.progression = { realWalk: { unlocked: false } }; // V1.1 — chaque NOUVELLE partie doit regagner l'accès RealWalk via son premier raccordement réseau (contrairement au chargement d'une vieille save, cf. deserializeGame)
       initFreshMap();
       debugLog(`RNG seed pour cette partie: ${RNG.getSeed()}`);
       logEvent(`🎮 Nouvelle partie [${DIFFICULTIES[difficulty].label}] — Chiral Network ONLINE`);

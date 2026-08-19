@@ -22,6 +22,22 @@ export function prepperStars(relation) { return Math.max(1, Math.min(BALANCE.pre
 
 export function prepperStarsLabel(relation) { return '⭐'.repeat(prepperStars(relation)) + '☆'.repeat(BALANCE.prepper.starsMax - prepperStars(relation)); }
 
+// V1.1 — "trust" est déjà porté par k.relation (0-100, existant depuis V0.x): il n'y a jamais eu
+// besoin d'un second champ trustPoints qui pourrait diverger de la valeur réelle. k.stars n'est pas
+// non plus dupliqué en état persisté — TOUJOURS dérivé à la volée via prepperStars(k.relation), la
+// SEULE source de vérité, exactement comme l'UI (prepperStarsLabel) le fait déjà partout. Cette
+// fonction détecte juste les FRANCHISSEMENTS de palier (jamais les régressions) autour d'une mutation
+// de relation, sur le même modèle que RealWalkSystem.js#crossedThresholds() — appelée par chaque site
+// qui modifie k.relation, avant ET après la mutation.
+export function checkPrepperStarMilestone(k, relationBefore) {
+      const before = prepperStars(relationBefore);
+      const after = prepperStars(k.relation);
+      if (after > before) {
+        eventBus.emit('prepper:starReached', { name: k.name, archetype: k.archetype, stars: after, relation: k.relation });
+        logEvent(`🌟 ${k.name} atteint ${after} étoile${after > 1 ? 's' : ''} de confiance !`, 'good');
+      }
+    }
+
 export function makePrepper(x, y, name) {
       const archetype = pickPrepperArchetype();
       return {
@@ -114,7 +130,9 @@ export function applyPrepperDeliveryOutcome(quest, success, rating) {
       const isCurrent = quest.mapKey === game.currentMap;
       if (success) {
         const gain = rating ? Math.max(BALANCE.prepper.relationGainMin, Math.round(rating.likes * BALANCE.prepper.relationGainLikesMult)) : BALANCE.prepper.relationGainNoRating;
+        const relationBefore = k.relation;
         k.relation = Math.min(100, k.relation + gain);
+        checkPrepperStarMilestone(k, relationBefore); // V1.1 — seul site où k.relation augmente dans tout le codebase (grep vérifié)
         if (quest.contractId && quest.need) {
           k.needs[quest.need] = Math.max(0, k.needs[quest.need] - (BALANCE.prepper.contractNeedFulfillBase + RNG.next() * BALANCE.prepper.contractNeedFulfillRandRange));
           k.contracts = (k.contracts || []).filter(c => c.id !== quest.contractId);
@@ -177,5 +195,14 @@ export function connectKnot(idx) {
       for (const k of newCells) game.routes.add(k);
       markMapDirty();
       logEvent(`🔧 Raccordement chiral achevé → ${knot.name} (-$${cost}, ${newCells.length} cases)`);
+      eventBus.emit('network:nodeConnected', { name: knot.name, mapKey: game.currentMap });
+      // V1.1 — débloque RealWalk (systems/WalkSession.js#activateRealWalk) au tout premier
+      // raccordement réseau réussi de la partie, jamais retiré ensuite. connectKnot() est le SEUL
+      // site du codebase qui raccorde un nœud (grep vérifié) — pas besoin d'un flag "premier appel"
+      // séparé, le garde `!unlocked` suffit et reste idempotent pour tous les raccordements suivants.
+      if (game.progression && game.progression.realWalk && !game.progression.realWalk.unlocked) {
+        game.progression.realWalk.unlocked = true;
+        logEvent('👟 Mode Porteur IRL débloqué — le Réseau Chiral reconnaît vos premiers pas.', 'good');
+      }
       eventBus.emit('render:request');
     }

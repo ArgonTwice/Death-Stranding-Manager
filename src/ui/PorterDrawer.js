@@ -3,8 +3,9 @@
 // actionnable immédiat (ex: "⚠️ Hydrophobe -> Éviter Timefall") avant tout détail. Onglets
 // Psychologie/Journal dépliables pour qui veut creuser. Cibles tactiles ≥48x48px.
 import { game } from '../core/GameState.js';
-import { JOURNAL_MILESTONES, PORTER_BACKGROUNDS, PORTER_JOYS, PORTER_PHOBIAS, SKILLS } from '../data/Constants.js';
+import { CARGO_TYPES, JOURNAL_MILESTONES, PORTER_BACKGROUNDS, PORTER_JOYS, PORTER_PHOBIAS, ROUTE_TYPES, SKILLS } from '../data/Constants.js';
 import { porterQuickSummary } from '../systems/PorterStorySystem.js';
+import { dispatchDeliveryManually } from '../engine/DeliveryEngine.js';
 import { closePanel, pushPanel } from '../core/NavigationManager.js';
 import { collapseDrawer, openDrawer } from './DrawerManager.js';
 
@@ -35,6 +36,29 @@ export function setPorterDrawerTab(tab) {
 
 function doomsStars(level) { return '👁️'.repeat(level) + '·'.repeat(3 - level); }
 
+// V1.1 — dispatch manuel d'une livraison principale: le joueur choisit la destination (un des
+// preppers connus du territoire actuel du porteur), le cargo et la route AVANT de l'envoyer, plutôt
+// que de laisser advanceDay() tirer une destination aléatoire. Visible uniquement pour un porteur
+// idle et en état de partir (mêmes conditions que l'auto-dispatch, cf. engine/DeliveryEngine.js).
+function manualDispatchHtml(p) {
+      if (p.status !== 'idle' || p.health <= 15 || (p.gearWear || 0) >= 100) return '';
+      const d = game.mapsData[p.map];
+      const knots = (d && d.mainKnots) || [];
+      if (!knots.length) return '';
+      const destOptions = knots.map(k => `<option value="${k.x},${k.y}">${k.name}</option>`).join('');
+      const cargoOptions = Object.entries(CARGO_TYPES).map(([key, c]) => `<option value="${key}">${c.name}</option>`).join('');
+      const routeOptions = Object.entries(ROUTE_TYPES).map(([key, r]) => `<option value="${key}">${r.icon} ${r.name}</option>`).join('');
+      return `
+        <div class="qp-card">
+          <div class="qp-card-head">🎯 Dispatch manuel</div>
+          <div class="qp-card-meta">Choisissez la destination, le cargo et la route de cette livraison — sinon l'auto-dispatch quotidien s'en chargera à votre place.</div>
+          <select id="dispatch-dest-${p.id}" class="qp-select">${destOptions}</select>
+          <select id="dispatch-cargo-${p.id}" class="qp-select">${cargoOptions}</select>
+          <select id="dispatch-route-${p.id}" class="qp-select">${routeOptions}</select>
+          <button class="term-card-action success" onclick="dispatchDeliveryManuallyUI(${p.id})">🚚 Envoyer</button>
+        </div>`;
+    }
+
 function summaryTabHtml(p) {
       const advice = porterQuickSummary(p);
       const bg = PORTER_BACKGROUNDS[p.background];
@@ -46,7 +70,8 @@ function summaryTabHtml(p) {
           <div class="convoy-preview-row"><span>❤️‍🩹 Santé</span><span>${Math.ceil(p.health)}/100</span></div>
           <div class="convoy-preview-row"><span>😰 Stress</span><span class="${p.stress > 80 ? 'convoy-risk-high' : ''}">${p.stress}/100</span></div>
           <div class="convoy-preview-row"><span>🔧 Usure équip.</span><span>${p.gearWear || 0}%</span></div>
-        </div>`;
+        </div>
+        ${manualDispatchHtml(p)}`;
     }
 
 function psychologyTabHtml(p) {
@@ -96,4 +121,19 @@ export function renderPorterDrawer() {
 // HUD.js sur porter:fearTriggered/joyTriggered/milestoneReached/traitAcquired.
 export function refreshPorterDrawerIfOpen(porterId) {
       if (openPorterId != null && (porterId == null || porterId === openPorterId)) renderPorterDrawer();
+    }
+
+// Pont UI (V1.1): lit les <select> de la carte "Dispatch manuel" au moment du clic — jamais un état
+// intermédiaire conservé entre deux rendus — et délègue la validation/création de la livraison à
+// engine/DeliveryEngine.js#dispatchDeliveryManually(), jamais de mutation game.* directe ici.
+export function dispatchDeliveryManuallyUI(porterId) {
+      const destEl = document.getElementById(`dispatch-dest-${porterId}`);
+      if (!destEl || !destEl.value) return;
+      const [destX, destY] = destEl.value.split(',').map(Number);
+      const cargoEl = document.getElementById(`dispatch-cargo-${porterId}`);
+      const routeEl = document.getElementById(`dispatch-route-${porterId}`);
+      const porterIdx = game.porters.findIndex(x => x.id === porterId);
+      if (porterIdx === -1) return;
+      dispatchDeliveryManually(porterIdx, destX, destY, { cargoType: cargoEl ? cargoEl.value : undefined, route: routeEl ? routeEl.value : undefined });
+      renderPorterDrawer();
     }

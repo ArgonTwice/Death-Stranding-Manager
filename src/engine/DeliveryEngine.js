@@ -430,6 +430,23 @@ export function sendDelivery(porterIdx) {
       createDelivery(porterIdx, destX, destY);
     }
 
+// V1.1 — dispatch MANUEL d'une livraison principale: le joueur choisit porteur/destination/cargo/
+// route au lieu de laisser l'auto-dispatch quotidien (advanceDay(), plus haut) tirer une destination
+// aléatoire. Coexiste avec l'auto-dispatch sans le remplacer (règle Kairosoft "un porteur idle repart
+// seul" volontairement conservée pour les porteurs non gérés manuellement): un porteur dispatché ici
+// n'est plus idle au prochain advanceDay(), donc jamais redispatché deux fois le même jour.
+// Isolation du snapshot (V1.1 QA règle 3): ne lit JAMAIS runtime.deliveryPlanning directement — reçoit
+// des valeurs déjà extraites en paramètres, primitives (nombres/chaînes). La livraison créée par
+// createDelivery() ci-dessus ne conserve aucune référence vers l'appelant: la muter ou vider
+// runtime.deliveryPlanning après coup ne peut jamais affecter une livraison déjà dispatchée.
+export function dispatchDeliveryManually(porterIdx, destX, destY, options = {}) {
+      const porter = game.porters[porterIdx];
+      if (!porter || porter.status !== 'idle' || porter.health <= 0) { logEvent('❌ Porteur indisponible pour ce dispatch'); return false; }
+      if (!Number.isFinite(destX) || !Number.isFinite(destY) || destX < 0 || destX >= MAP_WIDTH || destY < 0 || destY >= MAP_HEIGHT) { logEvent('❌ Destination invalide'); return false; }
+      createDelivery(porterIdx, destX, destY, { forceCargoType: options.cargoType, route: options.route });
+      return true;
+    }
+
 export function createDelivery(porterIdx, destX, destY, questOpts) {
       const B = BALANCE.delivery;
       const porter = game.porters[porterIdx];
@@ -440,8 +457,12 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       const cargoType = (questOpts && questOpts.forceCargoType) || pickCargoType();
       const cargo = CARGO_TYPES[cargoType];
 
-      // Calcul récompense (fixée par la quête si applicable — le cargo influence le risque/temps, pas le montant)
-      let reward = questOpts ? Math.ceil(questOpts.reward * (1 + gradeLevel(porter, 'service') * B.serviceGradeRewardMult)) : Math.ceil(distance * B.rewardDistanceMult * (1 + game.reputation / B.reputationRewardDivisor) * cargo.rewardMult);
+      // Calcul récompense (fixée par la quête si applicable — le cargo influence le risque/temps, pas le
+      // montant). V1.1 — testé sur questOpts.reward != null, PAS juste questOpts truthy: le dispatch
+      // manuel (dispatchDeliveryManually ci-dessous) passe un questOpts SANS .reward (seulement
+      // forceCargoType/route) pour obtenir le calcul auto normal malgré une destination/un cargo
+      // choisis à la main — jamais un montant NaN issu d'un questOpts.reward absent.
+      let reward = (questOpts && questOpts.reward != null) ? Math.ceil(questOpts.reward * (1 + gradeLevel(porter, 'service') * B.serviceGradeRewardMult)) : Math.ceil(distance * B.rewardDistanceMult * (1 + game.reputation / B.reputationRewardDivisor) * cargo.rewardMult);
       if (porter.equipment.vehicle) reward *= B.vehicleRewardMult;
       reward = Math.ceil(reward * (1 + (game.infraInvestments || 0) * B.infraRewardMultPerInvestment)); // investissements infrastructure, permanent
       reward = Math.ceil(reward * regionalNetworkRewardMult()); // V0.5.0: bonus permanent des Super-Relais régionaux
@@ -487,7 +508,11 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
         condition: 100, // état du cargo à l'arrivée -> note S/A/B/C (#1)
         btExposure: sampleBTExposure(porter.x, porter.y, destX, destY), // 0-5 cellules BT sur le trajet
         detection: 0, spotted: false, // jauge de détection progressive (#B)
-        quest: questOpts ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need, urgentQuestId: questOpts.urgentQuestId, zeroDamage: questOpts.zeroDamage, icon: questOpts.icon, convoyId: questOpts.convoyId } : null,
+        // V1.1 — testé sur questOpts.flavor (jamais juste questOpts truthy): dispatchDeliveryManually()
+        // passe un questOpts SANS .flavor (seulement forceCargoType/route) pour une livraison
+        // PRINCIPALE ordinaire au dispatch manuel — jamais un objet "quest" fantôme aux champs tous
+        // undefined qui la ferait passer à tort pour une quête annexe/contrat en aval.
+        quest: (questOpts && questOpts.flavor) ? { flavor: questOpts.flavor, prepperIdx: questOpts.prepperIdx, mapKey: questOpts.mapKey, contractId: questOpts.contractId, need: questOpts.need, urgentQuestId: questOpts.urgentQuestId, zeroDamage: questOpts.zeroDamage, icon: questOpts.icon, convoyId: questOpts.convoyId } : null,
         raidId: (questOpts && questOpts.raidId) || null,
         dmgMult: (questOpts && questOpts.dmgMult) || 1, // V0.4.0: stratégie de convoi "Sécurisé" (moins de dégâts)
         gearWearMult: (questOpts && questOpts.gearWearMult) || 1, // V0.4.0: stratégie de convoi "Rapide" (+usure)
@@ -503,8 +528,10 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       game.deliveries.push(delivery);
       porter.status = "en route";
       // Raid: un seul log groupé déjà émis par assignQuest(). Vie de camp (livraison routinière): silencieuse en arrière-plan.
-      if (questOpts && !questOpts.raidId) {
+      if (questOpts && questOpts.flavor && !questOpts.raidId) {
         logEvent(`🗒️ ${cargo.name} ${porter.name} → quête annexe (${destX},${destY}) +$${reward}`);
+      } else if (questOpts && !questOpts.flavor) {
+        logEvent(`🚚 ${porter.name} part en livraison (${cargo.name}) vers (${destX},${destY}) — dispatch manuel, +$${reward}`, 'good');
       }
       if (lostCargoBonus > 0) logEvent(`📦 ${porter.name} a récupéré une cargaison perdue en chemin (+$${lostCargoBonus})`, 'good');
       eventBus.emit('render:request');

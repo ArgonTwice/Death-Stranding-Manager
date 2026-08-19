@@ -60,6 +60,19 @@ function sensorCardHtml() {
       const s = walkSessionState();
       const info = SENSOR_STATUS_LABEL[s.sensorStatus] || SENSOR_STATUS_LABEL.idle;
       const active = s.sensorStatus === 'active';
+      // V1.1 — le moteur (systems/WalkSession.js#activateRealWalk) refuse déjà de démarrer si
+      // !game.progression.realWalk.unlocked; ce garde ne fait que refléter ce même verrou dans l'UI
+      // (bouton désactivé + message clair) plutôt que de laisser le joueur cliquer dans le vide.
+      const unlocked = !!(game.progression && game.progression.realWalk && game.progression.realWalk.unlocked);
+      if (!active && !unlocked) {
+        return terminalCardHtml({
+          title: '📡 Capteur de mouvement',
+          subtitle: 'Raccordez un premier nœud au Réseau Chiral (onglet Camp) pour débloquer le mode Porteur IRL.',
+          rarity: 'common',
+          badgesHtml: statusBadgeHtml('🔒 Verrouillé', 'common', '🔒'),
+          actionsHtml: `<button class="term-card-action" disabled>👟 Activer le mode Porteur</button>`
+        });
+      }
       return terminalCardHtml({
         title: '📡 Capteur de mouvement',
         subtitle: active ? 'Vos pas réels alimentent le réseau chiral.' : 'Optionnel — le jeu reste 100% jouable sans capteur.',
