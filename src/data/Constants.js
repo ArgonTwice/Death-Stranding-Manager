@@ -38,7 +38,13 @@ export const STRUCTURES = {
       depot:    { name: 'Dépôt chiral', cost: 1000, maxLevel: 3, levelNames: ['Dépôt local', 'Hub régional', 'Terminal chiral'] },
       zipline:  { name: 'Zipline chirale', cost: 2500, maxLevel: 3, levelNames: ['Zipline légère', 'Zipline renforcée', 'Réseau de ziplines'] },
       cauldron: { name: 'Chaudron chiral', cost: 1800, maxLevel: 1, levelNames: ['Chaudron actif'] },
-      insurance: { name: 'Bureau d\'assurance chirale', cost: 1200, maxLevel: 3, levelNames: ['Bureau local', 'Bureau régional', 'Bureau international'] }
+      insurance: { name: 'Bureau d\'assurance chirale', cost: 1200, maxLevel: 3, levelNames: ['Bureau local', 'Bureau régional', 'Bureau international'] },
+      // V1.10.0 — Bâtiments de Camp additionnels. Même système que ci-dessus (buildStructure()/
+      // dominantStructure(), systems/EconomySystem.js/engine/MapEngine.js — jamais dupliqué): un seul
+      // "dominant" actif à la fois (le plus haut niveau parmi TOUTES les structures possédées).
+      privateRoom: { name: 'Chambre Privée', cost: 1600, maxLevel: 3, levelNames: ['Chambre Sommaire', 'Chambre Confort', 'Suite Chirale'] },
+      canteen:     { name: 'Cantine', cost: 1400, maxLevel: 3, levelNames: ['Cantine de Camp', 'Cantine Chaude', 'Cuisine Chirale'] },
+      magellanBase:{ name: 'Base Mobile Magellan', cost: 5000, maxLevel: 1, levelNames: ['Base Mobile Active'] }
     };
 
 export const GRADES = {

@@ -9,6 +9,7 @@ import { FIRST_NAMES, GRADES, GRADE_TITLES, LAST_NAMES, RELICS, SKILLS, TRAITS, 
 import { recordLegendIfEligible } from './LegacySystem.js';
 import { acquiredTraitDmgResist, applyIdentityToPorter } from './PorterStorySystem.js';
 import { hasTalent } from './PorterTalentTree.js';
+import { dominantStructure } from '../engine/MapEngine.js';
 
 export function gearEffectiveness(p) {
       const wear = p.gearWear || 0;
@@ -59,10 +60,16 @@ export function equippedCount(p) {
         + p.equipment.cryptobiote + p.equipment.bolagun + p.equipment.cryobox + p.equipment.climbing_anchor;
     }
 
+// V1.10.0 — Chambre Privée dominante: -40% coût de repos, réutilisée par AutomationManager.js#
+// runAutomation() (auto-repos) qui duplique cette même formule de coût.
+export function restCostMult() {
+      return dominantStructure() === 'privateRoom' ? BALANCE.campBuildings.privateRoomRestCostMult : 1;
+    }
+
 export function forceRest(porterIdx) {
       const p = game.porters[porterIdx];
       if (p.status !== "idle" || p.health <= 0) return;
-      const cost = Math.ceil((p.salary / 2) * (1 + p.stress / 100)); // + cher si stress élevé
+      const cost = Math.ceil((p.salary / 2) * (1 + p.stress / 100) * restCostMult()); // + cher si stress élevé
       if (game.money < cost) { logEvent(`❌ Budget repos ($${cost})`); return; }
       game.money -= cost;
       p.stress = 0;

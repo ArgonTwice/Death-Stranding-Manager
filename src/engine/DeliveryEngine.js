@@ -471,6 +471,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       if (overload > B.overloadThreshold) timeMultiplier *= 1 + (overload - B.overloadThreshold) * B.overloadTimeMult; // surcharge ralentit
       timeMultiplier *= TRAITS[porter.trait].time_mult || 1; // trait Lève-tôt etc.
       timeMultiplier *= realWalkSpeedBonusMult(); // V0.8.0: bonus IRL — fonction pure de game.totalSteps, jamais du temps réel
+      if (dominantStructure() === 'magellanBase') timeMultiplier *= BALANCE.campBuildings.magellanBaseTimeMult; // V1.10.0 — Base Mobile Magellan dominante: -10% temps, toutes livraisons
 
       // Terrain canon: relief accidenté ralentit (véhicule inefficace en montagne/rivière)
       const destTerrain = game.terrain[cellKey(destX, destY)];
@@ -779,7 +780,8 @@ export function endMonthBookkeeping() {
 
       // Récupération santé (réduite: repos forcé devient un vrai outil, pas juste attendre)
       for (let p of game.porters) {
-        if (p.status === "idle" && p.health < 100) p.health = Math.min(100, p.health + B.idleHealRate + prepperPerkBonus('fastHeal'));
+        // V1.10.0 — Cantine dominante: bonus fixe supplémentaire de récupération santé mensuelle.
+        if (p.status === "idle" && p.health < 100) p.health = Math.min(100, p.health + B.idleHealRate + prepperPerkBonus('fastHeal') + (dominantStructure() === 'canteen' ? BALANCE.campBuildings.canteenIdleHealBonus : 0));
       }
 
       // V0.3.0: la météo est désormais gérée quotidiennement par territoire (WeatherSystem.tickWeatherSystem(),

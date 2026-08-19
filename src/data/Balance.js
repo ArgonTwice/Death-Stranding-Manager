@@ -13,7 +13,7 @@ export const EQUIP_MIN_RANK = { cryptobiote: 1, bolagun: 1, cryobox: 1, climbing
 
 export const VEHICLE_MIN_RANK = { trike: 3 };
 
-export const STRUCTURE_MIN_RANK = { zipline: 3 };
+export const STRUCTURE_MIN_RANK = { zipline: 3, magellanBase: 3 }; // V1.10.0 — Base Mobile Magellan: bâtiment de fin de jeu, même rang que zipline
 
 export const GAME_LENGTH_MONTHS = 60;
 
@@ -636,5 +636,13 @@ export const BALANCE = {
   porterEconomy: {
     creditsGainRate: 0.1, // fraction du reward d'une livraison réussie versée au portefeuille personnel du porteur
     creditsCap: 2000 // plafond anti-exploit par porteur — jamais une thésaurisation illimitée
+  },
+  // V1.10.0 — Bâtiments de Camp additionnels (data/Constants.js#STRUCTURES): bonus du type DOMINANT
+  // uniquement (dominantStructure(), engine/MapEngine.js — même principe que zipline/depot/shelter
+  // déjà en place), jamais cumulatif avec les autres structures possédées.
+  campBuildings: {
+    privateRoomRestCostMult: 0.6, // Chambre Privée dominante: -40% coût de forceRest()/auto-repos
+    canteenIdleHealBonus: 4, // Cantine dominante: +4 HP/mois supplémentaires pour les porteurs au repos (en plus de idleHealRate)
+    magellanBaseTimeMult: 0.9 // Base Mobile Magellan dominante: -10% temps de trajet, toutes livraisons
   }
 };

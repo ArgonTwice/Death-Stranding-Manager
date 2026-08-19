@@ -5,6 +5,7 @@ import { eventBus } from '../core/EventBus.js';
 import { game, logEvent } from '../core/GameState.js';
 import { BALANCE } from '../data/Balance.js';
 import { autoBuyEquipForIdlePorters } from './PorterAiEngine.js';
+import { restCostMult } from './PorterSystem.js';
 
 export function toggleAutomation(key) {
       if (!game.automation) game.automation = {};
@@ -33,7 +34,7 @@ export function runAutomation() {
           if (game.money >= cost) { game.money -= cost; p.gearWear = 0; repaired++; }
         }
         if (auto.autoRest && p.stress >= auto.autoRestThreshold) {
-          const cost = Math.ceil((p.salary / 2) * (1 + p.stress / 100));
+          const cost = Math.ceil((p.salary / 2) * (1 + p.stress / 100) * restCostMult()); // V1.10.0 — Chambre Privée dominante
           if (game.money >= cost) { game.money -= cost; p.stress = 0; p.health = Math.min(100, p.health + BALANCE.porter.forceRestHealthRestore); rested++; }
         }
         if (auto.autoReturn) {
