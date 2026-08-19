@@ -167,6 +167,7 @@ export function deserializeGame(s) {
         likes: p.likes || 0,
         grades: p.grades || { portage: 0, combat: 0, discretion: 0, service: 0, reseau: 0 },
         gearWear: p.gearWear || 0,
+        credits: p.credits || 0, // V1.9.0 — grandfather: une vieille sauvegarde sans ce champ démarre à 0
         // V1.2.0 fix — spread p.equipment D'ABORD (préserve l'ordre de clés existant pour un
         // round-trip serialize/deserialize/serialize stable), les valeurs par défaut harness/
         // climbing_anchor ne s'ajoutent qu'APRÈS pour les vieilles sauvegardes qui ne les ont pas

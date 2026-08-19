@@ -87,6 +87,7 @@ function summaryTabHtml(p) {
           <div class="convoy-preview-row"><span>❤️‍🩹 Santé</span><span>${Math.ceil(p.health)}/100</span></div>
           <div class="convoy-preview-row"><span>😰 Stress</span><span class="${p.stress > 80 ? 'convoy-risk-high' : ''}">${p.stress}/100</span></div>
           <div class="convoy-preview-row"><span>🔧 Usure équip.</span><span>${p.gearWear || 0}%</span></div>
+          <div class="convoy-preview-row"><span>💳 Portefeuille perso</span><span>$${p.credits || 0}</span></div>
         </div>
         ${manualDispatchHtml(p)}
         ${giftEquipmentHtml(p)}`;

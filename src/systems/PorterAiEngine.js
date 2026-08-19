@@ -19,17 +19,22 @@ const AUTO_BUY_PRIORITY = ['cryptobiote', 'boots', 'cryobox', 'scanner', 'bolagu
 // game.automation.autoBuyEquip est activé — même pattern que autoRest/autoRepair/autoReturn: un
 // porteur idle (donc "au repos", cf. brief) tente au plus autoBuyMaxPerTick achat(s), toujours le
 // premier type accessible dans AUTO_BUY_PRIORITY qu'il n'a pas encore.
+// V1.9.0 — priorité de paiement: le portefeuille INDIVIDUEL du porteur (systems/PorterEconomy.js#
+// p.credits) est tenté EN PREMIER (silent — sonde sans dépenser le budget de base pour rien), puis
+// le budget de la base en repli si les credits sont insuffisants. Jamais l'inverse: un porteur qui
+// a économisé ses propres gains les dépense avant de puiser dans la caisse commune.
 export function autoBuyEquipForIdlePorters() {
-      let bought = 0;
+      let bought = 0, boughtWithCredits = 0;
       for (const p of game.porters) {
         if (p.status !== 'idle' || p.health <= 0) continue;
         for (const type of AUTO_BUY_PRIORITY) {
           // silent=true: sonde chaque type sans logger les tentatives ratées (déjà possédé, budget
           // insuffisant, gate rang/étoiles...) — un seul log groupé à la fin, cf. AutomationManager.js.
-          if (buyEquip(type, p.id, true)) { bought++; break; } // au plus BALANCE.porterAi.autoBuyMaxPerTick (1) par porteur par tick
+          if (buyEquip(type, p.id, true, 'credits')) { bought++; boughtWithCredits++; break; }
+          if (buyEquip(type, p.id, true)) { bought++; break; } // repli sur le budget de la base
         }
       }
-      if (bought > 0) logEvent(`🤖 Ordres permanents: ${bought} achat(s) autonome(s) d'équipement à la Boutique`, 'good');
+      if (bought > 0) logEvent(`🤖 Ordres permanents: ${bought} achat(s) autonome(s) d'équipement à la Boutique (dont ${boughtWithCredits} sur portefeuille personnel)`, 'good');
     }
 
 // Action "Offrir Équipement" (fiche porteur, ui/PorterDrawer.js): achète l'équipement POUR ce porteur

@@ -18,11 +18,14 @@ export function shopDiscountMult() {
 // V1.5.0 — porterId optionnel: cible un porteur précis au lieu de targetPorter() (runtime.
 // selectedPorterId, piloté par l'UI Boutique) — utilisé par systems/PorterAiEngine.js pour l'achat
 // autonome et le don d'équipement, qui n'ont aucun rapport avec la sélection courante du joueur. Tous
-// les appels existants (buyEquip(type), sans 2e/3e argument) gardent EXACTEMENT le même comportement.
+// les appels existants (buyEquip(type), sans 2e/3e/4e argument) gardent EXACTEMENT le même comportement.
 // `silent`: n'émet aucun logEvent d'ÉCHEC (le succès reste toujours loggé) — utilisé par
 // PorterAiEngine.js#autoBuyEquipForIdlePorters() qui sonde plusieurs types dans l'ordre jusqu'à en
 // trouver un accessible: sans ce mode, chaque type déjà possédé/inaccessible spammerait le journal.
-export function buyEquip(type, porterId, silent) {
+// V1.9.0 — `payFrom` ('money' par défaut, ou 'credits'): paie sur le portefeuille INDIVIDUEL du
+// porteur (systems/PorterEconomy.js#p.credits) au lieu du budget de la base — même gating rang/
+// étoiles/slots, seule la SOURCE du paiement change.
+export function buyEquip(type, porterId, silent, payFrom) {
       const base = BALANCE.economy.equipBaseCosts;
       const target = porterId != null ? game.porters.find(p => p.id === porterId) : targetPorter();
       if (!target) { if (!silent) logEvent('❌ Aucun porteur actif'); return false; }
@@ -36,11 +39,13 @@ export function buyEquip(type, porterId, silent) {
         return false;
       }
       const cost = Math.ceil(base[type] * (1 + game.equipBought[type] * BALANCE.economy.equipCostScalingPerBought) * (1 - (game.structures.depot || 0) * BALANCE.economy.depotStructureDiscountPerLevel) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
-      if (game.money < cost) { if (!silent) logEvent(`❌ Budget ($${cost})`); return false; }
-      game.money -= cost;
+      const usesCredits = payFrom === 'credits';
+      const available = usesCredits ? (target.credits || 0) : game.money;
+      if (available < cost) { if (!silent) logEvent(`❌ Budget ($${cost})`); return false; }
+      if (usesCredits) target.credits -= cost; else game.money -= cost;
       game.equipBought[type]++;
       target.equipment[type]++;
-      logEvent(`🔧 ${target.name} +${type} (-$${cost})`);
+      logEvent(`🔧 ${target.name} +${type} (-$${cost}${usesCredits ? ' crédits perso' : ''})`);
       eventBus.emit('render:request');
       return true;
     }

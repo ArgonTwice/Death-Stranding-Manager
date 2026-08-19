@@ -628,5 +628,13 @@ export const BALANCE = {
     recruitCost: 4000, // bien au-dessus de hireBaseCost (500): technologie avancée débloquée tard
     costScalingPerOwned: 0.5, // scale avec le nombre de Pods déjà recrutés, même principe que hireCostPerActivePorter
     maxOwned: 3 // plafond anti-exploit: pas d'armée de robots gratuits à entretenir
+  },
+  // V1.9.0 — Portefeuille individuel par porteur ("Porter Credits"), systems/PorterEconomy.js.
+  // ADDITIF au budget de la base (game.money): jamais un remplacement, juste une réserve personnelle
+  // qui s'accumule sur SES PROPRES livraisons réussies et sert de PREMIÈRE source pour ses achats
+  // autonomes (systems/PorterAiEngine.js), le budget de base restant le fallback si insuffisants.
+  porterEconomy: {
+    creditsGainRate: 0.1, // fraction du reward d'une livraison réussie versée au portefeuille personnel du porteur
+    creditsCap: 2000 // plafond anti-exploit par porteur — jamais une thésaurisation illimitée
   }
 };
