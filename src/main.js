@@ -30,6 +30,7 @@ import { closeAllDrawersUI, initUIShell } from './ui/UIShell.js';
 import { addManualWalkBoostUI, closeWalkDrawer, openWalkDrawer, requestRealWalkActivationUI, stopRealWalkUI, toggleWalkDrawer } from './ui/WalkDrawer.js';
 import './systems/raid/RaidSystem.js'; // enregistre l'abonnement walk:stepDetected (effet de bord au chargement du module)
 import './systems/expedition/ExpeditionSystem.js'; // enregistre les abonnements raid:completed/raid:abandoned (effet de bord au chargement du module)
+import './ui/FeedbackFX.js'; // V1.2.0 — enregistre les abonnements success-glow/star-animate/timefall-alert/neon-pulse (effet de bord au chargement du module)
 import { closeRaidSelectionModal, launchRaidFromUI, openRaidSelectionModal } from './ui/RaidSelectionModal.js';
 import { abandonRaidUI, closeRaidTrackingDrawer, openContractBoardModalUI, openLoadoutPanelModalUI, openRaidSelectionModalUI, openRaidTrackingDrawer, toggleRaidTrackingDrawer } from './ui/RaidTrackingDrawer.js';
 import { closeContractBoardModal, launchContractFromUI, openContractBoardModal, setContractBoardFilter } from './ui/ContractBoardModal.js';

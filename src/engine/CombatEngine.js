@@ -7,6 +7,7 @@ import { RNG } from '../core/RNG.js';
 import { BALANCE, MAP_HEIGHT, MAP_WIDTH } from '../data/Balance.js';
 import { gradeLevel } from '../data/Constants.js';
 import { recordHallOfFame } from '../systems/PorterSystem.js';
+import { resolveCatcherEncounter } from '../systems/raid/CombatResolver.js';
 
 export function assaultCamp(campId, mode) {
       const B = BALANCE.combat;
@@ -201,30 +202,32 @@ export function engageCatcher(catcherId) {
       successChance += squad.reduce((s, p) => s + gradeLevel(p, 'combat'), 0) * B.catcherCombatGradeMult;
       successChance = Math.min(B.catcherSuccessCapMax, Math.max(B.catcherSuccessCapMin, successChance));
 
-      const success = RNG.next() < successChance;
+      // V1.2.0 — décision/résolution déterministe déléguée à CombatResolver.js (fonction pure,
+      // headless-testable): CombatEngine.js ne fait plus que passer le contexte, consommer RNG.js via
+      // ce même flux partagé (ordre de tirage inchangé bit-à-bit), puis appliquer le résultat.
+      const result = resolveCatcherEncounter({ B, squadSize: squad.length, campStrength: camp.strength, bloodBagsUsed, successChance }, RNG);
       const d = game.mapsData[game.currentMap];
       d.catchers = d.catchers.filter(c => c.id !== catcherId);
       game.catchers = d.catchers;
 
-      if (success) {
-        const loot = camp.strength * (B.catcherLootBase + Math.floor(RNG.next() * B.catcherLootRandRange));
-        game.materials.chiral_crystal += loot;
+      if (result.success) {
+        game.materials.chiral_crystal += result.loot;
         game.reputation = Math.min(100, game.reputation + B.catcherWinReputationGain);
         eventBus.emit('sfx:brass', 1);
-        logEvent(`🏆 CATCHER ABATTU (${squad.length} porteurs, ${bloodBagsUsed} poches de sang) — +${loot} cristaux chiraux, +${B.catcherWinReputationGain} réputation`, 'good');
+        logEvent(`🏆 CATCHER ABATTU (${squad.length} porteurs, ${bloodBagsUsed} poches de sang) — +${result.loot} cristaux chiraux, +${B.catcherWinReputationGain} réputation`, 'good');
       } else {
         let deaths = 0;
-        for (const p of squad) {
-          const deathChance = B.catcherDeathChanceBase - bloodBagsUsed / squad.length * B.catcherDeathChanceBloodBagMult;
-          if (RNG.next() < deathChance) {
+        squad.forEach((p, i) => {
+          const outcome = result.outcomes[i];
+          if (outcome.died) {
             p.status = 'dead';
             game.deaths++;
             deaths++;
             recordHallOfFame(p, 'dévoré par un Catcher');
           } else {
-            p.health = Math.max(10, p.health - (B.catcherFailDamageBase + RNG.next() * B.catcherFailDamageRandRange));
+            p.health = Math.max(10, p.health - outcome.damage);
           }
-        }
+        });
         game.reputation = Math.max(0, game.reputation - B.catcherFailReputationLoss);
         logEvent(`💀 ÉCHEC face au Catcher — ${deaths > 0 ? `${deaths} porteur(s) perdu(s)` : 'escouade blessée mais repliée'}, -${B.catcherFailReputationLoss} réputation`, 'death');
       }

@@ -173,7 +173,18 @@ export function renderBridgesMap(canvasId) {
         // Connexion néon HQ -> Relais
         ctx.strokeStyle = isRgbTriplet ? `rgba(${rgb}, ${0.35 + pulse * 0.4})` : rgb;
         ctx.lineWidth = status === ROUTE_STATUS.ACTIVE_RAID ? 3 : status === ROUTE_STATUS.LOCKED ? 1 : 2;
-        if (status === ROUTE_STATUS.LOCKED) ctx.setLineDash([3, 5]); else ctx.setLineDash([]);
+        if (status === ROUTE_STATUS.LOCKED) {
+          ctx.setLineDash([3, 5]);
+        } else if (status === ROUTE_STATUS.ACTIVE_RAID) {
+          // V1.2.0 — équivalent Canvas du "stroke-dashoffset SVG animé" demandé: un pattern de tirets
+          // dont le décalage avance avec le temps trace un flux chiral qui "coule" le long de la
+          // connexion, réservé au Raid IRL réellement en transit (seul cas où un flux directionnel a
+          // un sens — NETWORKED garde sa simple pulsation d'opacité existante, inchangée ci-dessus).
+          ctx.setLineDash([6, 6]);
+          ctx.lineDashOffset = -(now / 40) % 12;
+        } else {
+          ctx.setLineDash([]);
+        }
         if (isRgbTriplet) { ctx.shadowColor = `rgba(${rgb}, 0.7)`; ctx.shadowBlur = status === ROUTE_STATUS.LOCKED ? 0 : 8; }
         ctx.beginPath();
         ctx.moveTo(hq.x, hq.y);
@@ -181,6 +192,7 @@ export function renderBridgesMap(canvasId) {
         ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.setLineDash([]);
+        ctx.lineDashOffset = 0;
 
         // Icône mobile: Raid/Expédition IRL en transit sur CETTE route précise (interpolation linéaire
         // HQ->Relais selon la progression réelle des pas, purement une lecture de game.activeRaid).
@@ -212,6 +224,28 @@ export function renderBridgesMap(canvasId) {
         ctx.fillText(route.name, target.x, target.y + (route.toY > 5 ? -14 : 22));
 
         newHitNodes.push({ x: target.x, y: target.y, r: 14, kind: 'relay', route });
+      }
+
+      // V1.2.0 — marqueurs de danger: camps MULE hostiles du territoire actif, lecture seule de
+      // game.mapsData[mapKey].muleCamps (même source que ui/HUD.js#renderMuleCamps, jamais mutée
+      // ici). Losange rouge pulsant façon alerte radar — jamais cliquable depuis cette carte (le
+      // clic reste réservé aux nœuds de Relais/QG, cf. handleCanvasClick, comme avant ce changement).
+      for (const camp of (mapD.muleCamps || [])) {
+        if (camp.status !== 'hostile') continue;
+        const p = worldToScreen(camp.x, camp.y, transform);
+        const dangerPulse = 0.5 + Math.sin(now / 300 + camp.x + camp.y) * 0.35;
+        ctx.strokeStyle = `rgba(231, 76, 60, ${0.5 + dangerPulse * 0.4})`;
+        ctx.fillStyle = `rgba(231, 76, 60, ${0.25 + dangerPulse * 0.25})`;
+        ctx.shadowColor = 'rgba(231, 76, 60, 0.8)'; ctx.shadowBlur = 6 + dangerPulse * 6;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - 7); ctx.lineTo(p.x + 7, p.y + 6); ctx.lineTo(p.x - 7, p.y + 6);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(231, 76, 60, 0.95)';
+        ctx.fillText('⚠️', p.x, p.y + 4);
       }
 
       // QG — losange ambre, toujours au centre du réseau logique

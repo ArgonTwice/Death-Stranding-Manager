@@ -41,6 +41,14 @@
   --ds-neon-orange: #ff9f1c;
   --ds-neon-orange-glow: rgba(255, 159, 28, 0.45);
 
+  /* V1.2.0 — Polish Cyber-Bridges: 2 néons additifs manquants (succès/alerte). Réutilisent
+     --ds-neon-blue/--ds-neon-orange ci-dessus pour le réseau/logistique plutôt que d'en dupliquer
+     des équivalents — jamais de second jeu de variables pour la même teinte. */
+  --ds-neon-green: #2ecc71;
+  --ds-neon-green-glow: rgba(46, 204, 113, 0.5);
+  --ds-neon-red: #e74c3c;
+  --ds-neon-red-glow: rgba(231, 76, 60, 0.55);
+
   /* Safe area (V0.7.5 règle 5) — jamais de fallback à 0 seul: toujours max() avec un plancher */
   --ds-safe-bottom: env(safe-area-inset-bottom, 0px);
 }

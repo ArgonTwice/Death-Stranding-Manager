@@ -162,7 +162,13 @@ export function deserializeGame(s) {
         likes: p.likes || 0,
         grades: p.grades || { portage: 0, combat: 0, discretion: 0, service: 0, reseau: 0 },
         gearWear: p.gearWear || 0,
-        equipment: { harness: 0, climbing_anchor: 0, ...p.equipment },
+        // V1.2.0 fix — spread p.equipment D'ABORD (préserve l'ordre de clés existant pour un
+        // round-trip serialize/deserialize/serialize stable), les valeurs par défaut harness/
+        // climbing_anchor ne s'ajoutent qu'APRÈS pour les vieilles sauvegardes qui ne les ont pas
+        // encore (avant, l'ordre inverse réordonnait ces 2 clés en tête à chaque chargement — mêmes
+        // valeurs, mais JSON.stringify(serializeGame()) dérivait silencieusement d'un chargement à
+        // l'autre, cassant l'invariance canonical(serialize(deserialize(save))) === canonical(save)).
+        equipment: { ...(p.equipment || {}), harness: (p.equipment && p.equipment.harness) || 0, climbing_anchor: (p.equipment && p.equipment.climbing_anchor) || 0 },
         status: p.status === 'en route' ? 'idle' : p.status
       })).map(p => ensurePorterIdentity(p)); // V0.5.0: backfill déterministe pour porteurs pré-V0.5.0
       game.deliveries = [];

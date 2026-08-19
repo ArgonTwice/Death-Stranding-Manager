@@ -460,3 +460,66 @@ body.modal-open { overflow: hidden; overscroll-behavior: none; }
   border-color: var(--ds-border-strong);
   padding: var(--cb-space-4);
 }
+
+/* ============================================================
+   V1.2.0 — Polish visuel Cyber-Bridges 2.0: fallback glassmorphic, scrollbars néon, feedback FX.
+   ============================================================ */
+
+/* Fallback glassmorphic (règle: jamais de panneau illisible sur un navigateur sans backdrop-filter,
+   ex. anciens Firefox/Safari) — un fond plus opaque REMPLACE le blur manquant, jamais l'inverse: les
+   règles ci-dessus restent la version par défaut partout où le support existe. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel, .quest-drawer-panel, .ds-drawer, .ds-drawer-backdrop, .ds-modal-backdrop, .ds-modal-confirm,
+  .term-card, .porter-card, .item, .slot-card {
+    background: rgba(10, 9, 7, 0.96);
+  }
+}
+
+/* Scrollbars Cyber-Bridges 2.0 — additives: la scrollbar ambrée historique (style.css .log/.panel)
+   reste inchangée; ce thumb néon n'habille QUE les onglets Réseau ([data-main="reseau"], bleu) et
+   Logistique ([data-main="logistique"], orange — mêmes teintes que la navigation V1.1 LOT 2), via
+   attribut plutôt qu'une classe ajoutée en dur dans index.html (zéro changement HTML requis). */
+[data-main="reseau"]::-webkit-scrollbar, [data-main="logistique"]::-webkit-scrollbar { width: 6px; }
+[data-main="reseau"]::-webkit-scrollbar-track, [data-main="logistique"]::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+[data-main="reseau"]::-webkit-scrollbar-thumb { background: var(--ds-neon-blue); border-radius: var(--ds-radius-pill); }
+[data-main="logistique"]::-webkit-scrollbar-thumb { background: var(--ds-neon-orange); border-radius: var(--ds-radius-pill); }
+[data-main="reseau"], [data-main="logistique"] { scrollbar-width: thin; }
+[data-main="reseau"] { scrollbar-color: var(--ds-neon-blue) rgba(0, 0, 0, 0.3); }
+[data-main="logistique"] { scrollbar-color: var(--ds-neon-orange) rgba(0, 0, 0, 0.3); }
+
+/* Feedback FX (ui/FeedbackFX.js) — 4 classes ajoutées/retirées temporairement sur des bandeaux DOM
+   déjà existants (#dashboardSynthesisStrip, #weatherForecastStrip), jamais de nouvel élément créé.
+   will-change limité à ces 4 sélecteurs (jamais global: un will-change permanent sur tout le DOM
+   dégraderait les perfs au lieu de les améliorer) et retiré dès l'animation terminée par le module JS.
+   body.cb-reduced-motion coupe les 4, même garde-fou que le reste du Design System (OptionsPanel.js). */
+@keyframes ds-success-glow {
+  0% { box-shadow: 0 0 0 var(--ds-neon-green-glow); }
+  50% { box-shadow: 0 0 16px 4px var(--ds-neon-green-glow); }
+  100% { box-shadow: 0 0 0 var(--ds-neon-green-glow); }
+}
+.success-glow { animation: ds-success-glow 900ms ease-out; will-change: box-shadow; }
+
+@keyframes ds-star-animate {
+  0% { transform: scale(1); text-shadow: 0 0 0 var(--ds-neon-blue-glow); }
+  50% { transform: scale(1.08); text-shadow: 0 0 12px var(--ds-neon-blue-glow); }
+  100% { transform: scale(1); text-shadow: 0 0 0 var(--ds-neon-blue-glow); }
+}
+.star-animate { animation: ds-star-animate 700ms ease-in-out; will-change: transform; }
+
+@keyframes ds-timefall-alert {
+  0%, 100% { box-shadow: 0 0 0 var(--ds-neon-orange-glow); }
+  50% { box-shadow: 0 0 14px 3px var(--ds-neon-red-glow); }
+}
+.timefall-alert { animation: ds-timefall-alert 1200ms ease-in-out infinite; will-change: box-shadow; }
+
+@keyframes ds-neon-pulse {
+  0% { box-shadow: 0 0 0 var(--ds-neon-blue-glow); }
+  50% { box-shadow: 0 0 18px 5px var(--ds-neon-blue-glow); }
+  100% { box-shadow: 0 0 0 var(--ds-neon-blue-glow); }
+}
+.neon-pulse { animation: ds-neon-pulse 1000ms ease-out; will-change: box-shadow; }
+
+body.cb-reduced-motion .success-glow, body.cb-reduced-motion .star-animate,
+body.cb-reduced-motion .timefall-alert, body.cb-reduced-motion .neon-pulse {
+  animation: none !important;
+}
