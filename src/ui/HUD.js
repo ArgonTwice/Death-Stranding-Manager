@@ -9,7 +9,7 @@ import { RNG } from '../core/RNG.js';
 import { BALANCE, DAYS_PER_MONTH, GAME_LENGTH_MONTHS, MAP_HEIGHT, MAP_WIDTH, RANKS, STRUCTURE_MIN_RANK } from '../data/Balance.js';
 import { CAMP_TRAIT_LABELS, COUNTRIES, GRADES, JOURNAL_MILESTONES, LEAGUE_TIERS, PCC_TYPES, PORTER_BACKGROUNDS, PORTER_PHOBIAS, PREPPER_ARCHETYPES, RECIPES, RELICS, ROUTE_TYPES, SKILLS, SPONSORS, STRUCTURES, TITLES, TRAITS, cellKey, countryInfo, gradeLevel } from '../data/Constants.js';
 import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, sendToIncinerator } from '../engine/CombatEngine.js';
-import { acceptVisitorOffer, craft, dismissVisitor, launchQuestFromUI, sendDelivery } from '../engine/DeliveryEngine.js';
+import { acceptVisitorOffer, craft, dismissVisitor, estimateNetMargin, launchQuestFromUI, sendDelivery } from '../engine/DeliveryEngine.js';
 import { dominantStructure, setActiveBranch, switchMap } from '../engine/MapEngine.js';
 import { computeScore } from '../persistence/SaveManager.js';
 import { migratePrepperKnot } from '../persistence/SaveMigrations.js';
@@ -18,7 +18,7 @@ import { buildStructure, computeLogisticsDashboard, infraCost, investInfrastruct
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { beachJump, equipSlots, equippedCount, forceRest, hire, porterTitle, repairGear, retirePorter } from '../systems/PorterSystem.js';
 import { assignPrepperContract, connectKnot, maxPrepperStars, negotiatePrepperContract, prepperStarsLabel, revealedMainKnots, silhouetteMainKnots } from '../systems/PrepperSystem.js';
-import { EQUIP_MIN_STARS, ROBOT_BUDDY_MIN_STARS, VEHICLE_MIN_STARS } from '../data/UnlockTree.js';
+import { EQUIP_MIN_STARS, RECIPE_MIN_STARS, ROBOT_BUDDY_MIN_STARS, VEHICLE_MIN_STARS } from '../data/UnlockTree.js';
 import { isRobotBuddyUnlocked, robotBuddyCost, robotBuddyCount } from '../systems/RobotBuddySystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
@@ -195,12 +195,19 @@ export function renderCommandCenter() {
       const d = game.mapsData[game.currentMap];
 
       // Carte 1 — Action Prioritaire: la quête urgente la plus proche de l'expiration sur CE
-      // territoire, sinon le nombre de porteurs disponibles pour une commande, sinon "rien à faire".
+      // territoire, sinon la livraison en cours la plus proche d'arriver (avec sa Marge Nette
+      // estimée — engine/DeliveryEngine.js#estimateNetMargin), sinon le nombre de porteurs
+      // disponibles, sinon "rien à faire".
       const urgent = (game.urgentQuests || []).filter(q => q.mapKey === game.currentMap).sort((a, b) => a.expiresDay - b.expiresDay);
+      const inProgress = (game.deliveries || []).filter(x => x.map === game.currentMap).sort((a, b) => a.timeRemaining - b.timeRemaining);
       let actionBody;
       if (urgent.length) {
         const q = urgent[0];
         actionBody = `${q.icon} ${q.flavor} — <b>+$${q.reward}</b> · expire J${q.expiresDay}`;
+      } else if (inProgress.length) {
+        const nextD = inProgress[0];
+        const margin = estimateNetMargin(nextD);
+        actionBody = `🚚 Prochaine arrivée dans ${nextD.timeRemaining}j — Marge nette estimée: <b style="color:${margin.net >= 0 ? 'var(--chiral)' : 'var(--blood)'};">${margin.net >= 0 ? '+' : ''}$${margin.net}</b>`;
       } else {
         const idleCount = game.porters.filter(p => p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100).length;
         actionBody = idleCount > 0 ? `🚚 ${idleCount} porteur(s) disponible(s) — direction Livraisons` : 'Réseau en ordre — aucune action requise';
@@ -555,10 +562,17 @@ export function renderCauldron() {
         setInnerHtmlIfChanged(panelEl, '<div style="font-size:9px; color:var(--text-dim);">🔒 Construisez le Chaudron chiral</div>');
         return;
       }
+      // V1.18.0 — "blueprints" débloqués par étoiles Prepper (data/UnlockTree.js#RECIPE_MIN_STARS):
+      // verrouillé affiché distinctement (🔒 N⭐ requis) plutôt que silencieusement désactivé comme un
+      // simple manque de matériaux — le joueur doit comprendre POURQUOI, même règle que buyEquip()
+      // côté Boutique (ui/HUD.js#shopButtonsHtml, cf. plus bas dans ce fichier).
+      const stars = maxPrepperStars(game.currentMap);
       setInnerHtmlIfChanged(panelEl, RECIPES.map(r => {
-        const affordable = Object.keys(r.cost).every(m => (game.materials[m] || 0) >= r.cost[m]);
+        const minStars = RECIPE_MIN_STARS[r.id] || 0;
+        const starLocked = minStars > stars;
+        const affordable = !starLocked && Object.keys(r.cost).every(m => (game.materials[m] || 0) >= r.cost[m]);
         const costStr = Object.entries(r.cost).map(([m, v]) => `${v}${m === 'chiral_crystal' ? '🔮' : '🔧'}`).join(' + ');
-        return `<button ${affordable ? '' : 'disabled'} onclick="craft('${r.id}')" style="font-size:9px;">${r.name} (${costStr}) — ${r.desc}</button>`;
+        return `<button ${affordable ? '' : 'disabled'} onclick="craft('${r.id}')" style="font-size:9px;">${starLocked ? `🔒 ${minStars}⭐ requis — ` : ''}${r.name} (${costStr}) — ${r.desc}</button>`;
       }).join(''));
     }
 
@@ -617,8 +631,14 @@ export function updateUnlocks() {
         }
       }
       if (knotsEl) {
-        const show = currentRankIndex() >= 2; // Porteur Certifié
-        knotsEl.style.display = show ? 'block' : 'none';
+        // V1.18.0 — Preppers (connectKnot()) visibles DÈS LE DÉBUT (rang 2 -> 0): depuis la
+        // suppression du bouton manuel "Étendre le réseau" (V1.17.0), connectKnot() est devenu le
+        // SEUL levier interactif de croissance du réseau (il ajoute lui-même les cases du chemin à
+        // game.routes) — le garder caché jusqu'au rang Porteur Certifié (200 livraisons) aurait rendu
+        // l'étape "network" du tutoriel (data/TutorialScript.js, routes.size>=2) et toute progression
+        // réseau paisible avant ce rang tout simplement IMPOSSIBLES. Trouvé empiriquement en testant le
+        // Dashboard après la mission précédente.
+        knotsEl.style.display = 'block';
       }
       // V1.1 LOT 2 — sideQuests a migré de l'onglet Camp (où il partageait unlock-knots avec
       // mainKnots) vers l'onglet Livraisons: même condition de déblocage, second élément séparé

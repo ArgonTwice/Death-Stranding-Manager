@@ -6,6 +6,7 @@ import { currentRankIndex, game, logEvent, runtime } from '../core/GameState.js'
 import { RNG } from '../core/RNG.js';
 import { BALANCE, DAYS_PER_MONTH, DIFFICULTIES, HQ, MAP_HEIGHT, MAP_WIDTH, RANKS, VEHICLE_MAINTENANCE_COST } from '../data/Balance.js';
 import { CARGO_TYPES, CRISIS_FLAVORS, EVENTS, ORDER_ACTIONS, ORDER_CONTEXTS, ORDER_SUBJECTS, QUEST_OBJECTS, QUEST_REASONS, QUEST_SUBJECTS, QUEST_VERBS, RECIPES, ROUTE_TYPES, SKILLS, SQUAD_SYNERGIES, TITLES, TRAITS, VEHICLE_SPEED, cellKey, gradeLevel, pickCargoType } from '../data/Constants.js';
+import { RECIPE_MIN_STARS } from '../data/UnlockTree.js';
 import { checkMuleCamps, generateCatcherEncounter } from './CombatEngine.js';
 import { dominantStructure, isBTZone, isNearHostileMuleCamp, isOnRoute, loadMapData, networkExpansionCandidates } from './MapEngine.js';
 import { checkTerrainHazards, tickPioneerMissions } from '../systems/ReconnaissanceSystem.js';
@@ -290,6 +291,10 @@ export function generateCrisisContract() {
 export function craft(recipeId) {
       if (!game.structures.cauldron) { logEvent('❌ Construisez le Chaudron chiral'); return; }
       const r = RECIPES.find(x => x.id === recipeId);
+      // V1.18.0 — "blueprints" débloqués par étoiles Prepper (data/UnlockTree.js#RECIPE_MIN_STARS),
+      // ADDITIF aux gates matériaux/porteur ci-dessous — même principe que buyEquip()/buyVehicle()
+      // (EconomySystem.js) pour les articles de la Boutique.
+      if ((RECIPE_MIN_STARS[recipeId] || 0) > maxPrepperStars(game.currentMap)) { logEvent(`❌ Confiance Prepper insuffisante (${RECIPE_MIN_STARS[recipeId]}⭐ requis) — raccordez et livrez un Prepper d'abord`, 'warn'); return; }
       for (const mat in r.cost) {
         if ((game.materials[mat] || 0) < r.cost[mat]) { logEvent('❌ Matériaux insuffisants'); return; }
       }

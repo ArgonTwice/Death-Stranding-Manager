@@ -25,10 +25,14 @@ export const GRID_SIZE = 60;
 
 export const HQ = { x: 5, y: 5 };
 
+// V1.18.0 — départ "réaliste": startMoney normal 10000 -> 3000 (brief, mappé sur DIFFICULTIES.normal —
+// BALANCE.economy.startingMoney n'existe pas, le vrai départ argent vit ici depuis toujours). Easy/hard
+// réduits dans la MÊME proportion (x0.3) pour préserver l'écart relatif entre les 3 paliers plutôt que
+// de ne recalibrer QUE "normal" et aplatir la courbe de difficulté.
 export const DIFFICULTIES = {
-      easy:   { label: '🟢 Facile', costMult: 0.85, riskMult: 0.85, startMoney: 13000 },
-      normal: { label: '🟡 Normal', costMult: 1, riskMult: 1, startMoney: 10000 },
-      hard:   { label: '🔴 Difficile', costMult: 1.15, riskMult: 1.15, startMoney: 8000 }
+      easy:   { label: '🟢 Facile', costMult: 0.85, riskMult: 0.85, startMoney: 3900 },
+      normal: { label: '🟡 Normal', costMult: 1, riskMult: 1, startMoney: 3000 },
+      hard:   { label: '🔴 Difficile', costMult: 1.15, riskMult: 1.15, startMoney: 2400 }
     };
 
 // V1.14.0 — rythme par défaut ralenti (1000ms -> 1300ms/jour, +30%): laisse davantage de temps pour
@@ -327,7 +331,7 @@ export const BALANCE = {
     // 0.12 reste un plancher réel (+50% vs la valeur d'origine 0.08) sans cumuler deux nerfs coup sur coup.
     riskCeil: 1,
     serviceGradeRewardMult: 0.05,
-    rewardDistanceMult: 55, // V1.16.0 (révisé) — 100 -> 70 -> 55: seconde passe de recalibrage, cf. tests/balancing-simulation.test.mjs (vérifié: aucun archétype ne s'approche de 30M$ au mois 20)
+    rewardDistanceMult: 50, // V1.18.0 — 100 -> 70 -> 55 -> 50: troisième et (a priori) dernière passe, cf. tests/balancing-simulation.test.mjs
     reputationRewardDivisor: 100,
     vehicleRewardMult: 1.15, // V1.16.0 — 1.5 -> 1.15: recalibrage économique (véhicule reste utile via vitesse, moins via récompense brute)
     infraRewardMultPerInvestment: 0.002,

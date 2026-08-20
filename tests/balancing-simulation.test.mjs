@@ -80,7 +80,7 @@ const ARCHETYPES = {
   // (engine/DeliveryEngine.js#advanceDay), comme un joueur qui ouvre l'app une fois par semaine.
   casual: {
     setup() {
-      game.money = 10000;
+      game.money = 3000; // V1.18.0 — départ réaliste (DIFFICULTIES.normal.startMoney)
       hireRaw('scout'); hireRaw('hauler');
     },
     dailyAction(day) {
@@ -101,7 +101,7 @@ const ARCHETYPES = {
   // rentables, accepte les quêtes urgentes disponibles.
   optimiseur: {
     setup() {
-      game.money = 10000;
+      game.money = 3000; // V1.18.0 — départ réaliste (DIFFICULTIES.normal.startMoney)
       ['scout', 'hauler', 'driver', 'dooms'].forEach(s => hireRaw(s));
       toggleAutomation('autoRest'); setAutomationThreshold('autoRestThreshold', 70);
       toggleAutomation('autoRepair'); setAutomationThreshold('autoRepairThreshold', 60);
@@ -135,7 +135,7 @@ const ARCHETYPES = {
   // l'automatisation: mesure ce que RealWalkSystem.js apporte seul.
   realwalk: {
     setup() {
-      game.money = 10000;
+      game.money = 3000; // V1.18.0 — départ réaliste (DIFFICULTIES.normal.startMoney)
       hireRaw('scout'); hireRaw('hauler');
     },
     dailyAction(day) {
@@ -149,7 +149,7 @@ const ARCHETYPES = {
   // s'en charge (porteur non-idle au moment où advanceDay() tourne).
   dispatch: {
     setup() {
-      game.money = 10000;
+      game.money = 3000; // V1.18.0 — départ réaliste (DIFFICULTIES.normal.startMoney)
       ['scout', 'hauler', 'driver'].forEach(s => hireRaw(s));
       for (let i = 0; i < 4; i++) game.mapsData.mexico.routes.add(`${i},${i}`); // quelques cases réseau connues comme destinations "voulues"
     },

@@ -32,3 +32,18 @@ export const VEHICLE_MIN_STARS = {
 // étoiles, même principe que ci-dessus.
 export const ROBOT_BUDDY_MIN_STARS = 3;
 export const ROBOT_BUDDY_MIN_RANK_INDEX = 2; // "Porteur Certifié" (RANKS[2], data/Balance.js)
+
+// V1.18.0 — "blueprints" du Chaudron chiral (data/Constants.js#RECIPES, engine/DeliveryEngine.js#
+// craft()) débloqués par palier d'étoiles Prepper (1★-5★), même principe additif que les tables
+// ci-dessus. Graduées par puissance/permanence de l'effet: soin/utilitaire ponctuel en premier,
+// argent instantané et bonus PERMANENT (legendary_exo, jamais retiré du porteur) en dernier — un
+// type absent de cette table n'a aucun seuil (aucune recette n'est actuellement dans ce cas, mais le
+// pattern reste cohérent avec EQUIP_MIN_STARS ci-dessus si une future recette est ajoutée sans gate).
+export const RECIPE_MIN_STARS = {
+      stamina_elixir: 1,
+      chiral_battery: 1,
+      rep_elixir: 2,
+      mule_decoy: 2,
+      scrap_cash: 3,
+      legendary_exo: 4
+    };
