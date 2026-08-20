@@ -10,7 +10,7 @@ import { BALANCE, DAYS_PER_MONTH, GAME_LENGTH_MONTHS, MAP_HEIGHT, MAP_WIDTH, RAN
 import { CAMP_TRAIT_LABELS, COUNTRIES, GRADES, JOURNAL_MILESTONES, LEAGUE_TIERS, PCC_TYPES, PORTER_BACKGROUNDS, PORTER_PHOBIAS, PREPPER_ARCHETYPES, RECIPES, RELICS, ROUTE_TYPES, SKILLS, SPONSORS, STRUCTURES, TITLES, TRAITS, cellKey, countryInfo, gradeLevel } from '../data/Constants.js';
 import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, sendToIncinerator } from '../engine/CombatEngine.js';
 import { acceptVisitorOffer, craft, dismissVisitor, launchQuestFromUI, sendDelivery } from '../engine/DeliveryEngine.js';
-import { dominantStructure, nextLockedCountry, setActiveBranch, switchMap } from '../engine/MapEngine.js';
+import { dominantStructure, setActiveBranch, switchMap } from '../engine/MapEngine.js';
 import { computeScore } from '../persistence/SaveManager.js';
 import { migratePrepperKnot } from '../persistence/SaveMigrations.js';
 import { setAutomationThreshold, toggleAutomation } from '../systems/AutomationManager.js';
@@ -578,28 +578,17 @@ export function updateUnlocks() {
       }
     }
 
-export function lockedHintLabel() {
-      // Indices progressifs liés au rang Bridges (le nom/drapeau ne sont révélés qu'à l'unlock réel)
-      if (currentRankIndex() >= 3) return '🔒 🌐 Signal chiral localisé — Plate Gate prête';
-      if (currentRankIndex() >= 2) return '🔒 Rumeurs d\'un territoire chiral...';
-      return '🔒 Territoire inconnu';
-    }
-
 export function renderMapToggle() {
       const el = document.getElementById('mapToggle');
       if (!el) return;
-      const next = nextLockedCountry();
-      const countryButtons = COUNTRIES.map(c => {
-        const unlocked = !!game.mapsData[c.key];
+      // Secret total de progression (mission "Masquage des territoires"): aucun indice, aucun bouton
+      // désactivé pour les territoires non débloqués — ils ne sont ni générés ni injectés dans le DOM
+      // tant que game.mapsData[key] n'existe pas (créé par buildExpansion() une fois l'arc précédent
+      // entièrement raccordé). Avant V1.11.0 le prochain territoire affichait un indice progressif
+      // (lockedHintLabel) et les autres un bouton "Territoire scellé" grisé — supprimé intentionnellement.
+      const countryButtons = COUNTRIES.filter(c => !!game.mapsData[c.key]).map(c => {
         const active = game.currentMap === c.key;
-        if (unlocked) {
-          return `<button onclick="switchMap('${c.key}')" style="${active ? 'border-left-color: var(--amber); color: #fff;' : ''}">${c.flag} ${c.name}</button>`;
-        }
-        // Verrouillé: seul le PROCHAIN territoire à débloquer donne des indices progressifs, les autres restent muets
-        if (next && c.key === next.key) {
-          return `<button disabled title="Débloqué via Plate Gate">${lockedHintLabel()}</button>`;
-        }
-        return `<button disabled style="opacity:0.5;">🔒 Territoire scellé</button>`;
+        return `<button onclick="switchMap('${c.key}')" style="${active ? 'border-left-color: var(--amber); color: #fff;' : ''}">${c.flag} ${c.name}</button>`;
       }).join('');
 
       const d = game.mapsData[game.currentMap];

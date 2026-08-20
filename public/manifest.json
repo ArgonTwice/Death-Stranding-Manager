@@ -1,0 +1,15 @@
+{
+  "name": "Death Stranding Manager",
+  "short_name": "DS Manager",
+  "description": "Simulation logistique façon Kairosoft dans l'univers Death Stranding — Bridges Cyber-Terminal.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0a0a0a",
+  "background_color": "#0a0a0a",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

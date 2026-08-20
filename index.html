@@ -2,8 +2,14 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
   <title>Death Stranding Manager</title>
+  <!-- V1.11.0 — PWA fullscreen (mission "Masquage Territoires & PWA Z Fold"): manifest.json couvre
+       display standalone + orientation any pour le pliage/dépliage du Z Fold, cf. public/manifest.json. -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="stylesheet" href="/css/style.css">
   <!-- V0.7.5 — Design System "Bridges Cyber-Terminal": tokens additifs + overrides de contrôles
        natifs + layout header/safe-area. Chargés après style.css pour gagner la cascade. -->
