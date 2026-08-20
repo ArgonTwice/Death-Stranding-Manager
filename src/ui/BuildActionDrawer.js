@@ -14,9 +14,26 @@ import { statusBadgeHtml } from './components/StatusBadge.js';
 
 function applyCloseBuildActionDrawer() {
       collapseDrawer('buildActionDrawer');
+      // V1.25.4 — même correctif que ui/PorterDrawer.js (bug de même famille, trouvé en auditant
+      // systématiquement tout onclick="open*/toggle*" du projet après la découverte du cas Porteurs/
+      // Fiche): le seul appelant (RaidTrackingDrawer.js, bouton "🏗️ Construire") reste ouvert
+      // (masqué, jamais fermé) le temps que ce tiroir soit affiché — le réafficher à la fermeture.
+      if (isPanelOpen('raidTrackingDrawer')) openDrawer('raidTrackingDrawer', 'peek');
     }
 
 export function openBuildActionDrawer() {
+      // V1.25.4 — bug de même famille que ui/PorterDrawer.js#openPorterDrawer (trouvé en jouant une
+      // vraie partie, puis confirmé par audit systématique de tous les onclick="open*/toggle*" du
+      // projet): le SEUL appelant (RaidTrackingDrawer.js, bouton "🏗️ Construire") vit à l'intérieur
+      // du tiroir Raid Tactique déjà ouvert (#raidTrackingDrawer, state-peek) — sans ce
+      // collapseDrawer(), les deux tiroirs restaient simultanément visibles au même état "peek", et
+      // #raidTrackingDrawer (plus loin dans le DOM, index.html) peignait PAR-DESSUS
+      // #buildActionDrawer, rendant ce dernier invisible/inatteignable. collapseDrawer() est une pure
+      // opération DOM synchrone (DrawerManager.js), jamais de risque de course avec le pushPanel()
+      // synchrone juste en dessous — #raidTrackingDrawer reste "ouvert" dans la pile de navigation
+      // (jamais popState/closePanel ici) pour qu'applyCloseBuildActionDrawer() ci-dessus le réaffiche
+      // correctement à la fermeture de ce tiroir.
+      collapseDrawer('raidTrackingDrawer');
       pushPanel('buildActionDrawer', applyCloseBuildActionDrawer);
       openDrawer('buildActionDrawer', 'peek');
       renderBuildActionDrawer();

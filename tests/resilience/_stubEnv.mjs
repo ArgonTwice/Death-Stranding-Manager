@@ -21,7 +21,11 @@ export function installStubEnv({ withHistory = false } = {}) {
     const listeners = new Map(); // eventType -> Set<fn>, pour un removeEventListener réellement effectif
     return {
       id, value: '', textContent: '', innerHTML: '',
-      style: new Proxy({}, { get: () => '', set: () => true }),
+      // V1.25.4 — setProperty/removeProperty/getPropertyValue ajoutés en no-op: un vrai
+      // CSSStyleDeclaration expose ces méthodes en plus des propriétés simples (get renvoyait '' pour
+      // tout, y compris ces noms de méthode, ce qui faisait planter tout appel style.removeProperty(...)
+      // en "not a function" — jamais déclenché avant qu'un test exerce ui/DrawerManager.js#setDrawerState).
+      style: new Proxy({ setProperty() {}, removeProperty() {}, getPropertyValue: () => '' }, { get: (t, p) => (p in t ? t[p] : ''), set: () => true }),
       dataset: {}, children: [], classList: makeClassList(), width: 800, height: 400,
       addEventListener(type, fn) {
         if (!listeners.has(type)) listeners.set(type, new Set());

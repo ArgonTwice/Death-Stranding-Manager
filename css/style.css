@@ -452,6 +452,18 @@
     }
     .ds-drawer.dragging { transition: none; }
     .ds-drawer.state-collapsed { --drawer-y: 100%; pointer-events: none; }
+
+    /* V1.25.4 — bug réel trouvé en jouant une vraie partie (reproduit par clic réel): Télémétrie/
+       Terminal/Hall of Fame n'ont AUCUN bouton d'ouverture sur le Dashboard (jamais dans
+       .map-action-bar) — leur seul point d'entrée est un bouton À L'INTÉRIEUR d'un onglet modal
+       (.left, z-index 200: Options>Gestion pour les 2 premiers, Logistique>Archives pour le 3e).
+       Avec le z-index Drawers standard (100 < 200 Modales), ils s'ouvraient entièrement invisibles,
+       cachés derrière l'écran encore affiché — taper sur "Télémétrie"/"Terminal"/"Voir toutes les
+       légendes" ne changeait RIEN à l'écran, sans le moindre message d'erreur. Relevés au-dessus des
+       modales, seulement pour ces 3 tiroirs qui n'ont jamais d'autre contexte d'ouverture (contraste
+       avec Quêtes/Convoi/Porteurs/Réseau/Porteur IRL/Raid Tactique, tous ouverts depuis le Dashboard
+       SANS modale active, où le z-index Drawers standard reste correct et inchangé). */
+    #telemetryDrawer, #terminalDrawer, #hallOfFameDrawer { z-index: 210; }
     .ds-drawer.state-peek { --drawer-y: 58vh; pointer-events: auto; }
     .ds-drawer.state-full { --drawer-y: 0%; pointer-events: auto; }
     .ds-drawer-handle {

@@ -6,7 +6,7 @@ import { game } from '../core/GameState.js';
 import { CARGO_TYPES, JOURNAL_MILESTONES, PORTER_BACKGROUNDS, PORTER_JOYS, PORTER_PHOBIAS, ROUTE_TYPES, SKILLS } from '../data/Constants.js';
 import { porterQuickSummary } from '../systems/PorterStorySystem.js';
 import { dispatchDeliveryManually } from '../engine/DeliveryEngine.js';
-import { closePanel, pushPanel } from '../core/NavigationManager.js';
+import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
 import { collapseDrawer, openDrawer } from './DrawerManager.js';
 import { giftEquipmentToPorter } from '../systems/PorterAiEngine.js';
 import { BALANCE } from '../data/Balance.js';
@@ -18,11 +18,31 @@ let activeTab = 'resume';
 function applyClosePorterDrawer() {
       openPorterId = null;
       collapseDrawer('porterDrawer');
+      // V1.25.4 — la fiche est TOUJOURS ouverte depuis le tiroir Porteurs (seul appelant:
+      // ui/HUD.js#porter-actions, bouton "🪪 Fiche du porteur"), lui-même laissé ouvert (mais
+      // masqué) dans la pile de navigation — cf. openPorterDrawer() ci-dessous. Sans ce réaffichage,
+      // fermer la fiche (✕ ou bouton Retour physique) ramenait sur le Canvas au lieu de revenir au
+      // tiroir Porteurs pourtant toujours "ouvert" côté pile (isPanelOpen('portersDrawer') reste vrai
+      // tant qu'on ne l'a pas explicitement fermé) — retour incohérent en 2 temps au lieu d'1.
+      if (isPanelOpen('portersDrawer')) openDrawer('portersDrawer', 'full');
     }
 
 export function openPorterDrawer(porterId) {
       openPorterId = porterId;
       activeTab = 'resume';
+      // V1.25.4 — bug réel trouvé en jouant une vraie partie (reproduit via clic réel, pas seulement
+      // en code): le SEUL appelant de cette fonction (ui/HUD.js, bouton "🪪 Fiche du porteur") vit à
+      // l'intérieur du tiroir Porteurs déjà ouvert (#portersDrawer, state-full) — sans ce
+      // collapseDrawer(), les DEUX tiroirs plein écran se retrouvaient simultanément "state-full":
+      // #portersDrawer (plus loin dans le DOM, index.html) peignait PAR-DESSUS #porterDrawer, rendant
+      // la fiche du porteur totalement invisible/inatteignable derrière la liste — le joueur tapait
+      // "Fiche du porteur" et ne voyait STRICTEMENT AUCUN changement à l'écran. collapseDrawer() est
+      // une pure opération DOM synchrone (DrawerManager.js) — contrairement à closePanel()/
+      // history.back() (asynchrone via popstate) — donc jamais de risque de course avec le
+      // pushPanel() synchrone juste en dessous. #portersDrawer reste "ouvert" dans la pile de
+      // navigation (jamais popState/closePanel ici) pour que applyClosePorterDrawer() ci-dessus
+      // puisse le réafficher correctement à la fermeture de la fiche.
+      collapseDrawer('portersDrawer');
       pushPanel('porterDrawer', applyClosePorterDrawer);
       openDrawer('porterDrawer', 'full'); // fiche détaillée: plein par défaut, plus lisible
       renderPorterDrawer();
