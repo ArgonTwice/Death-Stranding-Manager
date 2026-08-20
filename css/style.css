@@ -605,7 +605,14 @@
          par défaut, réduite à 36px en mode replié .collapsed uniquement — cf. css/theme.css): sans
          cette exclusion, ce !important générique repassait la bannière repliée à 48px et annulait tout
          effet visuel du bouton [▼/▲] sur la hauteur réelle de la bannière. */
-      button:not(.modal-close):not(.minimap-expand-btn):not(.term-stepper-btn):not(.tutorial-skip-btn):not(.tutorial-toggle-btn) { min-height: 48px !important; padding: 10px 12px !important; font-size: 13px !important; margin: 3px 0 !important; }
+      /* V1.11.0 — .map-action-btn/.mtab-btn ajoutés à l'exclusion: ce sont déjà des cibles tactiles
+         dimensionnées explicitement (48px de cercle / min-height dédié via theme.css), avec une
+         typographie volontairement compacte (icône seule pour l'un, 8.5px/padding 8px 1px pour l'autre
+         afin de faire tenir 5 onglets sur un écran étroit type Z Fold replié). Sans cette exclusion, ce
+         padding/font-size générique écrasait cette typo calibrée et pouvait faire déborder/rogner le
+         libellé des onglets sur les très petites largeurs (même défaut que .minimap-expand-btn, déjà
+         exclu ci-dessous pour la même raison — "ne pas déformer leur cercle"). */
+      button:not(.modal-close):not(.minimap-expand-btn):not(.term-stepper-btn):not(.tutorial-skip-btn):not(.tutorial-toggle-btn):not(.map-action-btn):not(.mtab-btn) { min-height: 48px !important; padding: 10px 12px !important; font-size: 13px !important; margin: 3px 0 !important; }
       select, input[type="range"] { min-height: 38px !important; font-size: 13px !important; }
       .skill-badge { font-size: 11px !important; padding: 3px 6px !important; }
       .stat-line { font-size: 12px !important; }
