@@ -470,8 +470,15 @@ export const BALANCE = {
     reputationSpawnChanceBase: 0.05, // chance quotidienne indépendante de la météo
     reputationSpawnThreshold: 60, // au-delà de cette réputation, la chance de base augmente
     reputationSpawnBonusChance: 0.06,
-    expiryDaysBase: 4,
-    expiryDaysRandRange: 4,
+    // V1.25.2 — fenêtre d'expiration réévaluée en TEMPS RÉEL, pas seulement "en jours de jeu": à
+    // DAY_MS=1300ms (data/Balance.js), l'ancienne fenêtre 4-7 jours ne laissait que 5,2 à 9,1 SECONDES
+    // réelles au joueur pour remarquer une quête urgente, ouvrir le tiroir, choisir un porteur/itinéraire
+    // et cliquer Accepter — quasi impossible même en la regardant activement (la pause auto sur carte
+    // active, ui/HUD.js, se lève dès le tout premier clic, souvent celui qui ouvre justement le tiroir).
+    // Portée à 14-21 jours (~18-27s réelles à vitesse x1), un délai qui reste "urgent" sans être
+    // structurellement intenable.
+    expiryDaysBase: 14,
+    expiryDaysRandRange: 8,
     rewardBase: 400,
     rewardRandRange: 500,
     rewardReputationDivisor: 150,

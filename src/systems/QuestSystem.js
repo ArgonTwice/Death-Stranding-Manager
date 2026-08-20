@@ -5,7 +5,7 @@ import { eventBus } from '../core/EventBus.js';
 import { game, logEvent } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
 import { BALANCE, DAYS_PER_MONTH } from '../data/Balance.js';
-import { QUEST_ARCHETYPE_TEMPLATES } from '../data/Constants.js';
+import { COUNTRIES, QUEST_ARCHETYPE_TEMPLATES } from '../data/Constants.js';
 import { createDelivery } from '../engine/DeliveryEngine.js';
 
 function absoluteDay() { return game.month * DAYS_PER_MONTH + game.dayInMonth; }
@@ -44,7 +44,15 @@ export function generateUrgentQuest(mapKey, trigger) {
         negotiated: false, extraTimeMult: 1, riskCut: 0
       };
       game.urgentQuests.push(quest);
-      if (mapKey === game.currentMap) logEvent(`🎯 ${tmpl.icon} ${quest.flavor} — quête urgente (${knot.name})`, 'good');
+      // V1.25.2 — journalisé quel que soit le territoire (avant cette mission: gardé UNIQUEMENT si
+      // mapKey===game.currentMap, ce qui rendait une quête générée sur un territoire non consulté
+      // totalement invisible — ni log, ni badge — avant d'expirer silencieusement quelques secondes
+      // réelles plus tard, cf. clearExpiredUrgentQuests(). Le nom du territoire est ajouté seulement
+      // hors carte active, pour ne jamais alourdir le message le plus courant (quête sur la carte déjà
+      // affichée, où le territoire est implicite).
+      const country = COUNTRIES.find(c => c.key === mapKey);
+      const whereSuffix = mapKey === game.currentMap ? '' : ` — ${country ? `${country.flag} ${country.name}` : mapKey}`;
+      logEvent(`🎯 ${tmpl.icon} ${quest.flavor} — quête urgente (${knot.name})${whereSuffix}`, 'good');
       eventBus.emit('quest:urgent', { quest });
       return quest;
     }

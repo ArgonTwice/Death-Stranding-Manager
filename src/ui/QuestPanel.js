@@ -85,20 +85,30 @@ export function renderQuestPanel() {
       const el = document.getElementById('questDrawer');
       if (!el) return;
 
-      const urgent = (game.urgentQuests || []).filter(q => q.mapKey === game.currentMap);
+      const allUrgent = game.urgentQuests || [];
+      const urgent = allUrgent.filter(q => q.mapKey === game.currentMap);
       const inProgress = game.deliveries.filter(d => d.quest && d.quest.urgentQuestId);
       const history = game.urgentQuestHistory || [];
 
+      // V1.25.2 — badge compté sur TOUS les territoires (avant: filtré comme la liste ci-dessous, donc
+      // une quête urgente générée hors carte active n'allumait jamais le badge — combiné à l'ancienne
+      // fenêtre d'expiration très courte (cf. data/Balance.js#quest.expiryDaysBase), elle disparaissait
+      // sans que rien ne l'ait jamais signalée. Le badge sert d'alerte globale; la liste ci-dessous
+      // reste volontairement filtrée par territoire (onglet Urgences = "ici", pas un fourre-tout).
       const badgeEl = document.getElementById('questDrawerBadge');
-      if (badgeEl) badgeEl.textContent = urgent.length > 0 ? String(urgent.length) : '';
-      if (badgeEl) badgeEl.style.display = urgent.length > 0 ? 'flex' : 'none';
+      if (badgeEl) badgeEl.textContent = allUrgent.length > 0 ? String(allUrgent.length) : '';
+      if (badgeEl) badgeEl.style.display = allUrgent.length > 0 ? 'flex' : 'none';
 
       document.querySelectorAll('.qp-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.qpTab === activeTab));
 
       const bodyEl = document.getElementById('questDrawerBody');
       if (!bodyEl) return;
       if (activeTab === 'urgences') {
-        bodyEl.innerHTML = urgent.length ? urgent.map(urgentCardHtml).join('') : '<div class="qp-empty">Aucune urgence en attente sur ce territoire.</div>';
+        const elsewhereCount = allUrgent.length - urgent.length;
+        const emptyMsg = elsewhereCount > 0
+          ? `Aucune urgence sur ce territoire — ${elsewhereCount} en attente ailleurs (changez de carte pour les voir).`
+          : 'Aucune urgence en attente sur ce territoire.';
+        bodyEl.innerHTML = urgent.length ? urgent.map(urgentCardHtml).join('') : `<div class="qp-empty">${emptyMsg}</div>`;
       } else if (activeTab === 'encours') {
         bodyEl.innerHTML = inProgress.length ? inProgress.map(inProgressCardHtml).join('') : '<div class="qp-empty">Aucune quête en cours.</div>';
       } else {
