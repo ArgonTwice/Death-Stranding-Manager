@@ -196,9 +196,14 @@ export function renderCommandCenter() {
 
       // Carte 1 — Action Prioritaire: la quête urgente la plus proche de l'expiration sur CE
       // territoire, sinon la livraison en cours la plus proche d'arriver (avec sa Marge Nette
-      // estimée — engine/DeliveryEngine.js#estimateNetMargin), sinon le nombre de porteurs
-      // disponibles, sinon "rien à faire".
-      const urgent = (game.urgentQuests || []).filter(q => q.mapKey === game.currentMap).sort((a, b) => a.expiresDay - b.expiresDay);
+      // estimée — engine/DeliveryEngine.js#estimateNetMargin), sinon une quête urgente EN ATTENTE
+      // AILLEURS (V1.25.3 — avant cette mission, une quête urgente qui tournait sur un autre
+      // territoire pouvait cohabiter avec un "Réseau en ordre — aucune action requise" trompeur ici
+      // même, alors que le badge #questDrawerBadge, lui, l'affichait déjà globalement depuis
+      // V1.25.2), sinon le nombre de porteurs disponibles, sinon "rien à faire".
+      const allUrgentQuests = game.urgentQuests || [];
+      const urgent = allUrgentQuests.filter(q => q.mapKey === game.currentMap).sort((a, b) => a.expiresDay - b.expiresDay);
+      const elsewhereUrgentCount = allUrgentQuests.length - urgent.length;
       const inProgress = (game.deliveries || []).filter(x => x.map === game.currentMap).sort((a, b) => a.timeRemaining - b.timeRemaining);
       let actionBody;
       if (urgent.length) {
@@ -208,6 +213,8 @@ export function renderCommandCenter() {
         const nextD = inProgress[0];
         const margin = estimateNetMargin(nextD);
         actionBody = `🚚 Prochaine arrivée dans ${nextD.timeRemaining}j — Marge nette estimée: <b style="color:${margin.net >= 0 ? 'var(--chiral)' : 'var(--blood)'};">${margin.net >= 0 ? '+' : ''}$${margin.net}</b>`;
+      } else if (elsewhereUrgentCount > 0) {
+        actionBody = `🎯 ${elsewhereUrgentCount} quête(s) urgente(s) sur un autre territoire — changez de carte`;
       } else {
         const idleCount = game.porters.filter(p => p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100).length;
         actionBody = idleCount > 0 ? `🚚 ${idleCount} porteur(s) disponible(s) — direction Livraisons` : 'Réseau en ordre — aucune action requise';
@@ -538,7 +545,8 @@ export function renderCandidate() {
       const c = game.scoutedCandidate;
       if (!c) { el.innerHTML = ''; return; }
       el.innerHTML = `${SKILLS[c.skill].name} ${TRAITS[c.trait].name}${c.rare ? ' ⭐ PROMETTEUR (lvl2)' : ''}
-        <button onclick="hire(true)" style="font-size:9px; margin-top:2px;">✅ Embaucher ce candidat</button>`;
+        <button onclick="hire(true)" style="font-size:9px; margin-top:2px;">✅ Embaucher ce candidat</button>
+        <button onclick="dismissCandidate()" style="font-size:9px; margin-top:2px;">🚫 Ignorer (scouter à nouveau)</button>`;
     }
 
 // V1.8.0 — Pods Robotiques autonomes: visible seulement une fois débloqué (rang + étoiles Prepper),

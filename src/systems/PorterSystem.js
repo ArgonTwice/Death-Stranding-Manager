@@ -121,6 +121,12 @@ export function hireRaw(skill, trait, rare) {
     }
 
 export function scoutCandidate() {
+      // V1.25.3 — un candidat déjà repéré et non embauché était silencieusement REMPLACÉ (donc perdu,
+      // avec les $ déjà dépensés pour le trouver) par un second scoutisme, sans aucun avertissement:
+      // seul renderCandidate() (ui/HUD.js) affiche le candidat en attente, rien n'empêchait de le
+      // payer deux fois d'affilée par inattention. Bloqué ici — le joueur doit embaucher ou ignorer
+      // consciemment le candidat actuel avant d'en payer un nouveau.
+      if (game.scoutedCandidate) { logEvent('❌ Un candidat repéré attend déjà d\'être embauché (ou ignoré)'); return; }
       const activeCount = game.porters.filter(p => p.status !== "dead" && p.status !== "left").length;
       const fee = BALANCE.porter.scoutBaseFee + activeCount * BALANCE.porter.scoutFeePerActivePorter;
       if (game.money < fee) { logEvent(`❌ Budget scoutisme ($${fee})`); return; }
@@ -131,6 +137,17 @@ export function scoutCandidate() {
       const rare = RNG.next() < BALANCE.porter.scoutRareChance; // Kairosoft: chance de candidat "prometteur"
       game.scoutedCandidate = { skill, trait, rare };
       logEvent(`🔍 Candidat repéré: ${SKILLS[skill].name} ${TRAITS[trait].name}${rare ? ' ⭐ PROMETTEUR' : ''} (-$${fee})`);
+      eventBus.emit('render:request');
+    }
+
+// V1.25.3 — pendant du blocage anti-perte-silencieuse de scoutCandidate() ci-dessus: sans cette
+// fonction, un candidat scouté mais non désiré (mauvaise compétence, etc.) bloquait tout nouveau
+// scoutisme indéfiniment, faute de moyen explicite de le refuser. Ne rembourse jamais le fee déjà
+// payé (le scoutisme reste un coût irrécupérable, cohérent avec hire()/buyEquip() ailleurs).
+export function dismissCandidate() {
+      if (!game.scoutedCandidate) return;
+      logEvent(`🚶 Candidat ignoré: ${SKILLS[game.scoutedCandidate.skill].name} ${TRAITS[game.scoutedCandidate.trait].name}`);
+      game.scoutedCandidate = null;
       eventBus.emit('render:request');
     }
 
