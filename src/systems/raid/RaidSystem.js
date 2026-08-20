@@ -111,7 +111,17 @@ function completeRaid(raid) {
       }
       game.materials.chiral_crystal = (game.materials.chiral_crystal || 0) + reward.chiralium;
       game.materials.mule_scrap = (game.materials.mule_scrap || 0) + reward.muleScrap;
-      game.reputation = Math.min(100, game.reputation + reward.reputation);
+      // V1.25.8 — trouvé en jouant un Raid Tactique jusqu'au bout: RaidRewardResolver.js arrondit
+      // reward.reputation à 1 décimale (ex: 16.7) pour un affichage précis dans le message de log
+      // ci-dessous — mais l'ajouter TEL QUEL à game.reputation laissait ce champ devenir fractionnaire
+      // (ex: 66.7/100), alors que TOUTES les 17 autres sources de réputation du projet (grep exhaustif:
+      // CombatEngine.js/DeliveryEngine.js/NetworkSystem.js/AbsenceMuseum.js/Constants.js) n'utilisent
+      // que des constantes entières — game.reputation n'est affiché nulle part avec arrondi (HUD.js:
+      // sbRep/rep/rank, toujours `${game.reputation}` brut), donc ce seul point d'entrée aurait fait
+      // apparaître un "66.7/100" incohérent dans le bandeau de stats/le tiroir Réseau/la progression de
+      // rang. Arrondi ICI seulement (au moment d'appliquer au stat persistée) — le message de log
+      // ci-dessous garde sa précision d'origine (reward.reputation, jamais modifié).
+      game.reputation = Math.min(100, Math.round(game.reputation + reward.reputation));
 
       game.raidHistory = game.raidHistory || [];
       game.raidHistory.unshift({
