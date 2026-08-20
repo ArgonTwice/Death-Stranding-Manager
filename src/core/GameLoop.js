@@ -27,6 +27,31 @@ export function togglePause() {
   eventBus.emit('render:request');
 }
 
+// V1.13.0 — pause automatique le temps de lire un message bloquant (nouvelle réplique Die-Hardman,
+// alerte BB Pod...): mémorise l'état de pause manuel AVANT le premier appel (messagePauseActive
+// idempotent — un second message pendant que le premier tient déjà la pause ne doit jamais écraser
+// pausedBeforeMessage), pour que resumeAfterMessage() restaure exactement cet état plutôt que de
+// toujours relancer l'horloge — une pause manuelle déjà active avant le message reste active après.
+// PAS d'eventBus.emit('render:request') ici (à la différence de togglePause()): ces deux fonctions
+// sont appelées depuis des chemins déjà en plein rendu/reconciliation (TutorialManager.js#reconcile,
+// BBPodOverlay.js) — forcer un rendu synchrone ré-entrant depuis là a provoqué un débordement de pile
+// (reconcile -> pauseForMessage -> render -> checkTutorialProgress -> reconcile...) et un crash sur
+// du GameState partiellement initialisé en test (render() appelé avant la fin de newGame()). Seul
+// runtime.paused doit changer ici; le prochain rendu naturel (très fréquent) le reflétera.
+export function pauseForMessage() {
+  if (!runtime.messagePauseActive) {
+    runtime.pausedBeforeMessage = runtime.paused;
+    runtime.messagePauseActive = true;
+  }
+  runtime.paused = true;
+}
+
+export function resumeAfterMessage() {
+  if (!runtime.messagePauseActive) return;
+  runtime.messagePauseActive = false;
+  runtime.paused = runtime.pausedBeforeMessage;
+}
+
 export function setGameSpeed(mult) {
   const allowed = game.ngPlus ? [1, 2] : [1]; // x2 réservé à la Nouvelle Partie+, x3 supprimé (trop rapide pour être plaisant)
   runtime.gameSpeed = allowed.includes(mult) ? mult : 1;

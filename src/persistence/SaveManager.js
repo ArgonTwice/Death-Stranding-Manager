@@ -271,6 +271,11 @@ export function deserializeGame(s) {
       if (diffEl) diffEl.value = game.difficulty;
       runtime.announcedRank = currentRankIndex();
       runtime.announcedLeagueTier = porterLeagueTier(); // V0.5.0: n'annonce pas les paliers de ligue déjà atteints au chargement
+      // V1.13.0 — jamais de pause-message fantôme héritée d'un rendu antérieur au chargement (l'écran
+      // de sélection d'emplacement peut rendre une fois avant que cette partie ne soit chargée).
+      runtime.paused = false;
+      runtime.messagePauseActive = false;
+      runtime.pausedBeforeMessage = false;
     }
 
 export async function saveGame(silent = false) {
@@ -320,7 +325,11 @@ export async function newGame(confirmFirst, slot) {
       runtime.announcedLeagueTier = 0;
       game.dayInMonth = 0;
       runtime.gameSpeed = 1;
+      // V1.13.0 — jamais de pause-message fantôme héritée d'un rendu antérieur (écran de sélection
+      // d'emplacement) pour cette toute nouvelle session.
       runtime.paused = false;
+      runtime.messagePauseActive = false;
+      runtime.pausedBeforeMessage = false;
       runtime.placingPCC = null;
       game.monthState = { viewMap: 'mexico', moneyBeforeOps: startMoney, salaryCost: 0 };
       game.quarterSnapshot = { completed: 0, deaths: 0, money: startMoney };

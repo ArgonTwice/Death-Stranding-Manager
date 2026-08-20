@@ -223,7 +223,14 @@
        Journal/Réseau est désormais un tiroir (#networkDrawer) comme le reste. */
     .map-container {
       flex: 1; position: relative; z-index: 1;
-      display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+      display: flex; flex-direction: column; min-height: 0;
+      /* V1.13.0 — overflow-y:auto (au lieu de hidden): sur un écran court avec un bandeau tutoriel
+         haut/plusieurs lignes de statut au-dessus (ex: écran externe replié du Z Fold), la barre
+         d'action (.map-action-bar, poussée en bas via margin-top:auto) pouvait dépasser sous la barre
+         d'onglets fixe sans aucun moyen de l'atteindre — overflow:hidden rendait ses icônes invisibles
+         ET incliquables. Même correctif "zéro troncage" (règle 4) déjà appliqué ailleurs (responsive.css
+         .left .panel/.quest-drawer-panel/.nav-main-content): un contenu trop long scrolle, jamais coupé. */
+      overflow-x: hidden; overflow-y: auto;
       padding: 10px;
     }
 

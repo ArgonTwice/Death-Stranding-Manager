@@ -2,6 +2,7 @@
 // un badge de statut toujours visible (Connexion/Stress/Stade) + une bannière d'alerte transitoire
 // quand un BT est détecté à l'avance par le BB Pod, avec un choix "Prudence"/"Continuer" — vrai choix
 // de risque, sans jamais bloquer l'automatisation si le joueur l'ignore.
+import { pauseForMessage, resumeAfterMessage } from '../core/GameLoop.js';
 import { bbPodState, respondToBBPodAlert } from '../systems/BBPodSystem.js';
 
 let activeAlertPorterId = null;
@@ -30,6 +31,9 @@ export function showBBPodAlert({ porterId }) {
           <button class="qp-action-btn success" onclick="respondToBBPodAlertUI('caution')">🛡️ Prudence</button>
           <button class="qp-action-btn" onclick="dismissBBPodAlert()">➡️ Continuer</button>
         </div>`;
+      // V1.13.0 — laisse au joueur le temps de lire/choisir sans que l'horloge n'avance sous ses pieds;
+      // le délai de 8s ci-dessous reste le filet de sécurité qui évite un blocage indéfini si ignoré.
+      pauseForMessage();
       setTimeout(dismissBBPodAlert, 8000); // n'attend jamais indéfiniment une réponse — l'automatisation continue
     }
 
@@ -37,6 +41,7 @@ export function dismissBBPodAlert() {
       const el = document.getElementById('bbPodAlert');
       if (el) { el.classList.remove('open'); el.innerHTML = ''; }
       activeAlertPorterId = null;
+      resumeAfterMessage();
     }
 
 export function respondToBBPodAlertUI(choice) {

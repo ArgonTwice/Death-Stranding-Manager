@@ -90,6 +90,8 @@ export const runtime = {
       placingPCC: null,
       paused: false,
       gameSpeed: 1, // x1 par défaut, x2 uniquement débloqué en Nouvelle Partie+
+      messagePauseActive: false, // V1.13.0 — GameLoop.js#pauseForMessage/resumeAfterMessage: true tant qu'un message bloquant (tutoriel, alerte BB Pod) tient la pause automatique
+      pausedBeforeMessage: false, // valeur de `paused` à restaurer par resumeAfterMessage() — respecte une pause manuelle déjà en cours plutôt que de l'écraser
       mapDirty: true, // calque statique du canvas à redessiner
       timefallUntil: 0, // timestamp ms: pluie temporelle active jusque là
       duststormUntil: 0, // timestamp ms: Duststorm DS2 (Australie) active jusque là
