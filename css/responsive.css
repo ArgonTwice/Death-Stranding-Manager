@@ -90,6 +90,35 @@
 }
 
 /* ============================================================
+   V1.25.0 — GRAND ÉCRAN / MONITEUR PC (>= 1440px, >= 1920px): jusqu'ici #app-shell restait plafonné à
+   800px au-delà de 768px (règle "Navigation Unifiée" V1.0.5, toujours valable — jamais de sidebar),
+   ce qui laissait d'immenses bandes noires inutilisées sur un vrai moniteur de bureau (vérifié
+   visuellement via Playwright à 1920x1080 et 2560x1440: ~55-70% de la largeur d'écran gaspillée).
+   Paliers progressifs plutôt qu'un saut brutal — le Canvas #gameMap (width:100%; height:auto, ratio
+   intrinsèque 800/400 fixé par ses attributs width/height) grandit proportionnellement avec le
+   conteneur, ce qui comble aussi une bonne partie du vide vertical en même temps. .mtab-bar et
+   .tutorial-overlay suivent la même largeur pour rester visuellement alignés sur les bords de
+   #app-shell (cf. règle >=768px plus haut). */
+@media (min-width: 1440px) {
+  #app-shell { max-width: 1100px; }
+  .mtab-bar { max-width: 900px; }
+  .tutorial-overlay { max-width: 1100px; }
+  /* Modales/tiroirs (plafonnés 520px depuis V1.0.5, jamais retouché depuis): élargis en même temps
+     qu'#app-shell — sans ça, la vue scindée Livraisons (V1.3.0, grid-template-columns: minmax(260px,
+     38%) 1fr) reste cassée derrière un panneau 520px trop étroit pour sa propre colonne minimale
+     (38% de 520px = ~198px < 260px), un bug PRÉEXISTANT à cette mission découvert en testant
+     visuellement à 1920x1080 — la carte holographique s'y retrouvait écrasée. Bénéfice secondaire:
+     les grilles de cartes (Contrats/Loadout/Raid) gagnent aussi une vraie 3e colonne de large. */
+  .left .panel, .ds-drawer { max-width: 640px; }
+}
+@media (min-width: 1920px) {
+  #app-shell { max-width: 1400px; }
+  .mtab-bar { max-width: 1150px; }
+  .tutorial-overlay { max-width: 1400px; }
+  .left .panel, .ds-drawer { max-width: 760px; }
+}
+
+/* ============================================================
    V1.3.0 — SPLIT-VIEW LARGE ÉCRAN / Z FOLD DÉPLIÉ (>= 901px, volontairement au-dessus du breakpoint
    mobile 900px !important de style.css/layout.css plutôt que de réutiliser 768px/1280px déjà pris par
    les règles ci-dessus). Portée VOLONTAIREMENT restreinte à [data-main="livraisons"]: c'est le SEUL

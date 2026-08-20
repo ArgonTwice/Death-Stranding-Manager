@@ -345,6 +345,9 @@
     .log::-webkit-scrollbar-thumb:hover, .panel::-webkit-scrollbar-thumb:hover { background: var(--amber); }
     .panel { scrollbar-width: thin; scrollbar-color: var(--amber-dim) rgba(0,0,0,0.3); }
 
+    /* V1.25.0 — ancre les overlays du Canvas (BB Pod/MiniMap/Néantisation, tous position:absolute) sur
+       le canvas lui-même plutôt que sur .map-container: cf. commentaire index.html à côté du wrapper. */
+    .map-canvas-wrap { position: relative; }
     #gameMap { background: var(--void-black); border: 1px solid #2a2620; display: block; width: 100%; height: auto; box-shadow: 0 0 40px -12px rgba(255,140,43,0.08), inset 0 0 60px rgba(0,0,0,0.5); }
 
     .status-bar { height: 6px; background: rgba(0,0,0,0.4); overflow: hidden; margin: 4px 0; border: 1px solid rgba(255,255,255,0.03); position: relative; }

@@ -595,23 +595,32 @@
            ci-dessous (mêmes ids DOM/fonctions de rendu, juste un autre emplacement dans le document). -->
       <div id="dashboardCommandCenter" class="dashboard-command-center" aria-label="Centre de commande"></div>
       <div id="mapToggle" style="display: flex; gap: 6px; margin-bottom: 6px;"></div>
-      <canvas id="gameMap" width="800" height="400"></canvas>
-      <div id="voidoutBanner">
-        <div class="title">NÉANTISATION</div>
-        <div class="subtitle">— une âme rejoint le rivage —</div>
-      </div>
 
-      <!-- BB Pod (V0.6.0) — overlay léger toujours visible + bannière d'alerte transitoire, jamais
-           un tiroir plein écran (règle 5: overlays légers, pas de surcharge du Canvas). -->
-      <div id="bbPodOverlay" class="bbpod-overlay"></div>
-      <div id="bbPodAlert" class="bbpod-alert"></div>
+      <!-- V1.25.0 — wrapper .map-canvas-wrap (position:relative) ajouté pour ancrer les overlays
+           absolus (BB Pod/MiniMap/Néantisation) sur le CANVAS lui-même. Avant cette mission ils étaient
+           ancrés sur .map-container au complet: depuis que le Centre de Commande (V1.16.0) s'est inséré
+           EN AMONT du canvas dans le flux, top:8px les faisait flotter par-dessus les cartes du Dashboard
+           au lieu du coin de la carte — chevauchement/texte tronqué confirmé visuellement à toutes les
+           largeurs (mobile 320px à desktop 2560px), corrigé ici. -->
+      <div class="map-canvas-wrap">
+        <canvas id="gameMap" width="800" height="400"></canvas>
+        <div id="voidoutBanner">
+          <div class="title">NÉANTISATION</div>
+          <div class="subtitle">— une âme rejoint le rivage —</div>
+        </div>
 
-      <!-- MiniMap (V0.3.0): vue synthétique du réseau, incrustée sur le coin de la carte, jamais
-           bloquante — le bouton ⛶ ouvre une version plein écran (.left, même langage visuel que
-           les autres modales tactiques). -->
-      <div class="minimap-widget">
-        <canvas id="miniMapCanvas" width="120" height="120"></canvas>
-        <button class="minimap-expand-btn" onclick="toggleMiniMapFullscreen()" aria-label="Agrandir la mini-carte">⛶</button>
+        <!-- BB Pod (V0.6.0) — overlay léger toujours visible + bannière d'alerte transitoire, jamais
+             un tiroir plein écran (règle 5: overlays légers, pas de surcharge du Canvas). -->
+        <div id="bbPodOverlay" class="bbpod-overlay"></div>
+        <div id="bbPodAlert" class="bbpod-alert"></div>
+
+        <!-- MiniMap (V0.3.0): vue synthétique du réseau, incrustée sur le coin de la carte, jamais
+             bloquante — le bouton ⛶ ouvre une version plein écran (.left, même langage visuel que
+             les autres modales tactiques). -->
+        <div class="minimap-widget">
+          <canvas id="miniMapCanvas" width="120" height="120"></canvas>
+          <button class="minimap-expand-btn" onclick="toggleMiniMapFullscreen()" aria-label="Agrandir la mini-carte">⛶</button>
+        </div>
       </div>
 
       <!-- Barre d'actions tactiles (V0.7.0) — remplace l'ancienne pile verticale de boutons flottants
