@@ -5,7 +5,7 @@ import { eventBus } from '../core/EventBus.js';
 import { debugLog } from '../core/Debug.js';
 import { currentRankIndex, game, logEvent, runtime } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
-import { DIFFICULTIES, GAME_LENGTH_MONTHS, HQ, RANKS } from '../data/Balance.js';
+import { BALANCE, DIFFICULTIES, GAME_LENGTH_MONTHS, HQ, RANKS } from '../data/Balance.js';
 import { CAMP_EVENTS, FESTIVALS, RELICS, VISITOR_OFFERS, pickN, rollTrait } from '../data/Constants.js';
 import { VERSION } from '../config/version.js';
 import { generateBTZones, generateMainKnots, generateMuleCamps, generateTerrain, loadMapData, resetMuleCampIdCounter } from '../engine/MapEngine.js';
@@ -195,7 +195,17 @@ export function deserializeGame(s) {
       game.quarterSnapshot = s.quarterSnapshot || { completed: game.completed, deaths: game.deaths, money: game.money };
       game.activeFestival = s.activeFestival || null;
       game.hallOfFame = s.hallOfFame || [];
-      game.visitor = s.visitor || null;
+      // V1.16.0 — un visiteur en attente doit être RÉ-HYDRATÉ depuis le pool canonique VISITOR_OFFERS
+      // (par id), jamais restauré tel quel depuis `s.visitor`: la plupart des offres portent un
+      // `effect` fonction, qui ne survit pas à JSON.stringify (localStorage) — accepter l'offre après
+      // un rechargement aurait planté sur `v.effect is not a function`. La date d'expiration réelle du
+      // save est conservée, seul le reste (dont `effect`) revient à la version vivante du pool.
+      if (s.visitor) {
+        const canonical = VISITOR_OFFERS.find(o => o.id === s.visitor.id);
+        game.visitor = canonical ? { ...canonical, expiresMonth: s.visitor.expiresMonth } : null;
+      } else {
+        game.visitor = null;
+      }
       game.bonds = s.bonds || {};
       game.legacyBonus = s.legacyBonus || 0;
       game.collection = s.collection || [];
@@ -276,6 +286,41 @@ export function deserializeGame(s) {
       runtime.paused = false;
       runtime.messagePauseActive = false;
       runtime.pausedBeforeMessage = false;
+      sanitizeGame(); // V1.16.0 — dernier filet de sécurité, cf. commentaire ci-dessous
+    }
+
+// V1.16.0 — filet de sécurité post-désérialisation: reclampe les champs numériques qui pourraient
+// avoir été corrompus par une manipulation externe du localStorage (ou un bug futur) DANS des bornes
+// valides, plutôt que de laisser une valeur aberrante se propager dans toute la simulation (santé
+// négative jamais soignable, argent négatif qui fausse tous les calculs de budget, usure > 100%...).
+// Complète — ne remplace pas — SaveCorruption.test.js (qui couvre le JSON structurellement invalide,
+// menant au fallback newGame()): ici le save est structurellement valide, seules ses VALEURS le sont
+// éventuellement moins. Idempotente: appelée sur un état déjà sain, ne change rien.
+export function sanitizeGame() {
+      const clamp = (v, min, max, fallback) => (typeof v === 'number' && Number.isFinite(v)) ? Math.min(max, Math.max(min, v)) : fallback;
+
+      game.money = clamp(game.money, 0, Infinity, 0);
+      game.reputation = clamp(game.reputation, 0, 100, 50);
+      game.loyalty = clamp(game.loyalty, 0, 100, 50);
+      game.chiralMemory = clamp(game.chiralMemory, 0, Infinity, 0);
+      game.gratitudeTrace = clamp(game.gratitudeTrace, 0, Infinity, 0);
+      game.totalSteps = clamp(game.totalSteps, 0, Infinity, 0);
+      game.completed = clamp(game.completed, 0, Infinity, 0);
+      game.deaths = clamp(game.deaths, 0, Infinity, 0);
+
+      if (game.materials) {
+        for (const k of Object.keys(game.materials)) game.materials[k] = clamp(game.materials[k], 0, Infinity, 0);
+      }
+
+      for (const p of game.porters) {
+        p.health = clamp(p.health, 0, 100, p.status === 'dead' ? 0 : 100);
+        p.stress = clamp(p.stress, 0, 100, 0);
+        p.gearWear = clamp(p.gearWear, 0, 100, 0);
+        p.credits = clamp(p.credits, 0, BALANCE.porterEconomy.creditsCap, 0);
+        p.xp = clamp(p.xp, 0, Infinity, 0);
+        p.level = clamp(p.level, 1, Infinity, 1);
+        p.likes = clamp(p.likes, 0, Infinity, 0);
+      }
     }
 
 export async function saveGame(silent = false) {

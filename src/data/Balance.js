@@ -6,7 +6,7 @@ export const RANKS = [
       { name: 'Porteur Bridges',  minCompleted: 30,   minRep: 40, questMult: 1.15, costMult: 0.97 },
       { name: 'Porteur Certifié', minCompleted: 200,  minRep: 55, questMult: 1.3,  costMult: 0.94 },
       { name: 'Porteur d\'Élite', minCompleted: 900,  minRep: 65, questMult: 1.5,  costMult: 0.90 },
-      { name: 'Légende du Rivage',minCompleted: 2800, minRep: 75, questMult: 1.75, costMult: 0.85 }
+      { name: 'Légende du Rivage',minCompleted: 1800, minRep: 75, questMult: 1.75, costMult: 0.85 } // V1.16.0 — 2800 -> 1800: rang de fin de partie jugé trop tardif
     ];
 
 export const EQUIP_MIN_RANK = { cryptobiote: 1, bolagun: 1, cryobox: 1, climbing_anchor: 2 };
@@ -39,7 +39,9 @@ export const DAY_MS = 1300;
 
 export const DAYS_PER_MONTH = 30;
 
-export const VEHICLE_MAINTENANCE_COST = { truck: 80, bike: 40, trike: 60 };
+// V1.16.0 — x2.5 (80/40/60 -> 200/100/150): un véhicule devait rester un investissement stratégique
+// réel (bonus vitesse + vehicleRewardMult x1.5) plutôt qu'un ajout quasi-gratuit une fois acheté.
+export const VEHICLE_MAINTENANCE_COST = { truck: 200, bike: 100, trike: 150 };
 
 // BALANCE — valeurs d'équilibrage numériques extraites de engine/ et systems/ (coûts, taux, seuils,
 // multiplicateurs). Regroupées par système pour que chaque fichier n'importe que sa propre section.
@@ -189,7 +191,7 @@ export const BALANCE = {
     catcherLootBase: 8,
     catcherLootRandRange: 8,
     catcherWinReputationGain: 5,
-    catcherDeathChanceBase: 0.3,
+    catcherDeathChanceBase: 0.15, // V1.16.0 — 0.30 -> 0.15: une mort permanente de porteur sur près d'1 échec sur 3 jugée trop punitive
     catcherDeathChanceBloodBagMult: 0.15,
     catcherFailDamageBase: 25,
     catcherFailDamageRandRange: 25,
@@ -310,10 +312,10 @@ export const BALANCE = {
     btZoneRiskAdd: 0.35,
     muleCampRiskAdd: 0.15,
     onRouteRiskCut: 0.15,
-    riskFloor: 0.08,
+    riskFloor: 0.15, // V1.16.0 — 0.08 -> 0.15: 15% de risque minimum sur toute livraison, même la plus sécurisée
     riskCeil: 1,
     serviceGradeRewardMult: 0.05,
-    rewardDistanceMult: 100,
+    rewardDistanceMult: 70, // V1.16.0 — 100 -> 70: recalibrage économique (cf. tests/balancing-simulation.test.mjs)
     reputationRewardDivisor: 100,
     vehicleRewardMult: 1.5,
     infraRewardMultPerInvestment: 0.002,

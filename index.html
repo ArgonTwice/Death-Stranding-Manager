@@ -463,6 +463,16 @@
     <div class="quest-drawer-panel">
       <button class="modal-close" onclick="closeTelemetryDrawer()">✕</button>
       <h2>◆ TÉLÉMÉTRIE</h2>
+      <!-- V1.16.0 — déplacé depuis le Dashboard (refonte "Centre de Commande Actionnable"): mêmes ids
+           DOM et mêmes fonctions de rendu (ui/HUD.js#renderWeatherForecast/renderDashboardSynthesis),
+           purement un changement d'emplacement dans le document. Placés en SIBLINGS de #telemetryPanel,
+           jamais À L'INTÉRIEUR: renderTelemetryReport() réécrit tout le innerHTML de #telemetryPanel à
+           chaque render(), ce qui les aurait effacés à chaque cycle. -->
+      <h3>PRÉVISION CHIRALE</h3>
+      <div id="weatherForecastStrip" class="map-status-strip" aria-label="Prévision météo chirale"></div>
+      <h3>SYNTHÈSE RÉSEAU & MULE</h3>
+      <div id="dashboardSynthesisStrip" class="map-status-strip" aria-label="Synthèse Dashboard"></div>
+      <h3>STATISTIQUES DE PARTIE</h3>
       <div id="telemetryPanel"></div>
     </div>
   </div>
@@ -565,17 +575,12 @@
   <div id="drawerBackdrop" class="ds-drawer-backdrop" onclick="closeAllDrawersUI()"></div>
 
     <div class="map-container">
-      <div class="map-status-strip">
-        <div class="voyant"><span class="dot"></span> RÉSEAU CHIRAL: EN LIGNE</div>
-        <div class="voyant"><span class="dot dot-amber"></span> SIGNAL BRIDGES: STABLE</div>
-        <div class="voyant"><span class="dot dot-purple"></span> SCAN ODRADEK: ACTIF</div>
-      </div>
-      <!-- Chiral Forecast (V0.3.0): météo du territoire actif + prévision à N jours, toujours exacte -->
-      <div id="weatherForecastStrip" class="map-status-strip" aria-label="Prévision météo chirale"></div>
-      <!-- V1.1 LOT 2 — Dashboard: synthèse lecture seule (alertes MULE/BT, statut Réseau Chiral,
-           résumé d'expédition), cf. ui/HUD.js#renderDashboardSynthesis. Toujours visible (le
-           Dashboard EST la carte, jamais un onglet-modale), jamais d'action possible depuis ici. -->
-      <div id="dashboardSynthesisStrip" class="map-status-strip" aria-label="Synthèse Dashboard"></div>
+      <!-- V1.16.0 — refonte "Centre de Commande Actionnable" (remplace le bandeau décoratif "EN
+           LIGNE"/"STABLE"/"ACTIF", zéro information réelle): 3 cartes répondant chacune à une question
+           en <5s, cf. ui/HUD.js#renderCommandCenter. Les statistiques passives secondaires
+           (prévision météo détaillée, synthèse réseau/MULE) sont déplacées dans le tiroir Télémétrie
+           ci-dessous (mêmes ids DOM/fonctions de rendu, juste un autre emplacement dans le document). -->
+      <div id="dashboardCommandCenter" class="dashboard-command-center" aria-label="Centre de commande"></div>
       <div id="mapToggle" style="display: flex; gap: 6px; margin-bottom: 6px;"></div>
       <canvas id="gameMap" width="800" height="400"></canvas>
       <div id="voidoutBanner">

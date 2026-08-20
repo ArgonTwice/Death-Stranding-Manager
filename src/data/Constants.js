@@ -4,7 +4,6 @@
 import { currentRankIndex, game } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
 import { BALANCE, HQ } from './Balance.js';
-import { hireRaw } from '../systems/PorterSystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 
 export const SKILLS = {
@@ -136,8 +135,16 @@ export const FESTIVALS = [
 export const VISITOR_OFFERS = [
       { id: 'cheap_gear', name: '🧳 Marchand itinérant', desc: 'Cède un lot de matériaux contre $800', cost: 800,
         effect: () => { game.materials.chiral_crystal += 3; game.materials.mule_scrap += 2; } },
+      // V1.16.0 — effet en CLÉ SYMBOLIQUE ('hirePorter'), pas une closure comme les autres offres
+      // ci-dessous: c'était le SEUL point qui obligeait data/Constants.js à importer
+      // systems/PorterSystem.js#hireRaw, formant un cycle d'import latent (Constants.js <-> PorterSystem.js,
+      // documenté et jusqu'ici sans danger tant que rien ne le lisait au niveau module — cf. le
+      // commentaire de hireRaw()). Résolu par engine/DeliveryEngine.js#acceptVisitorOffer(), déjà
+      // consommateur légitime de PorterSystem.js. Bénéfice secondaire: une closure ne survit PAS à
+      // JSON.stringify (localStorage) — un visiteur "Porteur en cavale" accepté après un rechargement
+      // aurait plutôt planté sur v.effect() undefined; la clé texte, elle, survit à la sérialisation.
       { id: 'mercenary',  name: '🥾 Porteur en cavale', desc: 'Rejoint Bridges contre $600 (moins cher qu\'un recrutement classique)', cost: 600,
-        effect: () => { hireRaw(); } },
+        effect: 'hirePorter' },
       { id: 'buyback',    name: '♻️ Acheteur de ferraille', desc: 'Rachète toute ta ferraille MULE à bon prix', cost: 0,
         effect: () => { game.money += game.materials.mule_scrap * 150; game.materials.mule_scrap = 0; } },
       { id: 'rep_favor',  name: '🤝 Émissaire Bridges', desc: 'Coup de pouce réputation contre $500', cost: 500,
@@ -446,7 +453,12 @@ export const SPONSORS = [
         cond: () => game.reputation >= 40, desc: 'Maintenir réputation ≥ 40' },
       { id: 'chiral_corp',  name: 'Chiral Corp', signingBonus: 4000, monthlyIncome: 300,
         cond: () => currentRankIndex() >= 2, desc: 'Rang Bridges Certifié minimum' },
-      { id: 'mule_repenti', name: 'Syndicat discret (ex-MULE repenti)', signingBonus: 5000, monthlyIncome: 50,
+      // V1.16.0 — monthlyIncome 50 -> 350: la valeur d'origine (50) était INFÉRIEURE au sponsor de
+      // base sans condition (bridges_hq, 100/mois) malgré une condition réelle à remplir — jamais
+      // rentable comparé à ne rien faire. 350 positionne ce sponsor entre chiral_corp (300, rang
+      // Certifié) et bridges_elite (450, VIP), cohérent avec son bonus de signature déjà le plus élevé
+      // hors VIP (5000$) — ROI (signingBonus/monthlyIncome) ≈ 14,3 mois, sous la barre des 15 mois.
+      { id: 'mule_repenti', name: 'Syndicat discret (ex-MULE repenti)', signingBonus: 5000, monthlyIncome: 350,
         cond: () => game.materials.mule_scrap >= 2, desc: 'Conserver ≥ 2 ferraille MULE en stock' },
       // V0.5.0 — sponsors de prestige, débloqués par la Ligue (PorterLeague.js), contrats VIP à hautes récompenses
       { id: 'bridges_elite', name: 'Bridges — Division Élite', signingBonus: 8000, monthlyIncome: 450, vip: true,

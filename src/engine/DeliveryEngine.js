@@ -15,7 +15,7 @@ import { checkGameEnd, saveGame } from '../persistence/SaveManager.js';
 import { runAutomation } from '../systems/AutomationManager.js';
 import { checkSponsor, checkSubsidiaries } from '../systems/EconomySystem.js';
 import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems/NetworkSystem.js';
-import { gearEffectiveness, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
+import { gearEffectiveness, hireRaw, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
 import { applyUrgentQuestOutcome, clearExpiredUrgentQuests, tickUrgentQuestSpawns } from '../systems/QuestSystem.js';
 import { reportConvoyMemberOutcome } from '../systems/ConvoySystem.js';
@@ -314,7 +314,10 @@ export function acceptVisitorOffer() {
       if (!v) return;
       if (game.money < v.cost) { logEvent('❌ Budget insuffisant pour cette offre'); return; }
       game.money -= v.cost;
-      v.effect();
+      // V1.16.0 — la plupart des offres (data/Constants.js#VISITOR_OFFERS) restent des closures directes;
+      // 'hirePorter' est l'unique clé symbolique (cf. commentaire sur l'offre 'mercenary').
+      if (typeof v.effect === 'function') v.effect();
+      else if (v.effect === 'hirePorter') hireRaw();
       logEvent(`🧳 Offre acceptée: ${v.name}`, 'good');
       game.visitor = null;
       eventBus.emit('render:request');

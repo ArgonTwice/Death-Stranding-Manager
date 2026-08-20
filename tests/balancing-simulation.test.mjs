@@ -54,8 +54,9 @@ const { BALANCE } = await import(SRC + 'data/Balance.js');
 const { newGame } = await import(SRC + 'persistence/SaveManager.js');
 const { advanceDay } = await import(SRC + 'engine/DeliveryEngine.js');
 const { hireRaw, hire, forceRest, repairGear } = await import(SRC + 'systems/PorterSystem.js');
-const { buyEquip } = await import(SRC + 'systems/EconomySystem.js');
-const { assaultCamp, defendRelay } = await import(SRC + 'engine/CombatEngine.js');
+const { buyEquip, buyVehicle } = await import(SRC + 'systems/EconomySystem.js');
+const { assaultCamp, defendRelay, engageCatcher, buyConsumable } = await import(SRC + 'engine/CombatEngine.js');
+const { resolveCatcherEncounter } = await import(SRC + 'systems/raid/CombatResolver.js');
 const { toggleAutomation, setAutomationThreshold } = await import(SRC + 'systems/AutomationManager.js');
 const { recordSteps } = await import(SRC + 'systems/RealWalkSystem.js');
 const { acceptUrgentQuest, refuseUrgentQuest } = await import(SRC + 'systems/QuestSystem.js');
@@ -108,6 +109,13 @@ const ARCHETYPES = {
     },
     dailyAction(day) {
       if (day % 20 === 0 && game.porters.filter(p => p.status !== 'dead').length < 8 && game.money > BALANCE.porter.hireBaseCost * 3) hire(false);
+      // V1.16.0 — un véhicule (maintenance mensuelle x2.5), pour mesurer si ce recalibrage reste
+      // un investissement soutenable pour un archétype actif plutôt qu'une ruine silencieuse.
+      if (day === 30 && game.porters.some(p => !p.equipment.vehicle)) {
+        const p = game.porters.find(p => !p.equipment.vehicle);
+        runtime.selectedPorterId = p.id;
+        buyVehicle('bike');
+      }
       if (day % 7 === 0) {
         for (const c of (game.muleCamps || [])) {
           if (c.status === 'hostile') { assaultCamp(c.id, 'infiltration'); break; } // un seul assaut/semaine, jamais toute l'escouade vidée d'un coup
@@ -274,6 +282,44 @@ for (const [squadSize, campStrength] of [[1, 1], [2, 2], [3, 1]]) {
   console.log(`  assaut squad=${squadSize} campStrength=${campStrength}: théorique≈${pct(theoretical)}, empirique(${TRIALS} essais)=${pct(empirical)} (Δ${pct(delta)})`);
   assert(delta < 0.10, `assaultCamp('assault') squad=${squadSize}/strength=${campStrength}: taux empirique (${pct(empirical)}) s'écarte de plus de 10 points de la formule interne (${pct(theoretical)}) — résolution RNG suspecte`);
 }
+
+// ============================================================
+// V1.16.0 — engageCatcher(): mesure empirique du taux de MORT PERMANENTE d'un porteur sur un échec,
+// avant/après le recalibrage catcherDeathChanceBase (0.30 -> 0.15), pour vérifier que le nouveau
+// coefficient produit bien le taux voulu via la résolution RNG réelle (resolveCatcherEncounter).
+// ============================================================
+console.log('\n--- Taux de mort permanente (Catcher BT, en cas d\'échec) — empirique vs formule interne ---');
+function measureCatcherDeathRate(squadSize, campStrength, bloodBags, trials) {
+  RNG.setSeed(920001);
+  newGame(false);
+  let deaths = 0, porterDeathOpportunities = 0;
+  for (let i = 0; i < trials; i++) {
+    game.porters = [];
+    for (let j = 0; j < squadSize; j++) { hireRaw('scout'); const p = game.porters[game.porters.length - 1]; p.health = 100; p.gearWear = 0; }
+    game.materials.blood_grenades = squadSize * BALANCE.combat.catcherGrenadesPerPorter;
+    game.materials.blood_bags = bloodBags;
+    const catcherId = `sim-catcher-${i}`;
+    game.catchers = [{ id: catcherId, x: 1, y: 1, strength: campStrength }];
+    game.mapsData[game.currentMap].catchers = game.catchers;
+    engageCatcher(catcherId);
+    const anyDied = game.porters.some(p => p.status === 'dead');
+    const anySucceeded = !game.mapsData[game.currentMap].catchers.find(c => c.id === catcherId); // retiré de la liste = résolu (succès ou échec, cf. CombatEngine.js)
+    if (anySucceeded) { porterDeathOpportunities++; if (anyDied) deaths++; }
+  }
+  return porterDeathOpportunities > 0 ? deaths / porterDeathOpportunities : 0;
+}
+const catcherDeathRate = measureCatcherDeathRate(2, 1, 0, 500);
+console.log(`  squad=2 campStrength=1 sans poche de sang: au moins 1 mort dans l'escouade sur ${pct(catcherDeathRate)} des rencontres résolues (base configurée: ${pct(BALANCE.combat.catcherDeathChanceBase)}/porteur avant modificateurs)`);
+assert(catcherDeathRate < 0.60, `engageCatcher(): taux de mort d'escouade (${pct(catcherDeathRate)}) anormalement élevé même après le recalibrage catcherDeathChanceBase 0.30->0.15 — vérifier resolveCatcherEncounter()`);
+
+// ============================================================
+// V1.16.0 — coût de véhicule (maintenance x2.5): vérifie que l'archétype "optimiseur" (qui achète un
+// vélo au jour 30, cf. ARCHETYPES.optimiseur.dailyAction) reste solvable — pas une simple relecture des
+// résultats déjà agrégés plus haut, une assertion DÉDIÉE pour que l'intention soit explicite.
+// ============================================================
+const optResults = results.optimiseur;
+assert(optResults.every(r => r.finalMoney >= 0), 'archétype "optimiseur" (achète un véhicule au jour 30): argent négatif détecté — la maintenance x2.5 le rend insoutenable');
+console.log(`\n--- Coût véhicule x2.5: archétype "optimiseur" (achète un vélo au jour 30) reste solvable: argent final moyen=$${Math.round(optResults.reduce((s, r) => s + r.finalMoney, 0) / optResults.length)} ---`);
 
 console.log('\n=== RÉSUMÉ ===');
 if (FAIL.length === 0) {

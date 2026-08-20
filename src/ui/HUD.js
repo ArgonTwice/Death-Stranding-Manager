@@ -17,7 +17,8 @@ import { setAutomationThreshold, toggleAutomation } from '../systems/AutomationM
 import { buildStructure, computeLogisticsDashboard, infraCost, investInfrastructure, shopDiscountMult, signSponsor } from '../systems/EconomySystem.js';
 import { repairPCC } from '../systems/NetworkSystem.js';
 import { beachJump, equipSlots, equippedCount, forceRest, hire, porterTitle, repairGear, retirePorter } from '../systems/PorterSystem.js';
-import { assignPrepperContract, connectKnot, negotiatePrepperContract, prepperStarsLabel, revealedMainKnots, silhouetteMainKnots } from '../systems/PrepperSystem.js';
+import { assignPrepperContract, connectKnot, maxPrepperStars, negotiatePrepperContract, prepperStarsLabel, revealedMainKnots, silhouetteMainKnots } from '../systems/PrepperSystem.js';
+import { EQUIP_MIN_STARS, ROBOT_BUDDY_MIN_STARS, VEHICLE_MIN_STARS } from '../data/UnlockTree.js';
 import { isRobotBuddyUnlocked, robotBuddyCost, robotBuddyCount } from '../systems/RobotBuddySystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { generateTelemetryReport } from '../systems/TelemetrySystem.js';
@@ -105,6 +106,7 @@ export function render() {
       renderPorterTarget();
       renderAutomationPanel();
       renderLogisticsDashboard();
+      renderCommandCenter();
       renderWeatherForecast();
       renderDashboardSynthesis();
       renderMiniMap();
@@ -179,6 +181,62 @@ export function renderTelemetryReport() {
 // V0.3.0 — Chiral Forecast: météo actuelle + prévision à N jours du territoire affiché, sur le
 // bandeau de statut au-dessus de la carte. Mis à jour aussi par eventBus ('weather:forecastUpdated')
 // pour un retour immédiat au changement de météo, sans attendre le prochain render() global.
+// V1.16.0 — "Centre de Commande Actionnable": 3 cartes répondant chacune à une question en <5s
+// (brief). Purement dérivé de game.* déjà lu ailleurs (mêmes fonctions que renderMainKnots/
+// renderMuleCamps/renderWeatherForecast/renderDashboardSynthesis ci-dessous, jamais dupliquées),
+// lecture seule — aucune action possible depuis ces cartes, seulement une orientation vers l'onglet
+// pertinent (Livraisons/Réseau). Les statistiques passives préexistantes (indicateurs "EN LIGNE"
+// décoratifs, prévision météo détaillée, synthèse réseau/MULE) sont déplacées dans le tiroir
+// Télémétrie (index.html) plutôt que supprimées — mêmes ids DOM, mêmes fonctions de rendu inchangées.
+export function renderCommandCenter() {
+      const el = document.getElementById('dashboardCommandCenter');
+      if (!el) return;
+      const d = game.mapsData[game.currentMap];
+
+      // Carte 1 — Action Prioritaire: la quête urgente la plus proche de l'expiration sur CE
+      // territoire, sinon le nombre de porteurs disponibles pour une commande, sinon "rien à faire".
+      const urgent = (game.urgentQuests || []).filter(q => q.mapKey === game.currentMap).sort((a, b) => a.expiresDay - b.expiresDay);
+      let actionBody;
+      if (urgent.length) {
+        const q = urgent[0];
+        actionBody = `${q.icon} ${q.flavor} — <b>+$${q.reward}</b> · expire J${q.expiresDay}`;
+      } else {
+        const idleCount = game.porters.filter(p => p.status === 'idle' && p.health > 15 && (p.gearWear || 0) < 100).length;
+        actionBody = idleCount > 0 ? `🚚 ${idleCount} porteur(s) disponible(s) — direction Livraisons` : 'Réseau en ordre — aucune action requise';
+      }
+
+      // Carte 2 — Alerte Terrain: prochain Timefall/Tempête Chirale dans la fenêtre de prévision,
+      // relais sous attaque (priorité) ou camps MULE hostiles sur ce territoire.
+      const forecast = d ? forecastFor(game.currentMap) : [];
+      const nextBadIdx = forecast.findIndex(f => f.type !== 'calm');
+      const camps = (d && d.muleCamps) || [];
+      const hostileCount = camps.filter(c => c.status === 'hostile').length;
+      const underAttackCount = camps.filter(c => c.status === 'under_attack').length;
+      const terrainParts = [];
+      if (nextBadIdx >= 0) terrainParts.push(`${forecast[nextBadIdx].icon} ${forecast[nextBadIdx].name} dans J+${nextBadIdx + 1}`);
+      if (underAttackCount > 0) terrainParts.push(`🚨 ${underAttackCount} relais sous attaque`);
+      else if (hostileCount > 0) terrainParts.push(`⚠️ ${hostileCount} camp(s) MULE hostile(s)`);
+      const terrainBody = terrainParts.length ? terrainParts.join(' · ') : '✅ Aucune alerte';
+
+      // Carte 3 — Progression Réseau: prochain relais à raccorder + étoiles Prepper (déblocages boutique).
+      let networkBody = '—';
+      if (d) {
+        const knots = revealedMainKnots(d);
+        const connectedCount = knots.filter(k => d.routes.has(cellKey(k.x, k.y))).length;
+        const nextKnot = knots.find(k => !d.routes.has(cellKey(k.x, k.y)));
+        const stars = maxPrepperStars(game.currentMap);
+        const nextThresholds = [...Object.values(EQUIP_MIN_STARS), ...Object.values(VEHICLE_MIN_STARS), ROBOT_BUDDY_MIN_STARS].filter(s => s > stars);
+        const nextThreshold = nextThresholds.length ? Math.min(...nextThresholds) : null;
+        networkBody = `${connectedCount}/${(d.mainKnots || []).length} relais raccordés${nextKnot ? ` · prochain: ${nextKnot.name}` : ''}<br>⭐ ${stars}/${BALANCE.prepper.starsMax}${nextThreshold ? ` — encore ${nextThreshold - stars}⭐ pour débloquer plus d'équipement` : ''}`;
+      }
+
+      setInnerHtmlIfChanged(el, `
+        <div class="term-card cc-card"><div class="cc-card-title">🎯 Action Prioritaire</div><div class="cc-card-body">${actionBody}</div></div>
+        <div class="term-card cc-card"><div class="cc-card-title">⚠️ Alerte Terrain</div><div class="cc-card-body">${terrainBody}</div></div>
+        <div class="term-card cc-card"><div class="cc-card-title">📡 Progression Réseau</div><div class="cc-card-body">${networkBody}</div></div>
+      `);
+    }
+
 export function renderWeatherForecast() {
       const el = document.getElementById('weatherForecastStrip');
       if (!el) return;

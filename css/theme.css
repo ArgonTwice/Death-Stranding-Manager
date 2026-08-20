@@ -447,6 +447,37 @@ body.modal-open { overflow: hidden; overscroll-behavior: none; }
 .term-card { margin: var(--cb-space-2) 0; }
 .term-card-footer { gap: var(--cb-space-2); padding-top: var(--cb-space-2); margin-top: var(--cb-space-2); }
 
+/* ============================================================
+   V1.16.0 — Dashboard "Centre de Commande Actionnable": 3 cartes .term-card empilées (même chrome
+   glassmorphic biseauté que le reste de l'app, réutilisé plutôt que réinventé), réponse à une question
+   en <5s chacune — titre net + une ligne de corps, jamais un pavé de texte à décoder.
+   ============================================================ */
+.dashboard-command-center {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cb-space-2);
+  margin-bottom: var(--cb-space-3);
+}
+.cc-card { margin: 0; }
+.cc-card-title {
+  font-family: var(--cb-font-display);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--cb-orange);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.cc-card-body {
+  font-family: var(--cb-font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ds-text);
+}
+@media (min-width: 768px) {
+  .dashboard-command-center { flex-direction: row; }
+  .cc-card { flex: 1; }
+}
+
 /* Panels/modales — verre plus prononcé, cohérent avec les cartes */
 .panel {
   background: rgba(26, 26, 26, 0.62);
