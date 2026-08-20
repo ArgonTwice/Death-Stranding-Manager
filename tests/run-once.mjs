@@ -56,6 +56,15 @@ const { hireRaw } = await import(SRC + 'systems/PorterSystem.js');
 const { createMockMotionAdapter } = await import(SRC + 'sensors/MockMotionAdapter.js');
 const { recordSteps } = await import(SRC + 'systems/RealWalkSystem.js');
 const { launchRaid } = await import(SRC + 'systems/raid/RaidSystem.js'); // l'import seul enregistre déjà l'abonnement walk:stepDetected (effet de bord au chargement)
+// V1.20.0 — ui/HUD.js s'abonne aussi à plusieurs événements à l'IMPORT (quest:urgent/
+// mule:relayUnderAttack -> pauseForMessage(), entre autres) qui influencent réellement l'issue de la
+// simulation. Ce script en bénéficiait PAR ACCIDENT via un import mort (`import { render } from
+// '../ui/HUD.js'`) dans persistence/SaveManager.js, retiré en V1.20.0 (cycle persistence<->ui réel,
+// render() jamais appelé). Sans cet import explicite, run-once.mjs cesse de refléter le même graphe
+// d'abonnements que le jeu réel (main.js importe HUD.js directement — ce comportement-là ne change
+// jamais côté jeu). Chargé explicitement ici pour la même raison que systems/raid/RaidSystem.js
+// ci-dessus: rendre la dépendance délibérée plutôt qu'accidentelle.
+await import(SRC + 'ui/HUD.js');
 
 RNG.setSeed(SEED);
 newGame(false);

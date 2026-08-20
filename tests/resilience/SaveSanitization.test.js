@@ -3,7 +3,7 @@
 // ré-hydratation de game.visitor depuis le pool canonique VISITOR_OFFERS (un visiteur en attente ne
 // doit jamais planter au chargement, closure d'effet perdue par la sérialisation JSON ou non). Même
 // style zéro-dépendance que le reste de tests/resilience/ (_stubEnv.mjs), auto-découvert par runAll.mjs.
-import { installStubEnv, test, assert, assertEqual, summary } from './_stubEnv.mjs';
+import { installStubEnv, test, assert, assertEqual, assertDeepEqual, summary } from './_stubEnv.mjs';
 
 installStubEnv();
 
@@ -79,6 +79,36 @@ await test('sanitizeGame(): idempotent — running it again on an already-sane s
   sanitizeGame();
   const after = JSON.stringify({ money: game.money, reputation: game.reputation, porters: game.porters.map(p => ({ health: p.health, stress: p.stress, gearWear: p.gearWear })) });
   assertEqual(after, before, 'a second call on already-valid data must be a no-op');
+});
+
+await test('sanitizeGame(): reassigns duplicate/corrupted porter ids to a clean id=index sequence, deterministically', async () => {
+  const { hireRaw } = await import('../../src/systems/PorterSystem.js');
+  RNG.setSeed(120001);
+  newGame(false);
+  hireRaw('scout'); hireRaw('scout'); hireRaw('scout');
+  // Simule une sauvegarde corrompue/éditée à la main: ids dupliqués/incohérents (jamais produit par
+  // le jeu réel — hireRaw() assigne toujours id=game.porters.length, jamais modifié ailleurs, cf.
+  // grep exhaustif documenté dans le commit V1.19.0). sanitizeGame() doit tout de même reconstituer
+  // une séquence d'ids propre et unique plutôt que de laisser des doublons se propager en aval
+  // (game.bonds/game.duos, DeliveryEngine.js#bondKey, sont keyed sur ces ids).
+  game.porters[0].id = 7;
+  game.porters[1].id = 7;
+  game.porters[2].id = 7;
+  sanitizeGame();
+  const ids = game.porters.map(p => p.id);
+  assertEqual(new Set(ids).size, ids.length, `porter ids must all be unique after sanitizeGame(), got [${ids.join(',')}]`);
+  assertDeepEqual(ids, [0, 1, 2], 'sanitizeGame() must reindex to a clean 0..N-1 sequence matching array order, exactly like hireRaw() does on a real hire');
+});
+
+await test('sanitizeGame(): a legitimate save (ids already matching array index) is left untouched — the reindex is a no-op for real gameplay', async () => {
+  const { hireRaw } = await import('../../src/systems/PorterSystem.js');
+  RNG.setSeed(120002);
+  newGame(false);
+  hireRaw('scout'); hireRaw('scout');
+  const idsBefore = game.porters.map(p => p.id);
+  sanitizeGame();
+  const idsAfter = game.porters.map(p => p.id);
+  assertDeepEqual(idsAfter, idsBefore, 'a save produced by real gameplay (id already == index) must never have its ids changed by sanitizeGame()');
 });
 
 // ============================================================

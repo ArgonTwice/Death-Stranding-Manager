@@ -13,7 +13,6 @@ import { applyLegacyCarryOver } from '../systems/LegacySystem.js';
 import { porterLeagueTier } from '../systems/PorterLeague.js';
 import { ensurePorterIdentity } from '../systems/PorterStorySystem.js';
 import { greetOnLoad } from '../systems/TerminalSoul.js';
-import { render } from '../ui/HUD.js';
 import { confirmModal } from '../ui/ModalService.js';
 
 export function computeScore() {
@@ -326,6 +325,17 @@ export function sanitizeGame() {
         p.level = clamp(p.level, 1, Infinity, 1);
         p.likes = clamp(p.likes, 0, Infinity, 0);
       }
+
+      // V1.20.0 — durcissement anti-collision d'ID: systems/PorterSystem.js#hireRaw n'assigne jamais
+      // qu'un id = game.porters.length au moment du recrutement, et game.porters n'est JAMAIS
+      // splice/réordonné ailleurs dans le code (licenciement/mort ne posent qu'un flag status) — donc
+      // pour toute sauvegarde issue du jeu réel, p.id === son index dans le tableau EST DÉJÀ vrai, et
+      // la ligne ci-dessous est un no-op garanti. Elle ne change quelque chose que pour une sauvegarde
+      // corrompue/éditée à la main contenant des ids dupliqués ou incohérents — auquel cas game.bonds/
+      // game.duos (clés dérivées de ces ids, cf. DeliveryEngine.js#bondKey) étaient de toute façon déjà
+      // invalidés par la corruption; reconstituer un id=index propre et déterministe (sans RNG) reste
+      // le meilleur état récupérable, plutôt que de propager des doublons en aval.
+      game.porters.forEach((p, i) => { p.id = i; });
     }
 
 export async function saveGame(silent = false) {

@@ -66,6 +66,16 @@ const { dispatchDeliveryManually } = await import(SRC + 'engine/DeliveryEngine.j
 // (tests/run-once.mjs non plus), donc explicitement chargé ici pour que la mesure "Porter Credits"
 // reflète le vrai comportement du jeu plutôt qu'un abonnement jamais enregistré.
 await import(SRC + 'systems/PorterEconomy.js');
+// V1.20.0 — ui/HUD.js s'abonne aussi à plusieurs événements à l'IMPORT (quest:urgent/mule:relayUnderAttack
+// -> pauseForMessage(), entre autres) qui influencent réellement la trajectoire de la simulation
+// (runtime.paused change le comportement de certains chemins). Jusqu'ici ce script en bénéficiait
+// PAR ACCIDENT via un import mort `import { render } from '../ui/HUD.js'` dans persistence/
+// SaveManager.js (jamais appelé, retiré en V1.20.0 car il créait un cycle persistence<->ui réel) —
+// sans cet import explicite, ce script ne reflète plus le même graphe d'abonnements que le jeu réel
+// (main.js importe HUD.js directement, donc CE comportement-là ne change jamais côté jeu). Chargé
+// explicitement ici pour la même raison que PorterEconomy.js ci-dessus: rendre la dépendance
+// AUCUNEMENT accidentelle.
+await import(SRC + 'ui/HUD.js');
 
 const FAIL = [];
 function assert(cond, msg) { if (!cond) FAIL.push(msg); }
