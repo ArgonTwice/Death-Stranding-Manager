@@ -112,7 +112,7 @@ export function hireRaw(skill, trait, rare) {
       game.porters.push({
         id, name: pickPorterName(), skill: s, trait: t, likes: 0,
         grades: { portage: 0, combat: 0, discretion: 0, service: 0, reseau: 0 }, map: game.currentMap,
-        x: spawn.x, y: spawn.y, xp: rare ? BALANCE.porter.hireRareXp : 0, level: rare ? BALANCE.porter.hireRareLevel : 1, salary: Math.round((BALANCE.porter.hireBaseSalary + (rare ? BALANCE.porter.hireRareSalaryBonus : 0)) * DIFFICULTIES[game.difficulty || 'normal'].costMult),
+        x: spawn.x, y: spawn.y, xp: rare ? BALANCE.porter.hireRareXp : 0, level: rare ? BALANCE.porter.hireRareLevel : 1, salary: Math.round((BALANCE.porter.hireBaseSalary + (rare ? BALANCE.porter.hireRareSalaryBonus : 0)) * DIFFICULTIES[game.difficulty || 'normal'].costMult * (DIFFICULTIES[game.difficulty || 'normal'].salaryMult || 1)), // V1.23.0 — salaryMult creuse spécifiquement la masse salariale en Hardcore, en sus du costMult déjà appliqué à tout le reste (équipement/véhicules)
         health: 100, stress: 0, status: "idle", gearWear: 0, connection: 0, credits: 0, // V1.9.0 — Porter Credits (systems/PorterEconomy.js)
         equipment: { boots: 0, exo: 0, scanner: 0, cryptobiote: 0, bolagun: 0, cryobox: 0, harness: 0, climbing_anchor: 0, vehicle: null }
       });

@@ -29,10 +29,21 @@ export const HQ = { x: 5, y: 5 };
 // BALANCE.economy.startingMoney n'existe pas, le vrai départ argent vit ici depuis toujours). Easy/hard
 // réduits dans la MÊME proportion (x0.3) pour préserver l'écart relatif entre les 3 paliers plutôt que
 // de ne recalibrer QUE "normal" et aplatir la courbe de difficulté.
+// V1.23.0 — hard.riskMult 1.15 -> 2.0: un risque pré-multiplicateur "modéré" (ex: 0.3, livraison en
+// zone BT sans équipement optimisé) passe de 0.345 à 0.6 — un vrai saut de danger — SANS jamais
+// affecter une livraison déjà optimisée au plancher (BALANCE.delivery.riskFloor=0.12 s'applique
+// APRÈS la multiplication: un risque pré-mult déjà très bas reste clampé au même plancher quel que
+// soit riskMult). Choisi 2.0 (borne basse de la fourchette 2.0-2.5 suggérée) plutôt que 2.5: à ce
+// niveau, même un risque pré-mult modéré (0.4+) atteint déjà le plafond riskCeil=1 (100% de chance
+// d'un événement), au-delà de quoi 2.5 n'aurait plus rien puni de plus — juste rendu le mode Hardcore
+// dégénéré (toute livraison non-triviale à 100%) plutôt que "difficile mais stratégique".
+// salaryMult (nouveau champ): appliqué en SUS de costMult au moment du recrutement
+// (systems/PorterSystem.js#hireRaw) — creuse spécifiquement le poste salarial en Hardcore, distinct
+// du renchérissement général costMult (qui touche aussi équipement/véhicules).
 export const DIFFICULTIES = {
-      easy:   { label: '🟢 Facile', costMult: 0.85, riskMult: 0.85, startMoney: 3900 },
-      normal: { label: '🟡 Normal', costMult: 1, riskMult: 1, startMoney: 3000 },
-      hard:   { label: '🔴 Difficile', costMult: 1.15, riskMult: 1.15, startMoney: 2400 }
+      easy:   { label: '🟢 Facile', costMult: 0.85, riskMult: 0.85, startMoney: 3900, salaryMult: 1 },
+      normal: { label: '🟡 Normal', costMult: 1, riskMult: 1, startMoney: 3000, salaryMult: 1 },
+      hard:   { label: '🔴 Difficile', costMult: 1.15, riskMult: 2.0, startMoney: 2400, salaryMult: 1.3 }
     };
 
 // V1.14.0 — rythme par défaut ralenti (1000ms -> 1300ms/jour, +30%): laisse davantage de temps pour
@@ -500,7 +511,7 @@ export const BALANCE = {
     ],
     vipContractMinTier: 2, // Or minimum pour débloquer les contrats VIP des sponsors de prestige
     vipContractRewardMult: 2.2,
-    vipContractSpawnChance: 0.1
+    vipContractSpawnChance: 0.22 // V1.23.0 — 0.1 -> 0.22: contrats VIP plus fréquents une fois la Ligue Or atteinte
   },
   regionalNetwork: {
     cost: 2500,
@@ -538,11 +549,11 @@ export const BALANCE = {
     longAbsenceMs: 21600000 // 6h d'absence réelle -> message d'accueil dédié
   },
   bbpod: {
-    stressGainPerBtExposure: 10,
-    stressDecayPerDayCalm: 4,
+    stressGainPerBtExposure: 6, // V1.23.0 — 10 -> 6: réduit l'accumulation de stress par exposition BT
+    stressDecayPerDayCalm: 8, // V1.23.0 — 4 -> 8: double la récupération quotidienne, pour que la jauge redescende vraiment entre deux expositions
     connectionGainPerDelivery: 1,
     connectionGainPerMajorMemory: 6,
-    louStageConnectionThreshold: 65, // au-delà: le BB Pod "devient" Lou (évolution narrative)
+    louStageConnectionThreshold: 50, // V1.23.0 — 65 -> 50: avance le déblocage narratif de l'étape Lou
     detectionWarningExposureThreshold: 2, // btExposure à partir duquel bbpod:btDetected s'émet
     cautionDmgMult: 0.7, // choix "Prudence" sur l'alerte BB Pod: -30% dégâts si l'event se déclenche, +stress
     cautionStressCost: 5

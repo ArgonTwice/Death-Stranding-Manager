@@ -78,6 +78,7 @@ export const game = {
       progression: { realWalk: { unlocked: false } }, // V1.1 — RealWalk (systems/WalkSession.js#activateRealWalk) se débloque au premier raccordement réseau réussi (PrepperSystem.js#connectKnot), jamais retiré ensuite. SaveManager.js#deserializeGame() force unlocked:true par défaut pour toute sauvegarde ANTÉRIEURE à V1.1 (sans champ progression du tout) — grandfather clause, jamais de retrait rétroactif d'un accès déjà acquis par un joueur existant.
       // --- Propriétés repliées depuis d'anciennes variables top-level module-scope (refacto ES Modules) ---
       gameEnded: false,
+      consecutiveNegativeMonths: 0, // V1.23.0 — persistence/SaveManager.js#checkBankruptcy(): mois consécutifs terminés à $0
       quarterSnapshot: { completed: 0, deaths: 0, money: 10000 },
       dayInMonth: 0,
       monthState: { viewMap: null, moneyBeforeOps: 0, salaryCost: 0 },

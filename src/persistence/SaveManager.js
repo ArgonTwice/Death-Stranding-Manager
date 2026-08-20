@@ -79,6 +79,32 @@ export async function checkGameEnd() {
       saveGame(true); // persiste game.gameEnded immédiatement (sinon: rechargement = 1 jour de drift + score ré-enregistré)
     }
 
+// V1.23.0 — Faillite: le brief demandait de vérifier "game.money strictement < 0 pendant 2 mois
+// consécutifs", mais AUCUN chemin du jeu ne laisse jamais game.money passer sous 0 (chaque dépense
+// est gardée par un `if (game.money < cost) return`, et la boucle de salaires impayables licencie
+// les porteurs les plus chers PLUTÔT que de passer en négatif, cf. DeliveryEngine.js#
+// startMonthBookkeeping — vérifié par grep exhaustif de tous les sites `game.money -=`). Le vrai
+// signal de détresse financière observable est donc "le joueur termine le mois avec une trésorerie
+// à $0 pile" (le plancher a été touché), pas une valeur négative qui n'existe pas dans ce codebase.
+// Réutilise le même pipeline de fin de partie que checkGameEnd() (score/eventBus 'game:ended'/
+// showEndScreen déjà câblé côté UI), seul le message de log distingue les deux issues — aucune
+// nouvelle UI créée, conformément à la contrainte "sans refonte UI".
+export async function checkBankruptcy() {
+      if (game.gameEnded) return;
+      if (game.money <= 0) {
+        game.consecutiveNegativeMonths = (game.consecutiveNegativeMonths || 0) + 1;
+      } else {
+        game.consecutiveNegativeMonths = 0;
+      }
+      if (game.consecutiveNegativeMonths < 2) return;
+      game.gameEnded = true;
+      const score = computeScore();
+      logEvent(`💀 FAILLITE — Bridges met fin au contrat après 2 mois consécutifs de trésorerie à $0. Score final: ${score}`, 'death');
+      const list = await recordScore(score);
+      eventBus.emit('game:ended', { score, list });
+      saveGame(true);
+    }
+
 export const SAVE_KEY_LEGACY = 'ds-manager-save';
 
 export const SAVE_KEY_PREFIX = 'ds-manager-save-slot';
@@ -126,6 +152,7 @@ export function serializeGame() {
         completed: game.completed, deaths: game.deaths, porters: game.porters,
         structures: game.structures, currentMap: game.currentMap, mapsData: mapsOut,
         log: game.log.slice(0, 30), equipBought: game.equipBought, gameEnded: game.gameEnded,
+        consecutiveNegativeMonths: game.consecutiveNegativeMonths || 0,
         materials: game.materials, titles: game.titles, quarterSnapshot: game.quarterSnapshot,
         activeFestival: game.activeFestival, hallOfFame: game.hallOfFame, visitor: game.visitor,
         bonds: game.bonds, legacyBonus: game.legacyBonus, collection: game.collection,
@@ -159,6 +186,7 @@ export function serializeGame() {
 export function deserializeGame(s) {
       game.money = s.money; game.month = s.month; game.reputation = s.reputation;
       game.completed = s.completed; game.deaths = s.deaths;
+      game.consecutiveNegativeMonths = s.consecutiveNegativeMonths || 0; // V1.23.0 — grandfather: une vieille sauvegarde sans ce champ démarre à 0
       // Livraisons en cours non persistées (simplification): les porteurs "en route" repartent idle
       game.porters = s.porters.map(p => ({
         ...p,
@@ -311,6 +339,7 @@ export function sanitizeGame() {
       game.totalSteps = clamp(game.totalSteps, 0, Infinity, 0);
       game.completed = clamp(game.completed, 0, Infinity, 0);
       game.deaths = clamp(game.deaths, 0, Infinity, 0);
+      game.consecutiveNegativeMonths = clamp(game.consecutiveNegativeMonths, 0, Infinity, 0);
 
       if (game.materials) {
         for (const k of Object.keys(game.materials)) game.materials[k] = clamp(game.materials[k], 0, Infinity, 0);
@@ -378,7 +407,7 @@ export async function newGame(confirmFirst, slot) {
       const diffEl = document.getElementById('difficultySelect');
       const difficulty = (diffEl && diffEl.value) || 'normal';
       const startMoney = DIFFICULTIES[difficulty].startMoney;
-      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false, autoBuyEquip: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null, totalSteps: 0, activeRaid: null, raidHistory: [], playerLoadout: { boots: 'none', body: 'none', vehicle: 'none', pcc: 'none' }, world: { structures: [], nextStructureId: 0 }, activeExpedition: null, expeditionHistory: [], tutorial: { step: 0, completed: false, skipped: false, rewardsGranted: false }, pioneerMissions: [], terrainHazards: {} });
+      Object.assign(game, { money: startMoney, month: 1, reputation: 50, completed: 0, deaths: 0, porters: [], deliveries: [], structures: {}, currentMap: 'mexico', mapsData: {}, voidouts: [], log: [], materials: { chiral_crystal: 0, mule_scrap: 0, blood_grenades: 0, blood_bags: 0 }, titles: [], activeFestival: null, hallOfFame: [], visitor: null, bonds: {}, legacyBonus: 0, collection: [], duos: [], sponsor: null, automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false, autoBuyEquip: false }, difficulty, ngPlus: false, infraInvestments: 0, subsidiaries: [], loyalty: 50, urgentQuests: [], urgentQuestHistory: [], convoys: [], telemetry: { convoysLaunched: 0, convoysArrivedFull: 0, convoysArrivedPartial: 0, sheltersProtectedCount: 0, sheltersExposedTotal: 0, deliveriesResolved: 0, deliveriesSucceeded: 0, rewardByRouteType: { express: 0, shortcut: 0, contraband: 0, none: 0 } }, hardcoreTimefall: false, chiralMemory: 0, majorMemories: [], bbPod: { connection: 0, stress: 0, stage: 'pod' }, absenceMuseum: [], gratitudeTrace: 0, beachSession: null, totalSteps: 0, activeRaid: null, raidHistory: [], playerLoadout: { boots: 'none', body: 'none', vehicle: 'none', pcc: 'none' }, world: { structures: [], nextStructureId: 0 }, activeExpedition: null, expeditionHistory: [], tutorial: { step: 0, completed: false, skipped: false, rewardsGranted: false }, pioneerMissions: [], terrainHazards: {}, consecutiveNegativeMonths: 0 });
       Object.keys(game.equipBought).forEach(k => game.equipBought[k] = 0);
       game.gameEnded = false;
       runtime.announcedRank = 0;

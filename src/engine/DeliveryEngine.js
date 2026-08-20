@@ -12,7 +12,7 @@ import { dominantStructure, isBTZone, isNearHostileMuleCamp, isOnRoute, loadMapD
 import { checkTerrainHazards, tickPioneerMissions } from '../systems/ReconnaissanceSystem.js';
 import { hasTalent } from '../systems/PorterTalentTree.js';
 import { weatherRiskMod } from './WeatherEngine.js';
-import { checkGameEnd, saveGame } from '../persistence/SaveManager.js';
+import { checkBankruptcy, checkGameEnd, saveGame } from '../persistence/SaveManager.js';
 import { runAutomation } from '../systems/AutomationManager.js';
 import { checkSponsor, checkSubsidiaries } from '../systems/EconomySystem.js';
 import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems/NetworkSystem.js';
@@ -855,6 +855,7 @@ export function endMonthBookkeeping() {
       const netStr = netChange >= 0 ? `+$${netChange}` : `-$${Math.abs(netChange)}`;
       logEvent(`📊 BILAN — revenus +$${Math.max(0, income)} / salaires -$${game.monthState.salaryCost} = ${netStr}`, netChange >= 0 ? 'good' : 'warn');
 
+      checkBankruptcy(); // V1.23.0 — 2 mois consécutifs à $0 pile déclenche la fin de partie (cf. commentaire de la fonction)
       if (!game.gameEnded) saveGame(true); // autosave silencieux à chaque mois complété
     }
 
