@@ -1,7 +1,8 @@
-// tests/resilience/RewardBalance.test.js — suite V1.18.0: verrouille la valeur recalibrée de
-// BALANCE.delivery.rewardDistanceMult (50) ET vérifie qu'elle se propage FIDÈLEMENT dans le calcul
-// réel d'une récompense de livraison (engine/DeliveryEngine.js#createDelivery) — pas seulement que la
-// constante vaut 50 dans data/Balance.js, ce qui ne prouverait rien sur son utilisation effective.
+// tests/resilience/RewardBalance.test.js — suite V1.18.0 (valeur mise à jour V1.19.0): verrouille la
+// valeur recalibrée de BALANCE.delivery.rewardDistanceMult (55) ET vérifie qu'elle se propage
+// FIDÈLEMENT dans le calcul réel d'une récompense de livraison (engine/DeliveryEngine.js#createDelivery)
+// — pas seulement que la constante vaut 55 dans data/Balance.js, ce qui ne prouverait rien sur son
+// utilisation effective.
 // Même style zéro-dépendance que le reste de tests/resilience/ (_stubEnv.mjs), auto-découvert par
 // runAll.mjs. Le recalibrage économique complet (archétypes, plafond 30M$/mois 20) reste couvert par
 // tests/balancing-simulation.test.mjs (script séparé, invocation explicite).
@@ -16,8 +17,8 @@ const { newGame } = await import('../../src/persistence/SaveManager.js');
 const { hireRaw } = await import('../../src/systems/PorterSystem.js');
 const { dispatchDeliveryManually } = await import('../../src/engine/DeliveryEngine.js');
 
-await test('BALANCE.delivery.rewardDistanceMult is locked to the recalibrated value (100 -> 50)', async () => {
-  assertEqual(BALANCE.delivery.rewardDistanceMult, 50, 'rewardDistanceMult must stay at the V1.18.0 recalibrated value — any future change here needs a deliberate, verified balancing pass, not an accidental edit');
+await test('BALANCE.delivery.rewardDistanceMult is locked to the recalibrated value (100 -> 50 -> 55)', async () => {
+  assertEqual(BALANCE.delivery.rewardDistanceMult, 55, 'rewardDistanceMult must stay at the V1.19.0 recalibrated value — any future change here needs a deliberate, verified balancing pass, not an accidental edit');
 });
 
 await test('DIFFICULTIES.normal.startMoney reflects the "départ réaliste" recalibration (10000 -> 3000), easy/hard scaled proportionally', async () => {
@@ -42,7 +43,7 @@ await test('a standard-cargo delivery reward is computed exactly as distance * r
   // partie fraîche n'a ni investissement infra, ni Super-Relais régional, ni Route Historique, ni
   // structure de terrain posée — tous ces facteurs valent exactement 1).
   const expected = Math.ceil(distance * BALANCE.delivery.rewardDistanceMult * (1 + game.reputation / BALANCE.delivery.reputationRewardDivisor));
-  assertEqual(d.reward, expected, `reward must be computed from the recalibrated rewardDistanceMult (50), got ${d.reward}, expected ${expected} (distance=${distance}, reputation=${game.reputation})`);
+  assertEqual(d.reward, expected, `reward must be computed from the recalibrated rewardDistanceMult (55), got ${d.reward}, expected ${expected} (distance=${distance}, reputation=${game.reputation})`);
 });
 
 summary('RewardBalance.test.js');

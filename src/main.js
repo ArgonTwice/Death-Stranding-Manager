@@ -9,7 +9,7 @@ import { setGameSpeed, setTickFn, startGameClock, togglePause } from './core/Gam
 import { game, logEvent, runtime } from './core/GameState.js';
 import { GAME_LENGTH_MONTHS } from './data/Balance.js';
 import { SPLASH_TICKER_LINES } from './data/Constants.js';
-import { assaultCamp, buyConsumable, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, sendToIncinerator } from './engine/CombatEngine.js';
+import { assaultCamp, buyConsumable, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, reconCatcher, sendToIncinerator } from './engine/CombatEngine.js';
 import { acceptVisitorOffer, advanceDay, buildRoute, craft, dismissVisitor, launchQuestFromUI, sendDelivery } from './engine/DeliveryEngine.js';
 import { buildExpansion, foundBranch, setActiveBranch, switchMap } from './engine/MapEngine.js';
 import { computeScore, loadGame, loadScores, newGame, peekSlot, saveGame, startNewGamePlus } from './persistence/SaveManager.js';
@@ -284,6 +284,7 @@ window.craft = craft;
 window.defendRelay = defendRelay;
 window.dismissVisitor = dismissVisitor;
 window.engageCatcher = engageCatcher;
+window.reconCatcher = reconCatcher;
 window.forceRest = forceRest;
 window.fortifyRelay = fortifyRelay;
 window.foundBranch = foundBranch;

@@ -6,7 +6,7 @@ import { debugLog } from '../core/Debug.js';
 import { currentRankIndex, game, logEvent, runtime } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
 import { BALANCE, DIFFICULTIES, GAME_LENGTH_MONTHS, HQ, RANKS } from '../data/Balance.js';
-import { CAMP_EVENTS, FESTIVALS, RELICS, VISITOR_OFFERS, pickN, rollTrait } from '../data/Constants.js';
+import { CAMP_EVENTS, FESTIVALS, RELICS, VISITOR_OFFERS, pickN, rollTraitFromSeed } from '../data/Constants.js';
 import { VERSION } from '../config/version.js';
 import { generateBTZones, generateMainKnots, generateMuleCamps, generateTerrain, loadMapData, resetMuleCampIdCounter } from '../engine/MapEngine.js';
 import { applyLegacyCarryOver } from '../systems/LegacySystem.js';
@@ -163,7 +163,6 @@ export function deserializeGame(s) {
       // Livraisons en cours non persistées (simplification): les porteurs "en route" repartent idle
       game.porters = s.porters.map(p => ({
         ...p,
-        trait: p.trait || rollTrait(),
         likes: p.likes || 0,
         grades: p.grades || { portage: 0, combat: 0, discretion: 0, service: 0, reseau: 0 },
         gearWear: p.gearWear || 0,
@@ -176,7 +175,13 @@ export function deserializeGame(s) {
         // l'autre, cassant l'invariance canonical(serialize(deserialize(save))) === canonical(save)).
         equipment: { ...(p.equipment || {}), harness: (p.equipment && p.equipment.harness) || 0, climbing_anchor: (p.equipment && p.equipment.climbing_anchor) || 0 },
         status: p.status === 'en route' ? 'idle' : p.status
-      })).map(p => ensurePorterIdentity(p)); // V0.5.0: backfill déterministe pour porteurs pré-V0.5.0
+      }))
+        .map(p => ensurePorterIdentity(p)) // V0.5.0: backfill déterministe pour porteurs pré-V0.5.0 — garantit porterSeed AVANT le fallback de trait ci-dessous
+        // V1.19.0 fix — le fallback de trait manquant utilisait rollTrait() (flux RNG PARTAGÉ), donc
+        // charger une sauvegarde sans trait décalait la seed globale et cassait la reproductibilité
+        // (deux runs identiques divergeaient selon qu'un chargement avait eu lieu ou non). Utilise
+        // désormais rollTraitFromSeed(porterSeed) — flux isolé et déterministe, jamais le flux partagé.
+        .map(p => (p.trait ? p : { ...p, trait: rollTraitFromSeed(p.porterSeed) }));
       game.deliveries = [];
       game.convoys = []; // V0.4.0: en transit uniquement, jamais persisté (même logique que game.deliveries)
       game.structures = s.structures || {};

@@ -31,6 +31,16 @@ export function rollTrait() {
       return keys[Math.floor(RNG.next() * keys.length)];
     }
 
+// V1.19.0 — variante de rollTrait() qui ne touche JAMAIS le flux RNG partagé: dérive un flux isolé
+// et reproductible à partir d'un porterSeed déjà stocké (RNG.deriveGenerator, même pattern que
+// PorterStorySystem.js#applyIdentityToPorter). Sert au fallback de trait à la désérialisation
+// (SaveManager.js#deserializeGame) pour que CHARGER une sauvegarde ne décale plus jamais la seed.
+export function rollTraitFromSeed(seed) {
+      const keys = Object.keys(TRAITS);
+      const gen = RNG.deriveGenerator(seed);
+      return keys[Math.floor(gen.next() * keys.length)];
+    }
+
 export const STRUCTURES = {
       training: { name: 'Camp d\'entraînement', cost: 1500, maxLevel: 3, levelNames: ['Camp Basique', 'Camp Avancé', 'Centre d\'Excellence'] },
       shelter:  { name: 'Abri anti-BT', cost: 2000, maxLevel: 3, levelNames: ['Abri de fortune', 'Abri renforcé', 'Bunker chiral'] },
@@ -455,14 +465,15 @@ export const SPONSORS = [
         cond: () => currentRankIndex() >= 2, desc: 'Rang Bridges Certifié minimum' },
       // V1.16.0 — monthlyIncome 50 -> 350 (mission précédente): la valeur d'origine (50) était
       // INFÉRIEURE au sponsor de base sans condition (bridges_hq, 100/mois) malgré une condition réelle
-      // à remplir — jamais rentable comparé à ne rien faire. 350 positionne ce sponsor entre
-      // chiral_corp (300, rang Certifié) et bridges_elite (450, VIP) — ROI (signingBonus/monthlyIncome)
-      // ≈ 14,3 mois, déjà sous la barre des 15 mois demandée par une mission ultérieure qui redemandait
-      // ce même correctif ("supprimer et remplacer par un sponsor à ROI<15 mois") sans savoir qu'il
-      // avait déjà été appliqué — condition déjà satisfaite, ID/nom volontairement conservés (rien ne
-      // justifiait de recréer un sponsor déjà sain sous une autre identité).
-      { id: 'mule_repenti', name: 'Syndicat discret (ex-MULE repenti)', signingBonus: 5000, monthlyIncome: 350,
-        cond: () => game.materials.mule_scrap >= 2, desc: 'Conserver ≥ 2 ferraille MULE en stock' },
+      // à remplir — jamais rentable comparé à ne rien faire. Ce même correctif ("remplacer le Syndicat
+      // ex-MULE par un sponsor sain") a été redemandé 4 fois de suite sous le même libellé de version
+      // par des briefs successifs ignorant le travail déjà fait, avec des chiffres cibles légèrement
+      // différents à chaque fois (350/mois puis, ici, 2000 signature / 150/mois / seuil ferraille 5) —
+      // cette dernière passe applique enfin les chiffres EXACTS du brief le plus récent pour clore le
+      // sujet: ROI (signingBonus/monthlyIncome) = 2000/150 ≈ 13,3 mois, toujours sous la barre des 15
+      // mois visée par toutes les versions précédentes de cette même demande.
+      { id: 'mule_repenti', name: 'Syndicat discret (ex-MULE repenti)', signingBonus: 2000, monthlyIncome: 150,
+        cond: () => game.materials.mule_scrap >= 5, desc: 'Conserver ≥ 5 ferraille MULE en stock' },
       // V0.5.0 — sponsors de prestige, débloqués par la Ligue (PorterLeague.js), contrats VIP à hautes récompenses
       { id: 'bridges_elite', name: 'Bridges — Division Élite', signingBonus: 8000, monthlyIncome: 450, vip: true,
         cond: () => porterLeagueTier() >= BALANCE.league.vipContractMinTier, desc: `Ligue ${LEAGUE_TIERS[BALANCE.league.vipContractMinTier].name} minimum` },

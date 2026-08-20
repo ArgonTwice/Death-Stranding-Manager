@@ -18,7 +18,13 @@ function rollWeatherType() {
       const B = BALANCE.weatherSystem;
       const hardcoreMult = game.hardcoreTimefall ? BALANCE.legacy.hardcoreTimefallWeightMult : 1; // V0.5.0 NG+
       const timefallWeight = B.timefallWeight * hardcoreMult;
-      const chiralStormWeight = B.chiralStormWeight * hardcoreMult;
+      // V1.19.0 — extension "Menace croissante" (BALANCE.combat.threatGrowth*): la Tempête Chirale
+      // devient un cran plus fréquente tous les threatGrowthMonthInterval mois, jusqu'au même palier
+      // que le reste de la menace (threatGrowthCap), pour garder la tension en fin de partie.
+      const C = BALANCE.combat;
+      const threatGrowth = Math.min(C.threatGrowthCap, Math.floor(game.month / C.threatGrowthMonthInterval));
+      const baseTotal = B.calmWeight + timefallWeight + B.chiralStormWeight;
+      const chiralStormWeight = B.chiralStormWeight * hardcoreMult + threatGrowth * C.threatGrowthStormChanceAddPerStep * baseTotal;
       const total = B.calmWeight + timefallWeight + chiralStormWeight;
       const r = RNG.next() * total;
       if (r < B.calmWeight) return 'calm';

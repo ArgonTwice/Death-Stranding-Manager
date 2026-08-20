@@ -8,7 +8,7 @@ import { checkRankUp, currentRankIndex, game, logEvent, runtime } from '../core/
 import { RNG } from '../core/RNG.js';
 import { BALANCE, DAYS_PER_MONTH, GAME_LENGTH_MONTHS, MAP_HEIGHT, MAP_WIDTH, RANKS, STRUCTURE_MIN_RANK } from '../data/Balance.js';
 import { CAMP_TRAIT_LABELS, COUNTRIES, GRADES, JOURNAL_MILESTONES, LEAGUE_TIERS, PCC_TYPES, PORTER_BACKGROUNDS, PORTER_PHOBIAS, PREPPER_ARCHETYPES, RECIPES, RELICS, ROUTE_TYPES, SKILLS, SPONSORS, STRUCTURES, TITLES, TRAITS, cellKey, countryInfo, gradeLevel } from '../data/Constants.js';
-import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, sendToIncinerator } from '../engine/CombatEngine.js';
+import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, reconCatcher, sendToIncinerator } from '../engine/CombatEngine.js';
 import { acceptVisitorOffer, craft, dismissVisitor, estimateNetMargin, launchQuestFromUI, sendDelivery } from '../engine/DeliveryEngine.js';
 import { dominantStructure, setActiveBranch, switchMap } from '../engine/MapEngine.js';
 import { computeScore } from '../persistence/SaveManager.js';
@@ -355,6 +355,7 @@ export function renderCatcherPanel() {
         <div class="alert-threat" style="border-left:2px solid var(--bt-purple); padding-left:6px; margin-bottom:6px;">
           👹 Catcher (${c.x},${c.y}) force ${'⚠️'.repeat(c.strength)}<br>
           Stock: 🩸${grenades} 💉${bags}<br>
+          ${c.reconDone ? '🔭 Reconnaissance déjà effectuée<br>' : `<button onclick="reconCatcher('${c.id}')" style="font-size:8px;">🔭 Reconnaissance ($200-500)</button><br>`}
           <button onclick="engageCatcher('${c.id}')" style="font-size:8px;">⚔️ Engager le combat (2-4 porteurs)</button>
         </div>`).join(''));
     }

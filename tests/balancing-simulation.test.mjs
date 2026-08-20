@@ -109,8 +109,9 @@ const ARCHETYPES = {
     },
     dailyAction(day) {
       if (day % 20 === 0 && game.porters.filter(p => p.status !== 'dead').length < 8 && game.money > BALANCE.porter.hireBaseCost * 3) hire(false);
-      // V1.16.0 — un véhicule (maintenance mensuelle x2.5), pour mesurer si ce recalibrage reste
-      // un investissement soutenable pour un archétype actif plutôt qu'une ruine silencieuse.
+      // V1.16.0/V1.19.0 — un véhicule (maintenance mensuelle x2.5 puis x3 de la base d'origine),
+      // pour mesurer si ce recalibrage reste un investissement soutenable pour un archétype actif
+      // plutôt qu'une ruine silencieuse.
       if (day === 30 && game.porters.some(p => !p.equipment.vehicle)) {
         const p = game.porters.find(p => !p.equipment.vehicle);
         runtime.selectedPorterId = p.id;
@@ -313,13 +314,13 @@ console.log(`  squad=2 campStrength=1 sans poche de sang: au moins 1 mort dans l
 assert(catcherDeathRate < 0.60, `engageCatcher(): taux de mort d'escouade (${pct(catcherDeathRate)}) anormalement élevé même après le recalibrage catcherDeathChanceBase 0.30->0.15 — vérifier resolveCatcherEncounter()`);
 
 // ============================================================
-// V1.16.0 — coût de véhicule (maintenance x2.5): vérifie que l'archétype "optimiseur" (qui achète un
+// V1.16.0/V1.19.0 — coût de véhicule (maintenance x2.5 puis x3): vérifie que l'archétype "optimiseur" (qui achète un
 // vélo au jour 30, cf. ARCHETYPES.optimiseur.dailyAction) reste solvable — pas une simple relecture des
 // résultats déjà agrégés plus haut, une assertion DÉDIÉE pour que l'intention soit explicite.
 // ============================================================
 const optResults = results.optimiseur;
-assert(optResults.every(r => r.finalMoney >= 0), 'archétype "optimiseur" (achète un véhicule au jour 30): argent négatif détecté — la maintenance x2.5 le rend insoutenable');
-console.log(`\n--- Coût véhicule x2.5: archétype "optimiseur" (achète un vélo au jour 30) reste solvable: argent final moyen=$${Math.round(optResults.reduce((s, r) => s + r.finalMoney, 0) / optResults.length)} ---`);
+assert(optResults.every(r => r.finalMoney >= 0), 'archétype "optimiseur" (achète un véhicule au jour 30): argent négatif détecté — la maintenance x3 le rend insoutenable');
+console.log(`\n--- Coût véhicule x3: archétype "optimiseur" (achète un vélo au jour 30) reste solvable: argent final moyen=$${Math.round(optResults.reduce((s, r) => s + r.finalMoney, 0) / optResults.length)} ---`);
 
 // ============================================================
 // V1.16.0 — "impossibilité d'atteindre 30M$ au mois 20": horizon étendu (600 jours ≈ mois 20,

@@ -45,7 +45,10 @@ export const DAYS_PER_MONTH = 30;
 
 // V1.16.0 — x2.5 (80/40/60 -> 200/100/150): un véhicule devait rester un investissement stratégique
 // réel (bonus vitesse + vehicleRewardMult x1.5) plutôt qu'un ajout quasi-gratuit une fois acheté.
-export const VEHICLE_MAINTENANCE_COST = { truck: 200, bike: 100, trike: 150 };
+// V1.19.0 — le brief demande "x3" sans préciser la base; interprété comme x3 de la valeur ORIGINALE
+// (80/40/60 -> 240/120/180), pas x3 de la valeur DÉJÀ x2.5 (qui donnerait 600/300/450 — intenable
+// combiné au startMoney réduit à 3000 et au vehicleRewardMult déjà abaissé à 1.15, cf. balancing-simulation).
+export const VEHICLE_MAINTENANCE_COST = { truck: 240, bike: 120, trike: 180 };
 
 // BALANCE — valeurs d'équilibrage numériques extraites de engine/ et systems/ (coûts, taux, seuils,
 // multiplicateurs). Regroupées par système pour que chaque fichier n'importe que sa propre section.
@@ -146,7 +149,7 @@ export const BALANCE = {
   combat: {
     assaultSquadMaxSize: 3,
     assaultSuccessBase: 0.28, // V1.16.0 — 0.35 -> 0.28: recalibrage économique
-    assaultSuccessPerSquadMember: 0.15,
+    assaultSuccessPerSquadMember: 0.12, // V1.19.0 — 0.15 -> 0.12: un squad complet (3) doit rester utile sans garantir la réussite à lui seul
     infiltrationBolagunBonus: 0.08,
     infiltrationDiscretionGradeMult: 0.03,
     assaultCombatGradeMult: 0.03,
@@ -177,7 +180,7 @@ export const BALANCE = {
     defendFailDamageRandRange: 20,
     fortifyRelayCost: 600,
     catcherMinRank: 3,
-    catcherSpawnChance: 0.06,
+    catcherSpawnChance: 0.04, // V1.19.0 — 0.06 -> 0.04: Catchers plus rares mais l'action Reconnaissance (ci-dessous) et le scaling menace-croissante compensent en fin de partie
     catcherStrengthBase: 1,
     catcherStrengthRandRange: 3,
     bloodGrenadeCost: 200,
@@ -207,7 +210,20 @@ export const BALANCE = {
     // engagée par le joueur, cf. engine/MapEngine.js#generateMuleCamps et engine/CombatEngine.js
     // (spawn Catcher).
     threatGrowthMonthInterval: 10,
-    threatGrowthCap: 4
+    threatGrowthCap: 4,
+    // V1.19.0 — extension "Menace croissante": en plus du +1 force MULE/BT/Catcher ci-dessus, la
+    // même échelle (mois/10, plafonnée à threatGrowthCap crans) ajoute désormais aussi un bonus de
+    // chance de zone BT (génération de territoire, engine/MapEngine.js) et de chance de tempête
+    // chirale (météo, engine/WeatherSystem.js), pour que la tension monte vraiment jusqu'aux mois
+    // 30-60 plutôt que de plafonner sur les seules stats de combat.
+    threatGrowthBtZoneChanceAddPerStep: 0.05,
+    threatGrowthStormChanceAddPerStep: 0.03,
+    // V1.19.0 — nouvelle action "Reconnaissance Pre-Catcher": dépense ponctuelle avant d'engager un
+    // Catcher, réduit sa force pour la confrontation à venir (permet de compenser un spawn tardif
+    // renforcé par threatGrowth sans totalement neutraliser le risque).
+    catcherReconCostBase: 200,
+    catcherReconCostRandRange: 300,
+    catcherReconStrengthReduction: 1
   },
   map: {
     expansionCostBase: 2500,
@@ -263,7 +279,7 @@ export const BALANCE = {
     vehicleCostScalingPerBought: 0.25,
     equipBaseCosts: { boots: 200, exo: 400, scanner: 300, cryptobiote: 150, bolagun: 350, cryobox: 250, harness: 350, climbing_anchor: 300 },
     vehicleBaseCosts: { truck: 2000, bike: 1500, trike: 1800 },
-    infraCostBase: 50000,
+    infraCostBase: 15000, // V1.19.0 — 50000 -> 15000: à 50000 (rang Élite déjà tardif) quasi personne n'atteignait jamais le 1er investissement
     infraCostGrowth: 1.18,
     infraMinRankIndex: 3,
     subsidyBase: 500,
@@ -331,10 +347,10 @@ export const BALANCE = {
     // 0.12 reste un plancher réel (+50% vs la valeur d'origine 0.08) sans cumuler deux nerfs coup sur coup.
     riskCeil: 1,
     serviceGradeRewardMult: 0.05,
-    rewardDistanceMult: 50, // V1.18.0 — 100 -> 70 -> 55 -> 50: troisième et (a priori) dernière passe, cf. tests/balancing-simulation.test.mjs
+    rewardDistanceMult: 55, // V1.19.0 — 50 -> 55: léger réajustement à la hausse demandé par le brief (les 3 passes précédentes avaient fini un cran trop bas, cf. tests/balancing-simulation.test.mjs)
     reputationRewardDivisor: 100,
     vehicleRewardMult: 1.15, // V1.16.0 — 1.5 -> 1.15: recalibrage économique (véhicule reste utile via vitesse, moins via récompense brute)
-    infraRewardMultPerInvestment: 0.002,
+    infraRewardMultPerInvestment: 0.01, // V1.19.0 — 0.002 -> 0.01: l'investissement infrastructure (coût x5 réduit ci-dessous) doit rapporter un bonus perçu, pas un arrondi négligeable
     overloadThreshold: 0.9,
     overloadRiskMult: 0.6,
     shelterDominantRiskCut: 0.03,
@@ -440,7 +456,7 @@ export const BALANCE = {
     successLoyaltyGain: 6,
     failLoyaltyLoss: 8,
     refuseLoyaltyLoss: 4,
-    refuseUrgentMedicalLoyaltyLoss: 12,
+    refuseUrgentMedicalLoyaltyLoss: 6, // V1.19.0 — 12 -> 6: refuser une urgence médicale reste pénalisant sans être une sanction disproportionnée
     loyaltySchemaUnlockThreshold: 70
   },
   // V0.4.0 — Heavy Logistics & Convoys Update

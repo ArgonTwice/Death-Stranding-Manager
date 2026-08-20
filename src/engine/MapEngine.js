@@ -141,10 +141,16 @@ export function knotCityName(x, y) {
 
 export function generateBTZones() {
       // 15% des cellules = zone BT, jamais sur HQ
+      // V1.19.0 — extension "Menace croissante" (BALANCE.combat.threatGrowth*): un territoire
+      // découvert tard en partie génère un peu plus de zones BT, jamais rétroactif (comme le reste
+      // du scaling threatGrowth — cf. Balance.js#combat.threatGrowth*).
+      const C = BALANCE.combat;
+      const threatGrowth = Math.min(C.threatGrowthCap, Math.floor(game.month / C.threatGrowthMonthInterval));
+      const btZoneChance = BALANCE.map.btZoneChance + threatGrowth * C.threatGrowthBtZoneChanceAddPerStep;
       for (let x = 0; x < MAP_WIDTH; x++) {
         for (let y = 0; y < MAP_HEIGHT; y++) {
           if (x === HQ.x && y === HQ.y) continue;
-          if (RNG.next() < BALANCE.map.btZoneChance) game.btZones.push(cellKey(x, y));
+          if (RNG.next() < btZoneChance) game.btZones.push(cellKey(x, y));
         }
       }
     }

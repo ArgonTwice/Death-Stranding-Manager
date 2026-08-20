@@ -4,7 +4,7 @@
 import { game } from '../core/GameState.js';
 import { MAP_HEIGHT, MAP_WIDTH } from '../data/Balance.js';
 import { PCC_TYPES, SKILLS, TRAITS, cellKey } from '../data/Constants.js';
-import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, sendToIncinerator } from '../engine/CombatEngine.js';
+import { assaultCamp, convertCampToRelay, defendRelay, engageCatcher, fortifyRelay, reconCatcher, sendToIncinerator } from '../engine/CombatEngine.js';
 import { sendDelivery } from '../engine/DeliveryEngine.js';
 import { isBTZone, isOnRoute, setActiveBranch } from '../engine/MapEngine.js';
 import { pccLogbookLines } from '../systems/NarrativeLogEngine.js';
@@ -94,8 +94,12 @@ export function inspectorCampHtml(camp) {
     }
 
 export function inspectorCatcherHtml(c) {
+      const reconBtn = c.reconDone
+        ? `<div style="font-size:10px; color:var(--chiral);">🔭 Reconnaissance déjà effectuée</div>`
+        : `<button style="margin-top:8px;" onclick="reconCatcher('${c.id}'); refreshInspectorIfOpen();">🔭 Reconnaissance ($200-500)</button>`;
       return `<h2>◆ 👹 CATCHER MAJEUR</h2>
         <div style="font-size:11px;">Position (${c.x},${c.y})<br>Force ${'⚠️'.repeat(c.strength)}<br>Stock: 🩸${game.materials.blood_grenades || 0} 💉${game.materials.blood_bags || 0}</div>
+        ${reconBtn}
         <button style="margin-top:8px;" onclick="engageCatcher('${c.id}'); closeInspector();">⚔️ Engager le combat (2-4 porteurs)</button>`;
     }
 

@@ -192,6 +192,24 @@ export function buyConsumable(type) {
       eventBus.emit('render:request');
     }
 
+// V1.19.0 — "Reconnaissance Pre-Catcher": dépense ponctuelle (200-500$) pour affaiblir un Catcher
+// avant de l'engager, compensant catcherSpawnChance réduit (0.06 -> 0.04) et le renfort de
+// threatGrowth en fin de partie. Une seule reconnaissance par Catcher (camp.reconDone) pour éviter
+// de neutraliser gratuitement toute menace à coups de reconnaissances répétées.
+export function reconCatcher(catcherId) {
+      const B = BALANCE.combat;
+      const camp = (game.catchers || []).find(c => c.id === catcherId);
+      if (!camp) return;
+      if (camp.reconDone) { logEvent('❌ Ce Catcher a déjà été reconnu'); return; }
+      const cost = B.catcherReconCostBase + Math.floor(RNG.next() * B.catcherReconCostRandRange);
+      if (game.money < cost) { logEvent(`❌ Budget insuffisant pour la reconnaissance ($${cost})`); return; }
+      game.money -= cost;
+      camp.strength = Math.max(1, camp.strength - B.catcherReconStrengthReduction);
+      camp.reconDone = true;
+      logEvent(`🔭 Reconnaissance effectuée (-$${cost}) — force du Catcher réduite à ${'⚠️'.repeat(camp.strength)}`, 'good');
+      eventBus.emit('render:request');
+    }
+
 export function engageCatcher(catcherId) {
       const B = BALANCE.combat;
       const camp = (game.catchers || []).find(c => c.id === catcherId);
