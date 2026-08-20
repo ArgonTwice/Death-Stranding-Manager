@@ -775,7 +775,6 @@ export function endMonthBookkeeping() {
       updatePrepperNeeds();
       generatePrepperContracts();
       applyHermitGifts();
-      runAutomation();
       tickWorldAgingMonthly(); // V0.6.0: usure écosystémique progressive de toute l'infrastructure posée
 
       // Récupération santé (réduite: repos forcé devient un vrai outil, pas juste attendre)
@@ -811,6 +810,16 @@ export function advanceDay() {
         }
       }
       tick();
+      // V1.15.0 — déplacé depuis endMonthBookkeeping() (mensuel): AutomationManager.js#runAutomation()
+      // se documentait déjà lui-même comme un "tick quotidien" mais n'était en réalité appelé qu'une
+      // fois par mois, laissant jusqu'à 29 jours un porteur au stress/à l'usure au-delà de son seuil
+      // configuré sans que les Ordres Permanents ne réagissent — trouvé empiriquement par
+      // tests/balancing-simulation.test.mjs (archétype "optimiseur", autoRepair actif, usure moyenne
+      // pourtant élevée). Aucune consommation de RNG.js dans runAutomation()/autoBuyEquipForIdlePorters()
+      // (vérifié par lecture + tests/resilience/FullGameLoopV15.test.js "never touches the shared RNG
+      // stream"): déplacer son point d'appel ne change donc jamais l'ordre de tirage RNG des autres
+      // systèmes quotidiens, seulement LA FRÉQUENCE à laquelle stress/usure/achats sont corrigés.
+      runAutomation();
       tickPioneerMissions(); // V1.6.0 — Dispatch Pionnier: décompte quotidien, résout les missions arrivées à échéance
       checkTerrainHazards(); // V1.6.0 — aléas de terrain DS2 (éboulement/inondation), chance QUOTIDIENNE
       tickWeatherSystem(); // V0.3.0: météo dynamique par territoire + avance du Chiral Forecast, tous les jours
