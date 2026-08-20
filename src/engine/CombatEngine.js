@@ -107,6 +107,11 @@ export function checkMuleCamps() {
           else if (c.status === 'relay' && !c.fortified && RNG.next() < B.relayCounterAttackChance) {
             c.status = 'under_attack';
             logEvent(`⚠️ ATTENTION — Le relais logistique (${c.x},${c.y}) est sous attaque MULE !`, 'warn');
+            // V1.14.0 — pause auto (ui/HUD.js#pauseForMessage) UNIQUEMENT pour le territoire actif: un
+            // relais attaqué sur un territoire que le joueur ne regarde pas ne doit jamais geler la
+            // partie pour un événement qu'il ne peut pas encore voir (même garde-fou que le logEvent
+            // ci-dessus dans le cas 'reactivated' un peu plus haut).
+            if (key === game.currentMap) eventBus.emit('mule:relayUnderAttack', { x: c.x, y: c.y, campId: c.id });
           }
           if (c.status === 'relay') game.money += c.strength * B.relayIncomePerStrength; // revenu passif mensuel
         }

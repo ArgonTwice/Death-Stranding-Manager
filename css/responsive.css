@@ -159,3 +159,18 @@
 .nav-sub-item-text {
   overflow-wrap: break-word;
 }
+
+/* ============================================================
+   V1.14.0 — dernier élément de chaque onglet (Dashboard/Livraisons/Réseau/Logistique/Options)
+   entièrement visible au scroll. .nav-main-content/.nav-sub-content défilent déjà (overflow-y:auto
+   ci-dessus, V1.0.0 règle 4) à l'intérieur de .left .panel, mais leur seul padding venait de .panel
+   lui-même (theme.css, --cb-space-4 = 20px) — trop court pour garantir une marge confortable sous le
+   dernier bloc (ex: le texte d'aide sous #unlock-knots dans l'onglet Réseau) sur un navigateur mobile
+   dont le chrome (barre d'adresse/barre système) réduit la hauteur utile réelle. Ajouté ICI (sur le
+   contenu, pas sur .panel) pour agrandir la hauteur scrollable réelle d'autant — même logique que
+   .map-container (V1.13.0): un contenu trop long doit pouvoir scroller AU-DELÀ, jamais rester
+   accroché au bord.
+   ============================================================ */
+.nav-main-content, .nav-sub-content {
+  padding-bottom: calc(120px + var(--ds-safe-bottom));
+}

@@ -31,7 +31,11 @@ export const DIFFICULTIES = {
       hard:   { label: '🔴 Difficile', costMult: 1.15, riskMult: 1.15, startMoney: 8000 }
     };
 
-export const DAY_MS = 1000;
+// V1.14.0 — rythme par défaut ralenti (1000ms -> 1300ms/jour, +30%): laisse davantage de temps pour
+// lire/réagir à un tick, en complément (pas en remplacement) de la pause automatique sur message
+// (core/GameLoop.js#pauseForMessage). Ne touche jamais la simulation elle-même (RNG/déterminisme): les
+// tests appellent tickFn()/advanceDay() directement, jamais via ce setInterval temps réel.
+export const DAY_MS = 1300;
 
 export const DAYS_PER_MONTH = 30;
 

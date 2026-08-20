@@ -152,11 +152,13 @@ export function checkTutorialProgress() {
 // preventDefault()/stopPropagation() — le jeu réagit normalement au clic, Die-Hardman se contente de
 // glisser un mot au passage.
 function handleDocumentClick(evt) {
-      if (game.tutorial.completed) return;
-      // V1.13.0 — n'importe quel clic du joueur, où qu'il tombe, vaut "message lu" et relance l'horloge
-      // mise en pause par reconcile() pour la réplique en cours (règle 4: jamais bloquant — la pause
-      // n'est qu'un temps de lecture, pas une confirmation obligatoire sur un bouton précis).
+      // V1.14.0 — DOIT s'exécuter avant le early-return "tutoriel terminé" ci-dessous: ce même clic
+      // relance l'horloge pour N'IMPORTE QUEL message bloquant en cours (tutoriel, mais aussi V1.14.0
+      // quête urgente / attaque de relais MULE, cf. ui/HUD.js), et l'immense majorité du jeu réel se
+      // joue tutoriel déjà terminé — un retour anticipé ici aurait rendu resumeAfterMessage()
+      // inatteignable par un clic générique pour toute la partie une fois le tutoriel clos.
       resumeAfterMessage();
+      if (game.tutorial.completed) return;
       // V1.0.2 fix — un clic sur la bannière elle-même (ex: [▼/▲]) n'est jamais un "mauvais clic":
       // sans ce garde-fou, showTutorialNudge() se redéployait automatiquement (elle se déplie si elle
       // était repliée) juste après que le joueur vienne de la replier, annulant son clic.

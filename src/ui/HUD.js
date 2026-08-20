@@ -1,7 +1,7 @@
 // AUTO-EXTRACTED MODULE: ui/HUD.js
 // Généré depuis le monolithe index.html original (refacto ES Modules, comportement inchangé).
 
-import { setGameSpeed } from '../core/GameLoop.js';
+import { pauseForMessage, setGameSpeed } from '../core/GameLoop.js';
 import { eventBus } from '../core/EventBus.js';
 import { DEBUG } from '../core/Debug.js';
 import { checkRankUp, currentRankIndex, game, logEvent, runtime } from '../core/GameState.js';
@@ -203,12 +203,17 @@ export function renderDashboardSynthesis() {
       const connectedCount = d ? knots.filter(k => d.routes.has(cellKey(k.x, k.y))).length : 0;
       const camps = game.muleCamps || [];
       const hostileCount = camps.filter(c => c.status === 'hostile').length;
+      // V1.14.0 — un relais 'under_attack' n'apparaissait dans AUCUN indicateur toujours visible (ni ici
+      // ni ailleurs sur le Dashboard): seul un tour manuel dans l'onglet Réseau le révélait. Distingué
+      // ici avec sa propre icône plutôt que noyé dans hostileCount (sémantique différente: un relais
+      // perdu tombera aux MULEs si ignoré, un camp hostile ne fait qu'attendre d'être assailli).
+      const underAttackCount = camps.filter(c => c.status === 'under_attack').length;
       const catcherCount = (game.catchers || []).length;
       const enRoute = (game.deliveries || []).filter(x => x.status !== 'delivered' && x.status !== 'failed').length;
       const raidActive = game.activeRaid && game.activeRaid.status === 'active';
       setInnerHtmlIfChanged(el,
         `<span class="voyant"><span class="dot${connectedCount > 0 ? '' : ' dot-amber'}"></span> RÉSEAU CHIRAL: ${connectedCount}/${knots.length} raccordés</span>` +
-        `<span class="voyant"><span class="dot${(hostileCount > 0 || catcherCount > 0) ? ' dot-purple' : ''}"></span> ${hostileCount > 0 ? `⚠️ ${hostileCount} camp(s) MULE hostile(s)` : '✅ Aucune menace MULE'}${catcherCount > 0 ? ` · 👹 BT: ${catcherCount} Catcher` : ''}</span>` +
+        `<span class="voyant"><span class="dot${(hostileCount > 0 || underAttackCount > 0 || catcherCount > 0) ? ' dot-purple' : ''}"></span> ${underAttackCount > 0 ? `🚨 ${underAttackCount} relais sous attaque` : (hostileCount > 0 ? `⚠️ ${hostileCount} camp(s) MULE hostile(s)` : '✅ Aucune menace MULE')}${catcherCount > 0 ? ` · 👹 BT: ${catcherCount} Catcher` : ''}</span>` +
         `<span class="voyant">🚚 ${enRoute} livraison(s) en cours${raidActive ? ' · 🎯 Raid en cours' : ''}</span>`);
     }
 
@@ -829,11 +834,26 @@ eventBus.on('screen:hideEndScreen', () => {
 });
 // V0.3.0
 eventBus.on('weather:forecastUpdated', () => renderWeatherForecast());
-eventBus.on('quest:urgent', () => renderQuestPanel());
+eventBus.on('quest:urgent', ({ quest }) => {
+  renderQuestPanel();
+  // V1.14.0 — pause auto seulement pour le territoire actif (une quête générée ailleurs reste
+  // invisible tant qu'on n'y regarde pas, cf. QuestSystem.js#generateUrgentQuest qui ne logEvent()
+  // déjà que dans ce cas — même garde-fou ici). Pas d'ouverture forcée du tiroir Urgences (pushPanel()
+  // -> history.pushState(), indisponible dans l'environnement de test _stubEnv.mjs sans
+  // withHistory:true, et generateUrgentQuest() est appelée en boucle par de nombreux tests via
+  // advanceDay()/tickUrgentQuestSpawns()) — le badge #questDrawerBadge (déjà mis à jour par
+  // renderQuestPanel() ci-dessus) et le journal (logEvent, déjà émis par QuestSystem.js) suffisent à
+  // signaler l'urgence pendant que l'horloge est arrêtée.
+  if (quest && quest.mapKey === game.currentMap) pauseForMessage();
+});
 eventBus.on('quest:accepted', () => renderQuestPanel());
 eventBus.on('quest:negotiated', () => renderQuestPanel());
 eventBus.on('quest:refused', () => renderQuestPanel());
 eventBus.on('quest:expired', () => renderQuestPanel());
+// V1.14.0 — attaque de relais MULE (engine/CombatEngine.js#checkMuleCamps, déjà filtrée sur le
+// territoire actif à l'émission): pause auto, la carte "⚠️ Relais sous attaque" (renderMuleCamps
+// ci-dessous) reste l'action normale du joueur une fois la lecture faite.
+eventBus.on('mule:relayUnderAttack', () => pauseForMessage());
 // V0.4.0
 eventBus.on('convoy:created', () => renderConvoyPanel());
 eventBus.on('convoy:departed', () => { renderConvoyPanel(); renderTelemetryReport(); });
