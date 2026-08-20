@@ -135,6 +135,18 @@ export function reconcile(state) {
         // pousse pauseForMessage() après la fin de l'événement en cours, pour qu'elle ne soit levée que
         // par le PROCHAIN clic du joueur, comme voulu.
         setTimeout(pauseForMessage, 0);
+        // V1.25.1 — fix bug réel signalé ("la bannière ne disparaît jamais après avoir fini toutes les
+        // étapes normalement"): contrairement à toutes les étapes précédentes, la dernière ('closing',
+        // isStepSatisfied toujours vrai) n'attend plus AUCUNE action réelle du joueur — sa consommation
+        // exige simplement un second passage dans reconcile(). Or l'étape juste avant lui dit
+        // explicitement de NE RIEN cliquer ("Patience... laissez le temps s'écouler"), et pendant la
+        // pause-message ci-dessus, aucun tick/render naturel ne se reproduit tant que le joueur n'a pas
+        // cliqué quelque part — un joueur qui obéit à la consigne et attend passivement reste donc
+        // bloqué indéfiniment face à la réplique de clôture. Fermeture automatique après un délai de
+        // lecture, sans dépendre d'un clic ni d'un tick — idempotent via le garde complete déjà en place.
+        if (state.tutorial.step >= TUTORIAL_STEP_COUNT - 1) {
+          setTimeout(() => { if (!game.tutorial.completed) finishTutorial(); }, 4200);
+        }
       }
       lastPaintedCompleted = false;
     }
