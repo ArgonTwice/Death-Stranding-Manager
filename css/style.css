@@ -476,6 +476,16 @@
       background: rgba(5,4,3,0.5); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
       opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
     }
+    /* V1.25.7 — trouvé par revue de code: le fond assombri PARTAGÉ (#drawerBackdrop, un seul élément
+       pour tous les tiroirs) restait à z-index 90 même une fois Télémétrie/Terminal/Hall of Fame
+       relevés à 210 ci-dessus — en état "peek" (58vh), le tiers supérieur de la modale encore ouverte
+       derrière (Options>Gestion/Logistique>Archives, z-index 200) n'était donc jamais assombri NI
+       bloqué, ses boutons restant cliquables "à travers" le tiroir. Sans risque pour les 6 AUTRES
+       tiroirs (Quêtes/Convoi/Porteurs/Réseau/Porteur IRL/Raid Tactique): ils ne s'ouvrent JAMAIS
+       pendant qu'une modale .left est active (seul point d'entrée: .map-action-bar, visible
+       uniquement sur le Dashboard, modale fermée) — ce z-index n'a donc d'effet réel que dans les 3
+       cas concernés. */
+    .ds-drawer-backdrop.active { z-index: 205; }
     .ds-drawer-backdrop.active { opacity: 1; pointer-events: auto; }
     .quest-drawer-panel {
       flex: 1; min-height: 0; overflow-y: auto;

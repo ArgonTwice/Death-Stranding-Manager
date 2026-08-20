@@ -70,4 +70,40 @@ await test('the auto-dismiss timer never double-fires when the player DOES click
   assertEqual(game.money, rewardsMoneyAfterFirstFinish, 'the start-of-game bonus must never be granted twice (grantRewardsOnce guard survives the redundant deferred call)');
 });
 
+await test('starting a NEW game within the 4.2s auto-dismiss window never lets the stale timer silently finish the new session\'s tutorial', async () => {
+  // V1.25.7 — trouvé par revue de code automatisée: le timer capturait `game.tutorial` (le SINGLETON,
+  // relu au moment où le setTimeout FIRE) plutôt que LA session pour laquelle il avait été programmé.
+  // newGame()/loadGame() (persistence/SaveManager.js) remplacent game.tutorial par un TOUT NOUVEL
+  // objet — un joueur démarrant une nouvelle partie (ou chargeant une sauvegarde) dans cette fenêtre
+  // de 4,2s aurait vu le timer de l'ANCIENNE session terminer silencieusement la NOUVELLE: tutoriel
+  // jamais affiché, bonus de départ accordé sans avoir joué le tutoriel.
+  freshFixture(803);
+  game.porters.push({ id: 9103, name: 'Test Porter', skill: 'scout', status: 'idle', health: 100, stress: 0, gearWear: 0, map: game.currentMap, level: 1, xp: 0, trait: 'none', likes: 0, grades: { portage: 0, combat: 0, discretion: 0, service: 0, reseau: 0 }, equipment: {} });
+  game.mapsData.mexico.routes.add('1,1');
+  game.mapsData.mexico.routes.add('2,2');
+  game.completed = 1;
+
+  reconcile(game);
+  reconcile(game);
+  reconcile(game); // arrivée sur la clôture de LA PREMIÈRE session, timer de 4200ms programmé pour CET OBJET tutorial précis
+  const firstSessionTutorial = game.tutorial;
+  assertEqual(firstSessionTutorial.completed, false, 'sanity: first session not finished yet');
+
+  // Le joueur démarre une NOUVELLE partie AVANT que le timer ne s'écoule — game.tutorial devient un
+  // TOUT NOUVEL objet, distinct de firstSessionTutorial par identité (jamais juste par valeur).
+  freshFixture(804);
+  const secondSessionTutorial = game.tutorial;
+  assert(secondSessionTutorial !== firstSessionTutorial, 'sanity: newGame() must produce a brand new tutorial object, not mutate the old one');
+  assertEqual(secondSessionTutorial.step, 0, 'sanity: fresh session starts at step 0');
+  assertEqual(secondSessionTutorial.completed, false, 'sanity: fresh session not completed');
+  const moneyBeforeStaleTimer = game.money;
+
+  await wait(4400); // laisse le timer DE LA PREMIÈRE session s'écouler, alors que game.tutorial pointe désormais sur la seconde
+
+  assertEqual(game.tutorial, secondSessionTutorial, 'sanity: still the second session\'s tutorial object');
+  assertEqual(game.tutorial.completed, false, 'the stale timer must NEVER complete a session it was not scheduled for — the new tutorial must still be waiting at step 0');
+  assertEqual(game.tutorial.step, 0, 'the new session\'s progress must be completely untouched by the old timer');
+  assertEqual(game.money, moneyBeforeStaleTimer, 'the starter bonus must never be granted to a session that never actually finished its tutorial');
+});
+
 summary('TutorialClosingAutoDismiss.test.js');

@@ -145,7 +145,17 @@ export function reconcile(state) {
         // bloqué indéfiniment face à la réplique de clôture. Fermeture automatique après un délai de
         // lecture, sans dépendre d'un clic ni d'un tick — idempotent via le garde complete déjà en place.
         if (state.tutorial.step >= TUTORIAL_STEP_COUNT - 1) {
-          setTimeout(() => { if (!game.tutorial.completed) finishTutorial(); }, 4200);
+          // V1.25.7 — trouvé par revue de code (fork automatisé): le timer capturait `game.tutorial`
+          // (le SINGLETON, lu au moment où le timer FIRE) au lieu de LA session pour laquelle il a été
+          // programmé — newGame()/loadGame() (persistence/SaveManager.js) remplacent game.tutorial par
+          // un TOUT NOUVEL objet, jamais le même que celui capturé ici 4,2s plus tôt. Un joueur qui
+          // démarre une nouvelle partie (ou charge une sauvegarde) dans cette fenêtre de 4,2s voyait le
+          // timer de l'ANCIENNE session terminer silencieusement la NOUVELLE (tutoriel jamais affiché,
+          // bonus de départ accordé sans jamais avoir joué le tutoriel) — même piège d'identité d'objet
+          // déjà documenté ci-dessus pour lastPaintedTutorialRef (V1.13.0), reproduit ici car ce garde
+          // ne s'applique qu'à reconcile() lui-même, jamais à un setTimeout différé.
+          const scheduledForTutorial = state.tutorial;
+          setTimeout(() => { if (game.tutorial === scheduledForTutorial && !game.tutorial.completed) finishTutorial(); }, 4200);
         }
       }
       lastPaintedCompleted = false;
