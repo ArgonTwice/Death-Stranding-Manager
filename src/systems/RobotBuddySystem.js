@@ -1,8 +1,14 @@
 // systems/RobotBuddySystem.js (V1.8.0) — recrutement des Pods Robotiques autonomes ("Robot-Buddies"),
 // distinct de hire()/scoutCandidate() (systems/PorterSystem.js): pas de tirage aléatoire de skill/trait
 // (toujours skill:'robot', data/Constants.js#SKILLS, jamais tiré par le recrutement humain normal —
-// filtré explicitement là-bas), pas de salaire récurrent (autonome, cf. brief), gate ADDITIF rang +
-// étoiles Prepper (data/UnlockTree.js, même principe que systems/EconomySystem.js#buyEquip/buyVehicle).
+// filtré explicitement là-bas), pas de SALAIRE récurrent (buddy.salary=0, toujours vrai — un Pod
+// n'entre jamais dans la boucle de licenciement-si-impayable de startMonthBookkeeping()), gate ADDITIF
+// rang + étoiles Prepper (data/UnlockTree.js, même principe que systems/EconomySystem.js#buyEquip/
+// buyVehicle). V1.21.0 — introduit néanmoins une MAINTENANCE mensuelle distincte du salaire
+// (BALANCE.robotBuddy.maintenanceCostPerMonth, engine/DeliveryEngine.js#startMonthBookkeeping, même
+// schéma que VEHICLE_MAINTENANCE_COST): un Pod restait jusqu'ici strictement gratuit à l'usage une
+// fois son coût de recrutement amorti, ce qui le rendait supérieur à un porteur humain sans aucune
+// contrepartie récurrente.
 import { eventBus } from '../core/EventBus.js';
 import { currentRankIndex, game, logEvent } from '../core/GameState.js';
 import { BALANCE } from '../data/Balance.js';
@@ -36,7 +42,7 @@ export function recruitRobotBuddy() {
       // testé (SaveLoadExpedition.test.js/TutorialSave.test.js en dépendent pour tout porteur créé).
       const buddy = hireRaw('robot', 'ironback', false);
       buddy.salary = 0; // autonome — jamais de salaire récurrent, contrairement à un porteur humain
-      logEvent(`🤖 Pod Robotique ${buddy.name} déployé (-$${cost}) — aucun salaire, résistance dégâts élevée.`, 'good');
+      logEvent(`🤖 Pod Robotique ${buddy.name} déployé (-$${cost}) — aucun salaire, maintenance mensuelle $${BALANCE.robotBuddy.maintenanceCostPerMonth}, résistance dégâts élevée.`, 'good');
       eventBus.emit('render:request');
       return true;
     }

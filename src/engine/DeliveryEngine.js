@@ -17,6 +17,7 @@ import { runAutomation } from '../systems/AutomationManager.js';
 import { checkSponsor, checkSubsidiaries } from '../systems/EconomySystem.js';
 import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems/NetworkSystem.js';
 import { gearEffectiveness, hireRaw, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
+import { robotBuddyCount } from '../systems/RobotBuddySystem.js';
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, maxPrepperStars, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
 import { applyUrgentQuestOutcome, clearExpiredUrgentQuests, tickUrgentQuestSpawns } from '../systems/QuestSystem.js';
 import { reportConvoyMemberOutcome } from '../systems/ConvoySystem.js';
@@ -804,6 +805,16 @@ export function startMonthBookkeeping() {
       if (vehicleCost > 0) {
         game.money = Math.max(0, game.money - vehicleCost);
         logEvent(`🔧 Maintenance véhicules -$${vehicleCost}`);
+      }
+
+      // V1.21.0 — Maintenance Pods Robotiques: jusqu'ici $0/mois à vie une fois recrutés (buddy.salary=0
+      // dans le boucle de salaires ci-dessus, RobotBuddySystem.js#recruitRobotBuddy), ce qui les rendait
+      // strictement supérieurs à un porteur humain une fois le coût de recrutement amorti. Coût récurrent
+      // modéré (BALANCE.robotBuddy.maintenanceCostPerMonth), même schéma que la maintenance véhicules.
+      const robotCost = robotBuddyCount() * BALANCE.robotBuddy.maintenanceCostPerMonth;
+      if (robotCost > 0) {
+        game.money = Math.max(0, game.money - robotCost);
+        logEvent(`🤖 Maintenance Pods Robotiques -$${robotCost}`);
       }
 
       game.month++;

@@ -72,7 +72,7 @@ export const BALANCE = {
     forceRestHealthRestore: 25,
     beachJumpCost: 400,
     beachJumpStressIncrease: 15,
-    hireBaseSalary: 300,
+    hireBaseSalary: 350, // V1.21.0 — 300 -> 350: revalorise le coût fixe du roster (fine-tuning)
     hireRareSalaryBonus: 70,
     hireRareXp: 100,
     hireRareLevel: 2,
@@ -95,8 +95,8 @@ export const BALANCE = {
     startNeedRandRange: 30,
     needsGrowthBase: 3,
     needsGrowthRandRange: 4,
-    needsCriticalThreshold: 90,
-    needsCriticalRelationDecay: 2,
+    needsCriticalThreshold: 95, // V1.21.0 — 90 -> 95: retarde le seuil de criticité (fine-tuning)
+    needsCriticalRelationDecay: 1, // V1.21.0 — 2 -> 1: adoucit la dégradation quotidienne une fois en état critique, pour éviter une chute de relation brutale et difficile à rattraper
     contractMaxSimultaneous: 2,
     contractBaseChance: 0.2,
     contractHighRelationBonusChance: 0.1,
@@ -347,7 +347,7 @@ export const BALANCE = {
     // 0.12 reste un plancher réel (+50% vs la valeur d'origine 0.08) sans cumuler deux nerfs coup sur coup.
     riskCeil: 1,
     serviceGradeRewardMult: 0.05,
-    rewardDistanceMult: 55, // V1.19.0 — 50 -> 55: léger réajustement à la hausse demandé par le brief (les 3 passes précédentes avaient fini un cran trop bas, cf. tests/balancing-simulation.test.mjs)
+    rewardDistanceMult: 40, // V1.21.0 — 55 -> 40: resserrement ciblé de la tension financière fin de partie (fine-tuning demandé, cf. tests/balancing-simulation.test.mjs)
     reputationRewardDivisor: 100,
     vehicleRewardMult: 1.15, // V1.16.0 — 1.5 -> 1.15: recalibrage économique (véhicule reste utile via vitesse, moins via récompense brute)
     infraRewardMultPerInvestment: 0.01, // V1.19.0 — 0.002 -> 0.01: l'investissement infrastructure (coût x5 réduit ci-dessous) doit rapporter un bonus perçu, pas un arrondi négligeable
@@ -469,9 +469,9 @@ export const BALANCE = {
   },
   convoy: {
     maxEscorts: 3, // + 1 porteur-véhicule = 4 membres max
-    rewardSharePerEscort: 0.16, // même logique que squadBonusPerMember (DeliveryEngine)
-    riskCutPerEscort: 0.07,
-    riskCutCap: 0.21,
+    rewardSharePerEscort: 0.22, // V1.21.0 — 0.16 -> 0.22: revalorise le rôle stratégique du convoi (fine-tuning)
+    riskCutPerEscort: 0.10, // V1.21.0 — 0.07 -> 0.10
+    riskCutCap: 0.30, // V1.21.0 — 0.21 -> 0.30 (= maxEscorts x riskCutPerEscort): garde le plafond non contraignant à effectif complet, sinon le 3e escorte n'apporterait plus rien au-delà du 2e
     strategies: {
       fast:     { timeMult: 0.85, gearWearMult: 1.2 },                  // 🚚 Rapide: +15% vitesse, +20% usure
       secure:   { timeMult: 1.1, dmgMult: 0.6, riskCut: 0.18 },          // 🛡️ Sécurisé: -10% vitesse, moins de dégâts/embuscades
@@ -665,7 +665,8 @@ export const BALANCE = {
   robotBuddy: {
     recruitCost: 4000, // bien au-dessus de hireBaseCost (500): technologie avancée débloquée tard
     costScalingPerOwned: 0.5, // scale avec le nombre de Pods déjà recrutés, même principe que hireCostPerActivePorter
-    maxOwned: 3 // plafond anti-exploit: pas d'armée de robots gratuits à entretenir
+    maxOwned: 3, // plafond anti-exploit: pas d'armée de robots gratuits à entretenir
+    maintenanceCostPerMonth: 120 // V1.21.0 — nouveau: jusqu'ici $0/mois à vie après l'achat (déviait complètement le roster humain à coût recurrent nul). Volontairement en dessous de hireBaseSalary (350) — un Pod reste plus avantageux qu'un porteur humain à l'usage, juste plus qu'exactement gratuit.
   },
   // V1.9.0 — Portefeuille individuel par porteur ("Porter Credits"), systems/PorterEconomy.js.
   // ADDITIF au budget de la base (game.money): jamais un remplacement, juste une réserve personnelle
