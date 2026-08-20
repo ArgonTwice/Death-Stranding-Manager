@@ -211,6 +211,10 @@
       <details style="font-size:9px; color:var(--text-dim);">
         <summary style="cursor:pointer;">🏆 Hall of Fame</summary>
         <div id="hallOfFamePanel" style="margin-top:4px;"></div>
+        <!-- V1.16.0 — remplace l'icône d'accès rapide retirée de .map-action-bar: la vue complète
+             (#hallOfFameDrawer, ui/HallOfFamePanel.js) reste accessible, mais uniquement depuis
+             l'onglet Logistique désormais. -->
+        <button style="font-size:9px; margin-top:4px;" onclick="toggleHallOfFamePanel()">📜 Voir toutes les légendes</button>
       </details>
       <details style="font-size:9px; color:var(--text-dim);">
         <summary style="cursor:pointer;">🏺 Musée (<span id="collectionCount">0/5</span>)</summary>
@@ -251,8 +255,10 @@
       <div id="muleCampsPanel" style="font-size:9px;"></div>
 
       <h3>RÉSEAU CHIRAL</h3>
-      <button onclick="buildRoute()">Étendre le réseau ($600)</button>
-      <div style="font-size: 9px; color: var(--text-dim); margin-top: 2px;">-30% temps / +50% XP sur trajets connectés au réseau.</div>
+      <!-- V1.16.0 — plus de bouton d'achat manuel: la connexion réseau est désormais la conséquence
+           directe des étoiles Prepper (engine/DeliveryEngine.js#autoExpandNetworkByStars, appelée
+           mensuellement). -->
+      <div id="networkAutoExpandHint" style="font-size: 9px; color: var(--text-dim); margin-top: 2px;"></div>
 
       <div id="unlock-knots" style="display:none;">
         <h3>PREPPERS — VILLES PRINCIPALES</h3>
@@ -313,6 +319,13 @@
 
         <h3>TABLEAU DE BORD LOGISTIQUE — NOTIFICATIONS</h3>
         <div id="logisticsDashboard"></div>
+
+        <!-- V1.16.0 — remplace les icônes d'accès rapide retirées de .map-action-bar: Télémétrie et
+             Terminal (vues secondaires) restent accessibles, mais uniquement depuis l'onglet Options
+             désormais, comme Hall of Fame l'est depuis Logistique ci-dessus. -->
+        <h3>VUES SECONDAIRES</h3>
+        <button onclick="toggleTelemetryDrawer()">📡 Télémétrie</button>
+        <button onclick="toggleTerminalConsole()">💬 Terminal</button>
       </div>
     </div>
 
@@ -609,9 +622,6 @@
           🎯<span id="questDrawerBadge" class="quest-drawer-badge"></span>
         </button>
         <button id="convoyDrawerToggle" class="map-action-btn" onclick="toggleConvoyPanel()" aria-label="Convois">🚛</button>
-        <button id="hallOfFameDrawerToggle" class="map-action-btn" onclick="toggleHallOfFamePanel()" aria-label="Hall of Fame">🏆</button>
-        <button id="terminalDrawerToggle" class="map-action-btn" onclick="toggleTerminalConsole()" aria-label="Terminal">💬</button>
-        <button id="telemetryDrawerToggle" class="map-action-btn" onclick="toggleTelemetryDrawer()" aria-label="Télémétrie">📡</button>
         <button id="portersDrawerToggle" class="map-action-btn" onclick="togglePortersDrawer()" aria-label="Porteurs">🎒</button>
         <button id="networkDrawerToggle" class="map-action-btn" onclick="toggleNetworkDrawer()" aria-label="Réseau">📊</button>
         <button id="walkDrawerToggle" class="map-action-btn" onclick="toggleWalkDrawer()" aria-label="Porteur IRL">👟</button>

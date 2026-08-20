@@ -4,6 +4,7 @@
 // Cibles tactiles ≥48x48px (ergonomie mobile, cf. .qp-tab / .qp-action-btn dans css/style.css).
 import { game } from '../core/GameState.js';
 import { ROUTE_TYPES } from '../data/Constants.js';
+import { estimateNetMargin } from '../engine/DeliveryEngine.js';
 import { acceptUrgentQuest, negotiateUrgentQuest, refuseUrgentQuest } from '../systems/QuestSystem.js';
 import { closePanel, isPanelOpen, pushPanel } from '../core/NavigationManager.js';
 import { collapseDrawer, openDrawer } from './DrawerManager.js';
@@ -58,10 +59,15 @@ function urgentCardHtml(q) {
 
 function inProgressCardHtml(d) {
       const p = game.porters[d.porter];
+      // V1.16.0 — Marge Nette: Gains bruts - Salaire - "Carburant" (maintenance véhicule) - Usure,
+      // cf. engine/DeliveryEngine.js#estimateNetMargin (estimation d'affichage, prorata sur la durée
+      // réelle du trajet — jamais une valeur consommée par la simulation elle-même).
+      const margin = estimateNetMargin(d);
       return `
         <div class="qp-card">
           <div class="qp-card-head">${(d.quest && d.quest.icon) || '🚚'} ${d.quest ? d.quest.flavor : ''}</div>
           <div class="qp-card-meta">${p ? p.name : '?'} en route · ${d.timeRemaining}j restant(s) · +$${d.reward}</div>
+          <div class="qp-card-meta" style="opacity:0.75;">💰 Marge nette estimée: <b style="color:${margin.net >= 0 ? 'var(--chiral)' : 'var(--blood)'};">${margin.net >= 0 ? '+' : ''}$${margin.net}</b> (brut $${margin.gross} − salaire $${margin.salaryCost}${margin.fuelCost ? ` − carburant $${margin.fuelCost}` : ''} − usure $${margin.wearCost})</div>
         </div>`;
     }
 

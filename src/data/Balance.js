@@ -141,7 +141,7 @@ export const BALANCE = {
   },
   combat: {
     assaultSquadMaxSize: 3,
-    assaultSuccessBase: 0.35,
+    assaultSuccessBase: 0.28, // V1.16.0 — 0.35 -> 0.28: recalibrage économique
     assaultSuccessPerSquadMember: 0.15,
     infiltrationBolagunBonus: 0.08,
     infiltrationDiscretionGradeMult: 0.03,
@@ -195,7 +195,15 @@ export const BALANCE = {
     catcherDeathChanceBloodBagMult: 0.15,
     catcherFailDamageBase: 25,
     catcherFailDamageRandRange: 25,
-    catcherFailReputationLoss: 10
+    catcherFailReputationLoss: 5, // V1.16.0 — 10 -> 5: recalibrage économique
+    // V1.16.0 — "Menace croissante": +1 force MULE/BT tous les threatGrowthMonthInterval mois,
+    // plafonnée à threatGrowthCap (évite une spirale ingérable en fin de partie, GAME_LENGTH_MONTHS=60
+    // -> jusqu'à +6 sans plafond). Appliquée uniquement aux NOUVEAUX spawns (camps générés à
+    // l'ouverture d'un territoire, nouveaux Catchers) — ne buff jamais rétroactivement une menace déjà
+    // engagée par le joueur, cf. engine/MapEngine.js#generateMuleCamps et engine/CombatEngine.js
+    // (spawn Catcher).
+    threatGrowthMonthInterval: 10,
+    threatGrowthCap: 4
   },
   map: {
     expansionCostBase: 2500,
@@ -263,6 +271,7 @@ export const BALANCE = {
     voidoutCrystalBonusRepMult: 3,
     buildRouteBaseCost: 600,
     buildRouteCostPerRouteCell: 0.15,
+    autoExpandStarThreshold: 1, // V1.16.0 — engine/DeliveryEngine.js#autoExpandNetworkByStars: même seuil que le 1er déblocage boutique (data/UnlockTree.js#EQUIP_MIN_STARS.exo)
     specialOrderMinRank: 2,
     specialOrderSpawnChance: 0.08,
     specialOrderRewardBase: 1200,
@@ -312,12 +321,15 @@ export const BALANCE = {
     btZoneRiskAdd: 0.35,
     muleCampRiskAdd: 0.15,
     onRouteRiskCut: 0.15,
-    riskFloor: 0.15, // V1.16.0 — 0.08 -> 0.15: 15% de risque minimum sur toute livraison, même la plus sécurisée
+    riskFloor: 0.12, // V1.16.0 (révisé) — 0.08 -> 0.15 -> 0.12: la valeur 0.15 du commit précédent (même
+    // version V1.16.0, brief distinct arrivé juste après) s'est révélée trop punitive une fois combinée
+    // au reste du recalibrage de cette mission (rewardDistanceMult -55%, vehicleRewardMult réduit) —
+    // 0.12 reste un plancher réel (+50% vs la valeur d'origine 0.08) sans cumuler deux nerfs coup sur coup.
     riskCeil: 1,
     serviceGradeRewardMult: 0.05,
-    rewardDistanceMult: 70, // V1.16.0 — 100 -> 70: recalibrage économique (cf. tests/balancing-simulation.test.mjs)
+    rewardDistanceMult: 55, // V1.16.0 (révisé) — 100 -> 70 -> 55: seconde passe de recalibrage, cf. tests/balancing-simulation.test.mjs (vérifié: aucun archétype ne s'approche de 30M$ au mois 20)
     reputationRewardDivisor: 100,
-    vehicleRewardMult: 1.5,
+    vehicleRewardMult: 1.15, // V1.16.0 — 1.5 -> 1.15: recalibrage économique (véhicule reste utile via vitesse, moins via récompense brute)
     infraRewardMultPerInvestment: 0.002,
     overloadThreshold: 0.9,
     overloadRiskMult: 0.6,
@@ -372,7 +384,7 @@ export const BALANCE = {
     deliveryReputationGain: 3,
     levelUpXpPerLevel: 50,
     levelUpSalaryIncrease: 70,
-    firingReputationLoss: 10,
+    firingReputationLoss: 2, // V1.16.0 — 10 -> 2: recalibrage économique (licencier un porteur ne doit plus être quasi-interdit)
     idleHealRate: 6,
     timefallChance: 0.2,
     duststormChanceUpper: 0.32,

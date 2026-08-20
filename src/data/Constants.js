@@ -453,11 +453,14 @@ export const SPONSORS = [
         cond: () => game.reputation >= 40, desc: 'Maintenir réputation ≥ 40' },
       { id: 'chiral_corp',  name: 'Chiral Corp', signingBonus: 4000, monthlyIncome: 300,
         cond: () => currentRankIndex() >= 2, desc: 'Rang Bridges Certifié minimum' },
-      // V1.16.0 — monthlyIncome 50 -> 350: la valeur d'origine (50) était INFÉRIEURE au sponsor de
-      // base sans condition (bridges_hq, 100/mois) malgré une condition réelle à remplir — jamais
-      // rentable comparé à ne rien faire. 350 positionne ce sponsor entre chiral_corp (300, rang
-      // Certifié) et bridges_elite (450, VIP), cohérent avec son bonus de signature déjà le plus élevé
-      // hors VIP (5000$) — ROI (signingBonus/monthlyIncome) ≈ 14,3 mois, sous la barre des 15 mois.
+      // V1.16.0 — monthlyIncome 50 -> 350 (mission précédente): la valeur d'origine (50) était
+      // INFÉRIEURE au sponsor de base sans condition (bridges_hq, 100/mois) malgré une condition réelle
+      // à remplir — jamais rentable comparé à ne rien faire. 350 positionne ce sponsor entre
+      // chiral_corp (300, rang Certifié) et bridges_elite (450, VIP) — ROI (signingBonus/monthlyIncome)
+      // ≈ 14,3 mois, déjà sous la barre des 15 mois demandée par une mission ultérieure qui redemandait
+      // ce même correctif ("supprimer et remplacer par un sponsor à ROI<15 mois") sans savoir qu'il
+      // avait déjà été appliqué — condition déjà satisfaite, ID/nom volontairement conservés (rien ne
+      // justifiait de recréer un sponsor déjà sain sous une autre identité).
       { id: 'mule_repenti', name: 'Syndicat discret (ex-MULE repenti)', signingBonus: 5000, monthlyIncome: 350,
         cond: () => game.materials.mule_scrap >= 2, desc: 'Conserver ≥ 2 ferraille MULE en stock' },
       // V0.5.0 — sponsors de prestige, débloqués par la Ligue (PorterLeague.js), contrats VIP à hautes récompenses

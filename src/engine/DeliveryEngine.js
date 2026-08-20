@@ -16,7 +16,7 @@ import { runAutomation } from '../systems/AutomationManager.js';
 import { checkSponsor, checkSubsidiaries } from '../systems/EconomySystem.js';
 import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems/NetworkSystem.js';
 import { gearEffectiveness, hireRaw, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
-import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
+import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, maxPrepperStars, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
 import { applyUrgentQuestOutcome, clearExpiredUrgentQuests, tickUrgentQuestSpawns } from '../systems/QuestSystem.js';
 import { reportConvoyMemberOutcome } from '../systems/ConvoySystem.js';
 import { checkBBPodProximityWarning, tickBBPodDaily } from '../systems/BBPodSystem.js';
@@ -38,6 +38,26 @@ import { markMapDirty } from '../ui/MapRenderer.js';
 
 export function overloadRatio(p, cargo) {
       return cargo.mass / porterCapacity(p);
+    }
+
+// V1.16.0 — Marge Nette d'une livraison EN COURS (d = un élément de game.deliveries): Gains bruts
+// (d.reward, fixé au dispatch) - Salaire (prorata du salaire mensuel du porteur sur la durée réelle du
+// trajet) - "Carburant" (le jeu n'a pas de carburant à proprement parler: mappé sur la maintenance
+// mensuelle du véhicule équipé, prorata pareillement, 0 si aucun véhicule) - Usure (estimation du coût
+// de réparation de l'usure accumulée pendant CE trajet, à partir du taux d'usure moyen par tick —
+// l'usure réelle a une composante RNG, ceci reste une ESTIMATION d'affichage, jamais une valeur
+// consommée par la simulation). Fonction pure, ne mute jamais d.*/game.*.
+export function estimateNetMargin(d) {
+      const p = game.porters[d.porter];
+      if (!p || !d.maxSteps) return { gross: d.reward, salaryCost: 0, fuelCost: 0, wearCost: 0, net: d.reward };
+      const B = BALANCE.delivery;
+      const durationMonths = d.maxSteps / DAYS_PER_MONTH;
+      const salaryCost = Math.ceil((p.salary || 0) * durationMonths);
+      const fuelCost = p.equipment && p.equipment.vehicle ? Math.ceil((VEHICLE_MAINTENANCE_COST[p.equipment.vehicle] || 0) * durationMonths) : 0;
+      const avgWearPerTick = B.tickGearWearBase + B.tickGearWearRandRange / 2;
+      const wearCost = Math.ceil(avgWearPerTick * d.maxSteps * BALANCE.porter.repairCostPerWearPoint);
+      const net = d.reward - salaryCost - fuelCost - wearCost;
+      return { gross: d.reward, salaryCost, fuelCost, wearCost, net };
     }
 
 export function deliveryRating(condition) {
@@ -86,6 +106,10 @@ export function sampleBTExposure(x0, y0, x1, y1) {
       return count;
     }
 
+// V1.16.0 — plus de bouton d'achat manuel ("Étendre le réseau ($600)"): la fonction reste inchangée
+// pour tests/resilience/{TutorialCampHardening,TutorialSave}.test.js (qui l'appellent directement) et
+// comme mécanisme SOUS-JACENT de autoExpandNetworkByStars() ci-dessous, mais n'est plus exposée depuis
+// index.html/ui/HUD.js — la connexion réseau est désormais la conséquence directe des étoiles Prepper.
 export function buildRoute() {
       const cost = Math.ceil(BALANCE.delivery.buildRouteBaseCost * (1 + game.routes.size * BALANCE.delivery.buildRouteCostPerRouteCell)); // scale avec taille réseau
       if (game.money < cost) { logEvent(`❌ Budget ($${cost})`); return; }
@@ -99,6 +123,25 @@ export function buildRoute() {
       game.routes.add(pick);
       logEvent(`🛣️ Route → (${pick}) (-$${cost})`);
       eventBus.emit('render:request');
+    }
+
+// V1.16.0 — "la connexion doit être la conséquence directe de l'atteinte des étoiles Prepper" (brief):
+// remplace le bouton d'achat manuel de buildRoute() ci-dessus. Appelée mensuellement
+// (endMonthBookkeeping, comme checkMuleCamps/checkSubsidiaries) sur CHAQUE territoire débloqué (pas
+// seulement celui affiché) — une extension GRATUITE par mois et par territoire, dès que sa relation
+// Prepper la mieux établie atteint BALANCE.delivery.autoExpandStarThreshold (1⭐, le même seuil que le
+// premier déblocage boutique existant, data/UnlockTree.js#EQUIP_MIN_STARS.exo). Réutilise
+// networkExpansionCandidates() (même règle de voisinage/cratères que buildRoute()), jamais de tirage
+// de destination dupliqué.
+export function autoExpandNetworkByStars() {
+      for (const mapKey in game.mapsData) {
+        if (maxPrepperStars(mapKey) < BALANCE.delivery.autoExpandStarThreshold) continue;
+        const { candidates } = networkExpansionCandidates(mapKey);
+        if (!candidates.length) continue;
+        const pick = candidates[Math.floor(RNG.next() * candidates.length)];
+        game.mapsData[mapKey].routes.add(pick);
+        if (mapKey === game.currentMap) { game.routes = game.mapsData[mapKey].routes; logEvent(`🛣️ Réseau étendu (${pick}) — confiance Prepper`, 'good'); }
+      }
     }
 
 export function generateQuestFlavor() {
@@ -774,6 +817,7 @@ export function endMonthBookkeeping() {
       checkCampEvent();
       checkSponsor();
       checkMuleCamps();
+      autoExpandNetworkByStars(); // V1.16.0 — remplace le bouton manuel "Étendre le réseau"
       checkSubsidiaries();
       updatePrepperNeeds();
       generatePrepperContracts();

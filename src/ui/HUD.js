@@ -93,6 +93,7 @@ export function render() {
       renderStats();
       updateUnlocks();
       renderMainKnots();
+      renderNetworkAutoExpandHint();
       renderSideQuests();
       renderStructures();
       const pccHintEl = document.getElementById('pccModeHint');
@@ -716,6 +717,19 @@ export function prepperCardHtml(d, k, i, idlePorters) {
         </div>
         ${contracts || '<div style="font-size:9px; color:var(--text-dim); margin-top:3px;">Aucune requête active.</div>'}
       </div>`;
+    }
+
+// V1.16.0 — explique le mécanisme qui remplace le bouton manuel "Étendre le réseau ($600)": la
+// confiance Prepper (étoiles) déclenche désormais une extension gratuite chaque mois
+// (engine/DeliveryEngine.js#autoExpandNetworkByStars).
+export function renderNetworkAutoExpandHint() {
+      const el = document.getElementById('networkAutoExpandHint');
+      if (!el) return;
+      const stars = maxPrepperStars(game.currentMap);
+      const threshold = BALANCE.delivery.autoExpandStarThreshold;
+      setInnerHtmlIfChanged(el, stars >= threshold
+        ? `-30% temps / +50% XP sur trajets connectés au réseau. ⭐ ${stars}/${BALANCE.prepper.starsMax} — extension automatique chaque mois.`
+        : `-30% temps / +50% XP sur trajets connectés au réseau. 🔒 Le réseau s'étend automatiquement dès qu'un Prepper raccordé atteint ${threshold}⭐ (actuellement ${stars}⭐).`);
     }
 
 export function renderMainKnots() {

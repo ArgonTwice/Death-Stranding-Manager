@@ -113,7 +113,7 @@ runtime.activeVisitorOffers = VISITOR_OFFERS;
 
 export function logEvent(msg, level = 'info') {
       game.log.unshift({ text: `[${game.month}] ${msg}`, level });
-      if (game.log.length > 25) game.log.pop();
+      if (game.log.length > 200) game.log.pop(); // V1.16.0 — 25 -> 200 (journal de bord)
       eventBus.emit('log:added');
     }
 

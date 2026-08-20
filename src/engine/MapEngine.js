@@ -181,7 +181,11 @@ export function generateMuleCamps() {
         const y = Math.floor(RNG.next() * MAP_HEIGHT);
         if (Math.hypot(x - HQ.x, y - HQ.y) < BALANCE.map.muleCampMinDistanceFromHQ) continue; // pas trop près du camp
         if (camps.some(c => Math.hypot(c.x - x, c.y - y) < BALANCE.map.muleCampMinDistanceBetween)) continue; // pas collés entre eux
-        camps.push({ id: `mule-${counters.muleCampId++}`, x, y, strength: BALANCE.map.muleCampStrengthBase + Math.floor(RNG.next() * BALANCE.map.muleCampStrengthRandRange), status: 'hostile', safeUntilMonth: null, needsIncineration: false });
+        // V1.16.0 — "Menace croissante": un territoire ouvert plus tard dans la partie démarre avec des
+        // camps déjà plus forts (cf. BALANCE.combat.threatGrowth*), jamais un buff rétroactif d'un camp
+        // déjà généré.
+        const threatGrowth = Math.min(BALANCE.combat.threatGrowthCap, Math.floor(game.month / BALANCE.combat.threatGrowthMonthInterval));
+        camps.push({ id: `mule-${counters.muleCampId++}`, x, y, strength: BALANCE.map.muleCampStrengthBase + Math.floor(RNG.next() * BALANCE.map.muleCampStrengthRandRange) + threatGrowth, status: 'hostile', safeUntilMonth: null, needsIncineration: false });
       }
       return camps;
     }

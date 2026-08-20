@@ -171,7 +171,7 @@ const ARCHETYPES = {
 const DAYS = 300;
 const SEEDS = [500001, 500002, 500003];
 
-function runArchetype(name, seed) {
+function runArchetype(name, seed, days = DAYS) {
   RNG.setSeed(seed);
   newGame(false);
   ARCHETYPES[name].setup();
@@ -180,7 +180,7 @@ function runArchetype(name, seed) {
   const likesHistory = [];
   let minMoneySince200 = Infinity;
 
-  for (let day = 1; day <= DAYS; day++) {
+  for (let day = 1; day <= days; day++) {
     ARCHETYPES[name].dailyAction(day);
     advanceDay();
     if (day % 10 === 0) {
@@ -320,6 +320,20 @@ assert(catcherDeathRate < 0.60, `engageCatcher(): taux de mort d'escouade (${pct
 const optResults = results.optimiseur;
 assert(optResults.every(r => r.finalMoney >= 0), 'archétype "optimiseur" (achète un véhicule au jour 30): argent négatif détecté — la maintenance x2.5 le rend insoutenable');
 console.log(`\n--- Coût véhicule x2.5: archétype "optimiseur" (achète un vélo au jour 30) reste solvable: argent final moyen=$${Math.round(optResults.reduce((s, r) => s + r.finalMoney, 0) / optResults.length)} ---`);
+
+// ============================================================
+// V1.16.0 — "impossibilité d'atteindre 30M$ au mois 20": horizon étendu (600 jours ≈ mois 20,
+// DAYS_PER_MONTH=30) avec l'archétype le PLUS actif économiquement ("optimiseur": automatisation
+// complète, hire régulier, assauts MULE hebdomadaires, véhicule) — le scénario le plus favorable à une
+// éventuelle inflation. Un plafond à 30M$ n'a de sens que comparé à un résultat RÉEL très en-dessous:
+// vérifié une fois, imprimé pour que toute dérive future de data/Balance.js reste visible ici plutôt
+// que découverte des mois plus tard par un joueur.
+console.log('\n--- Plafond économique long-terme (mois 20, archétype "optimiseur") ---');
+const MONTH20_DAYS = 600;
+const longRun = runArchetype('optimiseur', 500001, MONTH20_DAYS);
+console.log(`  jour ${MONTH20_DAYS} (mois ~${Math.floor(MONTH20_DAYS / 30)}): argent=$${longRun.finalMoney.toLocaleString('fr-FR')}`);
+assert(longRun.finalMoney < 30000000, `archétype "optimiseur" atteint $${longRun.finalMoney} au jour ${MONTH20_DAYS} — dépasse le plafond de 30M$ demandé, data/Balance.js a besoin d'un recalibrage supplémentaire`);
+assert(longRun.finalMoney < 5000000, `archétype "optimiseur" atteint $${longRun.finalMoney} au jour ${MONTH20_DAYS} — largement sous 30M$ mais déjà un ordre de grandeur suspect pour ce stade de partie (GAME_LENGTH_MONTHS=60)`);
 
 console.log('\n=== RÉSUMÉ ===');
 if (FAIL.length === 0) {

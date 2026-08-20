@@ -172,7 +172,10 @@ export function generateCatcherEncounter() {
       if (d.catchers.length > 0) return; // un seul Catcher actif à la fois par territoire
       if (RNG.next() > B.catcherSpawnChance) return;
       const x = Math.floor(RNG.next() * MAP_WIDTH), y = Math.floor(RNG.next() * MAP_HEIGHT);
-      const strength = B.catcherStrengthBase + Math.floor(RNG.next() * B.catcherStrengthRandRange);
+      // V1.16.0 — "Menace croissante": cf. BALANCE.combat.threatGrowth* (même principe que
+      // engine/MapEngine.js#generateMuleCamps), jamais rétroactif sur un Catcher déjà présent.
+      const threatGrowth = Math.min(B.threatGrowthCap, Math.floor(game.month / B.threatGrowthMonthInterval));
+      const strength = B.catcherStrengthBase + Math.floor(RNG.next() * B.catcherStrengthRandRange) + threatGrowth;
       d.catchers.push({ id: `catcher-${catcherIdCounter++}`, x, y, strength });
       if (d === game.mapsData[game.currentMap]) game.catchers = d.catchers;
       eventBus.emit('sfx:drum', 'heavy'); // apparition d'un Catcher: impact lourd, menace immédiate
