@@ -93,8 +93,23 @@ export function signSponsor(id) {
       if (!s) return;
       if (game.sponsor && game.sponsor.id === id) { logEvent('❌ Déjà sponsorisé par ce partenaire'); return; }
       game.sponsor = { id: s.id, name: s.name, monthlyIncome: s.monthlyIncome, desc: s.desc };
-      game.money += s.signingBonus;
-      logEvent(`🤝 Nouveau sponsor: ${s.name} (+$${s.signingBonus} de signature, +$${s.monthlyIncome}/mois tant que: ${s.desc})`, 'good');
+      // V1.25.9 — bug économique réel trouvé en jouant (exploit confirmé: 20 clics alternant entre
+      // seulement 2 sponsors = +$40 000 à partir de $4 000, sans coût ni cooldown): game.sponsor est un
+      // objet UNIQUE (pas une liste), donc changer de sponsor N'A JAMAIS été bloqué au-delà du garde
+      // "même sponsor déjà actif" ci-dessus — mais le bonus de SIGNATURE (one-shot) était accordé à
+      // CHAQUE changement, y compris en revenant vers un sponsor déjà signé plus tôt cette partie.
+      // game.sponsorsSignedIds (persisté, jamais réinitialisé en cours de partie — seulement par
+      // newGame()) mémorise qui a déjà touché son bonus: le changement de sponsor pour le revenu mensuel
+      // reste toujours 100% libre, seul le bonus ponctuel ne se déclenche plus qu'une fois par sponsor.
+      game.sponsorsSignedIds = game.sponsorsSignedIds || [];
+      const alreadyClaimedBonus = game.sponsorsSignedIds.includes(s.id);
+      if (!alreadyClaimedBonus) {
+        game.money += s.signingBonus;
+        game.sponsorsSignedIds.push(s.id);
+        logEvent(`🤝 Nouveau sponsor: ${s.name} (+$${s.signingBonus} de signature, +$${s.monthlyIncome}/mois tant que: ${s.desc})`, 'good');
+      } else {
+        logEvent(`🤝 Sponsor changé: ${s.name} (+$${s.monthlyIncome}/mois tant que: ${s.desc} — bonus de signature déjà perçu)`, 'good');
+      }
       eventBus.emit('render:request');
     }
 

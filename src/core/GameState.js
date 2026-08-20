@@ -50,6 +50,7 @@ export const game = {
       collection: [], // ids des reliques rares trouvées (musée)
       duos: [], // paires "id1-id2" formellement partenaires (bond >= 8 raids ensemble)
       sponsor: null, // sponsor actuel (nom, revenu mensuel, condition)
+      sponsorsSignedIds: [], // V1.25.9 — ids de sponsors déjà signés au moins une fois cette partie (systems/EconomySystem.js#signSponsor): empêche de re-toucher le bonus de signature en changeant de sponsor plusieurs fois, jamais un verrou sur le CHANGEMENT de sponsor lui-même (toujours libre)
       automation: { autoRest: false, autoRestThreshold: 70, autoRepair: false, autoRepairThreshold: 60, autoReturn: false }, // ordres permanents (#Phase4)
       ngPlus: false, // Nouvelle Partie+ active — seul mode où x2 est disponible
       infraInvestments: 0, // nb d'investissements infrastructure Bridges (sink économique répétable, coût géométrique)

@@ -22,7 +22,17 @@ export function isMuseumFull() {
 export function sealRelic(porterName, description, cause) {
       if (isMuseumFull()) return false;
       museumSlots().push({ relicName: description, porterName, cause, sealedMonth: game.month });
-      game.reputation = Math.min(100, game.reputation + BALANCE.museum.reputationBonusPerRelic); // impact mécanique minime, volontaire
+      // V1.25.9 — bug réel trouvé en jouant (audit "vraie partie"): reputationBonusPerRelic (0.4, un
+      // binaire flottant non exact) accumulé par additions répétées produisait un bruit de précision
+      // flottante classique JS ("55.99999999999999" affiché tel quel dans le bandeau de stats,
+      // ui/HUD.js ne fait jamais Math.round() à l'affichage) — reproductible dès 5 reliques scellées.
+      // Contrairement à RaidSystem.js#completeRaid (V1.25.8, arrondi à l'ENTIER — un raid est un
+      // événement ponctuel, un saut entier convient), ce bonus est VOLONTAIREMENT minime et cumulatif
+      // sur les 5 reliques du musée (commentaire ci-dessus): arrondir à l'entier après CHAQUE ajout
+      // annulerait l'effet pour la toute première relique (50.4 -> 50, aucun changement visible) et
+      // casserait l'accumulation progressive voulue. Arrondi à 1 décimale (même technique que
+      // RaidRewardResolver.js) — élimine le bruit flottant tout en préservant la granularité prévue.
+      game.reputation = Math.min(100, Math.round((game.reputation + BALANCE.museum.reputationBonusPerRelic) * 10) / 10);
       logEvent(`🏛️ Musée des Absences: "${description}" — ${porterName} scellé pour toujours (${museumSlots().length}/${BALANCE.museum.slotCount})`, 'good');
       eventBus.emit('museum:relicSealed', { description, porterName });
       return true;
