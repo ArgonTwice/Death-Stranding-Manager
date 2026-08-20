@@ -43,8 +43,20 @@
 .ds-drawer {
   padding-bottom: var(--ds-safe-bottom);
 }
+/* V1.25.5 — bug réel trouvé en jouant une vraie partie (mort d'un porteur -> séquence "Le Rivage",
+   ui/BeachPanel.js): 16px ne réserve AUCUNE marge pour .mtab-bar (~56-70px, position:fixed, bottom:0,
+   TOUJOURS présente derrière une modale .left — body.modal-open ne la masque jamais, cf. css/theme.css)
+   qui reste sous n'importe quelle modale courte, z-index 20 < 200. Le panel est bottom-aligné
+   (align-items:flex-end, .left) donc son bord inférieur touche TOUJOURS le bas réel de l'écran, quelle
+   que soit la hauteur de son contenu — un contenu suffisamment court (ex: les boutons de choix Le
+   Rivage, seulement 4 lignes + 2 boutons) atterrit alors dans la zone visuellement recouverte par la
+   barre d'onglets. Le clic résolvait déjà correctement par z-index (confirmé via
+   document.elementFromPoint), mais les boutons chevauchaient visuellement la nav — cohérent avec le
+   même correctif déjà appliqué à #mainNavModal (.nav-main-content/.nav-sub-content, 120px,
+   responsive.css V1.14.0) mais jamais étendu aux AUTRES modales .left autonomes (Le Rivage, Inspecteur,
+   MiniMap, Sélection Raid, Tableau de Contrats, Loadout) qui partagent la même règle générale ici. */
 .left .panel {
-  padding-bottom: calc(16px + var(--ds-safe-bottom));
+  padding-bottom: calc(90px + var(--ds-safe-bottom));
 }
 #endScreen {
   padding-bottom: var(--ds-safe-bottom);
