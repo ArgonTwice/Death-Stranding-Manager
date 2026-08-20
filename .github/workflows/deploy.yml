@@ -24,6 +24,14 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # V1.24.0 — garde-fous avant toute build de production: la suite de résilience, le check de
+      # déterminisme strict (deux processus indépendants, même seed) et le snapshot doré. N'importe
+      # lequel de ces 3 échoue -> le job s'arrête ici (comportement par défaut de GitHub Actions sur un
+      # `run` en échec), `build` (upload-pages-artifact) et `deploy` (needs: build) ne s'exécutent
+      # jamais. Reproduit en CI exactement le protocole déjà suivi manuellement avant chaque push.
+      - run: npm test
+      - run: node tests/determinism-check.mjs
+      - run: npm run snapshot:verify
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

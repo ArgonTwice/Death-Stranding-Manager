@@ -89,9 +89,22 @@ export async function checkGameEnd() {
 // Réutilise le même pipeline de fin de partie que checkGameEnd() (score/eventBus 'game:ended'/
 // showEndScreen déjà câblé côté UI), seul le message de log distingue les deux issues — aucune
 // nouvelle UI créée, conformément à la contrainte "sans refonte UI".
+//
+// V1.24.0 — extension: "la masse salariale reste impayable même après licenciements" est également
+// structurellement impossible (la boucle de licenciement de startMonthBookkeeping() s'arrête
+// uniquement quand game.money >= salary_cost DU GROUPE RESTANT, ou quand ce groupe est vide —
+// salary_cost retombe alors à 0, toujours payable). En revanche un vrai trou a été identifié: un
+// roster tombé à ZÉRO porteur (tous licenciés faute de budget) avec une trésorerie insuffisante pour
+// re-recruter même le porteur le moins cher (systems/PorterSystem.js#hire, coût plancher =
+// BALANCE.porter.hireBaseCost à effectif nul) est un vrai soft-lock: plus aucune action ne peut
+// jamais générer de revenu, mais game.money peut rester à une valeur positive non nulle (ex: $50) qui
+// ne déclenchait PAS le check money<=0 ci-dessus — la partie restait alors bloquée indéfiniment sans
+// jamais atteindre de fin. Compte désormais aussi comme un mois "en détresse".
 export async function checkBankruptcy() {
       if (game.gameEnded) return;
-      if (game.money <= 0) {
+      const activeCount = game.porters.filter(p => p.status !== 'dead' && p.status !== 'left').length;
+      const strandedNoRoster = activeCount === 0 && game.money < BALANCE.porter.hireBaseCost;
+      if (game.money <= 0 || strandedNoRoster) {
         game.consecutiveNegativeMonths = (game.consecutiveNegativeMonths || 0) + 1;
       } else {
         game.consecutiveNegativeMonths = 0;
@@ -99,7 +112,8 @@ export async function checkBankruptcy() {
       if (game.consecutiveNegativeMonths < 2) return;
       game.gameEnded = true;
       const score = computeScore();
-      logEvent(`💀 FAILLITE — Bridges met fin au contrat après 2 mois consécutifs de trésorerie à $0. Score final: ${score}`, 'death');
+      const reason = activeCount === 0 ? 'roster entièrement licencié et fonds insuffisants pour recruter' : 'trésorerie à $0';
+      logEvent(`💀 FAILLITE — Bridges met fin au contrat après 2 mois consécutifs de détresse financière (${reason}). Score final: ${score}`, 'death');
       const list = await recordScore(score);
       eventBus.emit('game:ended', { score, list });
       saveGame(true);

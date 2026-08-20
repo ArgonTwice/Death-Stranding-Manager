@@ -507,6 +507,7 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       reward = Math.ceil(reward * regionalNetworkRewardMult()); // V0.5.0: bonus permanent des Super-Relais régionaux
       reward = Math.ceil(reward * historicRouteRewardMult(porter.map, destX, destY)); // V0.6.0: Route Historique (continuité du monde)
       reward = Math.ceil(reward * (1 + structuresForMap(porter.map).length * BALANCE.building.rewardMultPerFieldStructure)); // V0.9.5: bonus passif des structures de terrain (Raid IRL) pour les porteurs PNJ automatisés
+      reward = Math.ceil(reward * (1 + (game.chiralMemory || 0) * BALANCE.memory.chiralMemoryRewardMult)); // V1.24.0: lie le Memory Engine à l'économie réelle, bonus permanent minime
 
       // Surcharge: ratio masse cargo / capacité porteur — au-delà de 0.9 ça pénalise risque + vitesse (canon: balance/stamina DS)
       const overload = overloadRatio(porter, cargo);

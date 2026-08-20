@@ -415,7 +415,25 @@ export const BALANCE = {
     deliveryReputationGain: 3,
     levelUpXpPerLevel: 50,
     levelUpSalaryIncrease: 70,
-    firingReputationLoss: 2, // V1.16.0 — 10 -> 2: recalibrage économique (licencier un porteur ne doit plus être quasi-interdit)
+    // V1.24.0 — 2 -> 8: réaffûté à la hausse. V1.16.0 avait volontairement adouci cette valeur (10->2)
+    // à une époque où ce champ était la SEULE conséquence d'un licenciement — mais depuis V1.23.0
+    // (faillite déterministe, checkBankruptcy()), un licenciement d'urgence pour budget impayable est
+    // devenu un moyen de "contourner" la faillite gratuitement (l'effectif rétrécit, la trésorerie ne
+    // passe jamais négative). Ce champ n'est utilisé QUE dans cette boucle d'urgence (aucun autre site
+    // dans le codebase), donc le relever ici ne pénalise jamais une retraite volontaire
+    // (systems/PorterSystem.js#retirePorter, aucune perte de réputation) — seulement l'échec de gestion
+    // budgétaire qui force un licenciement.
+    // DÉVIATION du brief (qui demandait -15 à -20): testé empiriquement via
+    // tests/balancing-simulation.test.mjs à 18 PUIS 15 (borne basse) — les deux créent une spirale de
+    // mort économique sur l'archétype "optimiseur" (plafond mois 20: $45k en V1.19 -> $429 à 15,
+    // $237 à 18 — au bord de la faillite). Cause: la réputation gouverne aussi currentRankIndex()
+    // (core/GameState.js), qui détermine costMult/questMult (data/Balance.js#RANKS) — un gros coup de
+    // réputation peut faire chuter de rang, renchérissant salaires/équipement ET réduisant les
+    // récompenses simultanément, ce qui déclenche de nouveaux licenciements d'urgence (boucle de
+    // rétroaction négative). Une économie déjà tendue par 2 missions précédentes (V1.21.0, cf. mémoire
+    // projet) ne supporte pas cet ajout à pleine puissance. Valeur retenue: 8 (mois 20 optimiseur:
+    // $18 890, sain) — toujours 4x l'ancienne valeur (2), un vrai coût, sans spirale destructrice.
+    firingReputationLoss: 8,
     idleHealRate: 6,
     timefallChance: 0.2,
     duststormChanceUpper: 0.32,
@@ -538,6 +556,13 @@ export const BALANCE = {
     scoreTraitAcquired: 30,
     chiralMemoryGainMajor: 5, // gagné à chaque souvenir majeur (score >= threshold)
     chiralMemoryGainMinor: 1, // petites contributions (ex: gratitude fantômes, cf. ChiralTraceSystem)
+    // V1.24.0 — game.chiralMemory n'avait jusqu'ici AUCUN effet mécanique (purement affiché sur le
+    // Terminal, ui/TerminalConsole.js) malgré son nom de "Memory Engine". Bonus multiplicatif minime
+    // sur le reward de livraison (engine/DeliveryEngine.js#createDelivery, même schéma que
+    // infraRewardMultPerInvestment/regionalNetworkRewardMult), +0.1%/point accumulé — reste symbolique
+    // même en fin de partie (chiralMemory dans la centaine de points typiquement) plutôt qu'un levier
+    // d'inflation économique majeur.
+    chiralMemoryRewardMult: 0.001,
     connectionGainMajor: 8, // "Lien" du porteur concerné
     connectionGainMinor: 2,
     connectionCap: 100,
@@ -551,6 +576,14 @@ export const BALANCE = {
   bbpod: {
     stressGainPerBtExposure: 6, // V1.23.0 — 10 -> 6: réduit l'accumulation de stress par exposition BT
     stressDecayPerDayCalm: 8, // V1.23.0 — 4 -> 8: double la récupération quotidienne, pour que la jauge redescende vraiment entre deux expositions
+    // V1.24.0 — nouveau: la décroissance quotidienne (stressDecayPerDayCalm) est un montant FIXE par
+    // jour, quel que soit le nombre d'expositions BT survenues CE jour-là (systems/BBPodSystem.js#
+    // tickBBPodDaily) — une opération avec plusieurs livraisons simultanées en zone BT peut donc
+    // toujours accumuler plus de stress que la décroissance quotidienne ne peut en retirer, même après
+    // le doublement V1.23.0. Décompression hebdomadaire supplémentaire (tous les 7 jours), même pattern
+    // que systems/MemoryStormCycle.js (cycle sur totalDaysElapsed()), pour garantir qu'une jauge élevée
+    // ne reste jamais bloquée indéfiniment même durant une période chargée.
+    stressWeeklyReset: 25,
     connectionGainPerDelivery: 1,
     connectionGainPerMajorMemory: 6,
     louStageConnectionThreshold: 50, // V1.23.0 — 65 -> 50: avance le déblocage narratif de l'étape Lou

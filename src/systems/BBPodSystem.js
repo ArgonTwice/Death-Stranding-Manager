@@ -4,7 +4,7 @@
 // simple journal après-coup) sans jamais bloquer/pénaliser l'automatisation.
 import { eventBus } from '../core/EventBus.js';
 import { game, logEvent } from '../core/GameState.js';
-import { BALANCE } from '../data/Balance.js';
+import { BALANCE, DAYS_PER_MONTH } from '../data/Balance.js';
 
 function pod() {
       game.bbPod = game.bbPod || { connection: 0, stress: 0, stage: 'pod' };
@@ -13,10 +13,23 @@ function pod() {
 
 export function bbPodState() { return pod(); }
 
+// V1.24.0 — même pattern que systems/MemoryStormCycle.js#totalDaysElapsed(): jour absolu depuis le
+// début de la partie, pour un cycle de 7 jours cohérent (game.dayInMonth seul repart de 0 tous les 30
+// jours, jamais un multiple de 7 — un cycle basé dessus dériverait d'un mois à l'autre).
+function totalDaysElapsed() {
+      return (game.month - 1) * DAYS_PER_MONTH + game.dayInMonth;
+    }
+
 // Tick quotidien (DeliveryEngine.advanceDay) — le stress redescend naturellement les jours calmes.
 export function tickBBPodDaily() {
       const p = pod();
       p.stress = Math.max(0, p.stress - BALANCE.bbpod.stressDecayPerDayCalm);
+      // V1.24.0 — lissage hebdomadaire: décompression nette supplémentaire tous les 7 jours, backstop
+      // pour les périodes chargées où plusieurs expositions BT le même jour dépassent la décroissance
+      // quotidienne fixe (cf. commentaire de BALANCE.bbpod.stressWeeklyReset).
+      if (totalDaysElapsed() > 0 && totalDaysElapsed() % 7 === 0) {
+        p.stress = Math.max(0, p.stress - BALANCE.bbpod.stressWeeklyReset);
+      }
     }
 
 function evolveStageIfReady() {
