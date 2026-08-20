@@ -52,7 +52,18 @@ function drawNetwork(canvas, opts = {}) {
         if (opts.big) {
           ctx.fillStyle = '#d8d2c4';
           ctx.font = '9px monospace';
-          ctx.fillText(`${PREPPER_ARCHETYPES[k.archetype]?.icon || ''} ${k.name}`, px + 7, py + 3);
+          const label = `${PREPPER_ARCHETYPES[k.archetype]?.icon || ''} ${k.name}`;
+          // V1.25.6 — bug réel trouvé en jouant une vraie partie (Carte Tactique plein écran): le
+          // label était toujours dessiné à droite du point (px+7) sans jamais vérifier s'il dépassait
+          // le bord du canvas — un Prepper situé près du bord droit (MAP_WIDTH=10 cases, fréquent)
+          // avait son nom tronqué à mi-mot, illisible. Bascule à gauche du point (texte terminant à
+          // px-7) uniquement quand il déborderait à droite — jamais l'inverse (le point gauche du
+          // canvas laisse toujours la place), donc aucun changement visuel pour la grande majorité des
+          // Preppers qui n'étaient pas concernés.
+          const overflowsRight = px + 7 + ctx.measureText(label).width > w;
+          ctx.textAlign = overflowsRight ? 'right' : 'left';
+          ctx.fillText(label, overflowsRight ? px - 7 : px + 7, py + 3);
+          ctx.textAlign = 'left'; // restaure l'alignement par défaut pour tout dessin ultérieur (jamais d'état canvas qui fuit entre itérations)
         }
       }
 
