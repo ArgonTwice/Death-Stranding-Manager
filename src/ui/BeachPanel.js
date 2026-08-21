@@ -3,6 +3,7 @@
 // à la mort d'un porteur. Révèle les lignes poétiques une à une puis propose le choix Souvenir/Relique.
 // Ne bloque le jeu que le temps de la lecture — se ferme après résolution, comme les autres modales.
 import { eventBus } from '../core/EventBus.js';
+import { game } from '../core/GameState.js';
 import { resolveBeachChoice } from '../systems/TheBeachEngine.js';
 import { closePanel, pushPanel } from '../core/NavigationManager.js';
 
@@ -62,9 +63,20 @@ export function closeBeachPanel() {
 
 // Pont UI: délègue à TheBeachEngine puis ferme la modale (la mort reste définitive, ce n'est qu'un
 // dernier geste — cf. TheBeachEngine.js).
+//
+// V1.29.0 — ne ferme QUE s'il n'y a plus rien à montrer. Si une 2e session était en attente
+// (game.beachQueue, 2 porteurs morts dans le même tick), resolveBeachChoice() l'a déjà dépilée dans
+// game.beachSession et réémis 'beach:triggered' de façon SYNCHRONE — le listener de ce module a donc
+// déjà rafraîchi #beachModal EN PLACE (openBeachPanel réutilise le même panneau déjà ouvert,
+// pushPanel est idempotent au sommet de la pile: aucune nouvelle entrée d'historique). Fermer ici
+// quand même déclencherait closePanel -> history.back(), qui est ASYNCHRONE (popstate différé) et
+// finirait par escamoter ce contenu tout juste réaffiché sans que le joueur l'ait jamais vu — même
+// famille de piège que "setTimeout capturant un objet remplaçable" (cf. bug tutoriel V1.25.7): un
+// signal différé doit toujours revérifier l'état courant avant d'agir, jamais supposer qu'il est
+// encore valide au moment où il se déclenche réellement.
 export function resolveBeachChoiceUI(choice) {
       resolveBeachChoice(choice);
-      closeBeachPanel();
+      if (!game.beachSession) closeBeachPanel();
     }
 
 eventBus.on('beach:triggered', (session) => openBeachPanel(session));

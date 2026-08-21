@@ -67,6 +67,7 @@ export const game = {
       absenceMuseum: [], // V0.6.0 — EXACTEMENT 5 emplacements max, scellés pour toujours (AbsenceMuseum.js)
       gratitudeTrace: 0, // V0.6.0 — Likes cumulés du réseau fantôme (ChiralTraceSystem.js), déclenche les Pèlerins
       beachSession: null, // V0.6.0 — séquence de la Plage en cours (TheBeachEngine.js). Éphémère, jamais persisté, comme game.deliveries.
+      beachQueue: [], // V1.29.0 — sessions en attente si 2 porteurs meurent dans le MÊME tick avant que le joueur résolve la 1ère (bug réel trouvé en jouant une vraie partie: sans file, la 2e écrasait silencieusement la 1ère). Éphémère, jamais persisté, même famille que beachSession.
       totalSteps: 0, // V0.8.0 — pas IRL cumulés validés (RealWalkSystem.js), persisté, jamais affecté par RNG.js
       activeRaid: null, // V0.9.0 — Raid Tactique en cours (RaidSystem.js), persisté: peut s'étaler sur plusieurs sessions IRL
       raidHistory: [], // V0.9.0 — historique borné des raids achevés (rang, récompense), affiché dans RaidTrackingDrawer.js

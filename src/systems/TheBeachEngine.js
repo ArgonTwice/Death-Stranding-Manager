@@ -15,17 +15,34 @@ function pickLines(n) {
       return out;
     }
 
-// Appelée depuis DeliveryEngine.tick() au moment de la mort d'un porteur. Construit une session
-// éphémère (game.beachSession — jamais persistée, comme game.deliveries) et notifie l'UI.
-export function triggerBeachSequence(porter, cause) {
+function buildSession(porter, cause) {
       const distanceKm = 10 + Math.floor(RNG.next() * 90);
       const relicObject = BEACH_RELIC_OBJECTS[Math.floor(RNG.next() * BEACH_RELIC_OBJECTS.length)];
-      game.beachSession = {
+      return {
         porterId: porter.id, porterName: porter.name, cause,
         lines: pickLines(4),
         relicDescription: `${relicObject} du km ${distanceKm}`,
         resolved: false
       };
+    }
+
+// Appelée depuis DeliveryEngine.tick() au moment de la mort d'un porteur. Construit une session
+// éphémère (game.beachSession — jamais persistée, comme game.deliveries) et notifie l'UI.
+//
+// V1.29.0 — bug réel trouvé en jouant une vraie partie: DeliveryEngine.tick() itère TOUTES les
+// livraisons dans la même passe, donc 2 porteurs peuvent mourir dans le MÊME tick avant que le
+// joueur ait eu la moindre chance de résoudre la 1re séquence (résolution async, via clic UI). Sans
+// file, la 2e mort écrasait purement et simplement game.beachSession — le 1er porteur perdait toute
+// clôture (pas de relique possible, pas de message de mémoire), sans le moindre signal. Si une
+// session est déjà active et NON résolue, la nouvelle rejoint game.beachQueue au lieu d'écraser —
+// resolveBeachChoice() dépile la suivante dès que la courante est résolue.
+export function triggerBeachSequence(porter, cause) {
+      const session = buildSession(porter, cause);
+      if (game.beachSession && !game.beachSession.resolved) {
+        game.beachQueue.push(session);
+        return;
+      }
+      game.beachSession = session;
       eventBus.emit('beach:triggered', { ...game.beachSession });
     }
 
@@ -42,5 +59,14 @@ export function resolveBeachChoice(choice) {
         logEvent(`🌊 Un souvenir de ${session.porterName} rejoint la mémoire du réseau, libre.`, 'good');
       }
       eventBus.emit('beach:resolved', { choice, porterId: session.porterId, porterName: session.porterName });
-      game.beachSession = null;
+      // V1.29.0 — dépile la prochaine séquence en attente (2e porteur mort dans le même tick) plutôt
+      // que de la perdre: repêche AUTOMATIQUEMENT la suivante, comme si le joueur venait d'ouvrir une
+      // 2e notification déjà en attente — même déclenchement (beach:triggered) que le tout premier cas.
+      const next = game.beachQueue.shift();
+      if (next) {
+        game.beachSession = next;
+        eventBus.emit('beach:triggered', { ...game.beachSession });
+      } else {
+        game.beachSession = null;
+      }
     }

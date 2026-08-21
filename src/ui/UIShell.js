@@ -30,11 +30,36 @@ const BOTTOM_SHEET_DRAWERS = [
       ['buildActionDrawer', closeBuildActionDrawer]
     ];
 
+// V1.29.0 — bug réel trouvé en jouant une vraie partie (audit libre, pas de brief): responsive.css
+// (>=768px, chargé après layout.css) remet body.padding-bottom à 0 pour recentrer #app-shell, mais
+// aucune règle ne restaure ensuite une réserve pour .mtab-bar (position:fixed, bottom:0) — sur TOUT
+// écran >=768px de large (donc la quasi-totalité du desktop/tablette), le bas de .map-container
+// (donc .map-action-bar, poussé tout en bas via margin-top:auto) se retrouve physiquement recouvert
+// par la barre d'onglets fixe, sans le moindre débordement détectable (.map-container elle-même
+// n'overflow jamais, donc jamais de scrollbar pour compenser) — Quêtes/Convois/Porteurs/Statut/
+// Porteur IRL/Raid Tactique totalement inatteignables. Plutôt que redevine une valeur fixe (58/70/80px
+// selon les endroits, déjà en dérive avec la vraie hauteur rendue de .mtab-bar depuis que
+// min-height:44px/icône+libellé ont été calibrés, V1.11.0+), même pattern déjà établi pour
+// --tutorial-h (ui/TutorialOverlay.js): mesurer la hauteur RÉELLE via ResizeObserver, jamais un
+// nombre magique à resynchroniser manuellement à chaque futur changement de style de .mtab-bar.
+function ensureMtabBarHeightVar() {
+      if (typeof document === 'undefined') return;
+      const el = document.querySelector('.mtab-bar');
+      const root = document.documentElement;
+      if (!el || !root || !root.style || typeof root.style.setProperty !== 'function') return;
+      const update = () => root.style.setProperty('--mtabbar-h', el.offsetHeight + 'px');
+      update();
+      if (typeof ResizeObserver === 'function') {
+        new ResizeObserver(update).observe(el);
+      }
+    }
+
 export function initUIShell() {
       initNavigation();
       for (const [id, onCloseRequest] of BOTTOM_SHEET_DRAWERS) {
         registerDrawer(id, { onCloseRequest });
       }
+      ensureMtabBarHeightVar();
     }
 
 // Pont UI pour le tapotement du fond assombri commun (#drawerBackdrop) — ferme tout tiroir ouvert

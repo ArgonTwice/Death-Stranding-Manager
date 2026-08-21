@@ -17,8 +17,18 @@
    redéfinit (padding-bottom, etc.).
    ============================================================ */
 @media (min-width: 768px) {
+  /* V1.29.0 — bug réel trouvé en jouant une vraie partie (audit libre): cette règle remettait
+     purement et simplement padding-bottom à 0, sans jamais restaurer de réserve pour .mtab-bar
+     (position:fixed, bottom:0, toujours présente) — sur TOUT écran >=768px, .map-action-bar
+     (dernier élément de .map-container, poussé tout en bas via margin-top:auto) se retrouvait
+     physiquement recouvert par la barre d'onglets, sans aucun débordement pour compenser
+     (.map-container ne scrolle jamais dans ce cas: son contenu tient déjà dans sa hauteur allouée).
+     --mtabbar-h (ui/UIShell.js#ensureMtabBarHeightVar, ResizeObserver sur .mtab-bar) remplace le 0
+     fixe par la hauteur RÉELLEMENT rendue de la barre d'onglets, jamais un nombre magique à
+     resynchroniser manuellement — 70px de repli seulement pour le tout premier paint avant que le
+     JS n'ait tourné. */
   body {
-    padding-bottom: 0 !important;
+    padding-bottom: var(--mtabbar-h, 70px) !important;
   }
 
   /* Conteneur applicatif centré (V1.0.5) — évite l'étirement excessif du Canvas/des menus sur
