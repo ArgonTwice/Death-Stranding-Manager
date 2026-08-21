@@ -522,7 +522,16 @@
     <div class="ds-drawer-handle"></div>
     <div class="quest-drawer-panel">
       <button class="modal-close" onclick="closeNetworkDrawer()">✕</button>
-      <h2>◆ RÉSEAU CHIRAL — ÉTAT</h2>
+      <!-- V1.28.0 — audit hiérarchie UI (docs/ROADMAP_V2.md idée 3): ce tiroir est un résumé de STATUT
+           général du joueur (trésorerie/rang/réputation/titres/score/journal — la couverture réseau
+           n'est qu'UNE ligne parmi huit), pas la gestion du réseau chiral (ça, c'est l'onglet principal
+           "Réseau & Preppers", contenu totalement différent: camps MULE, expansion, Preppers). Les deux
+           partageaient jusqu'ici le même nom "Réseau" (aria-label du bouton + ce titre), un joueur
+           cliquant le raccourci de la barre d'action pour gérer son réseau tombait sur un écran de
+           stats — renommé en "Statut" ici ET sur le bouton (index.html#networkDrawerToggle). Aucun id/
+           fonction interne touché (networkDrawer/toggleNetworkDrawer restent inchangés) — pur
+           renommage visuel, zéro risque fonctionnel. -->
+      <h2>◆ STATUT — BRIDGES</h2>
       <div class="stat-line">
         <span class="stat-label">Trésorerie</span>
         <span class="stat-val" id="budget">$10000</span>
@@ -632,7 +641,7 @@
         </button>
         <button id="convoyDrawerToggle" class="map-action-btn" onclick="toggleConvoyPanel()" aria-label="Convois">🚛</button>
         <button id="portersDrawerToggle" class="map-action-btn" onclick="togglePortersDrawer()" aria-label="Porteurs">🎒</button>
-        <button id="networkDrawerToggle" class="map-action-btn" onclick="toggleNetworkDrawer()" aria-label="Réseau">📊</button>
+        <button id="networkDrawerToggle" class="map-action-btn" onclick="toggleNetworkDrawer()" aria-label="Statut">📊</button>
         <button id="walkDrawerToggle" class="map-action-btn" onclick="toggleWalkDrawer()" aria-label="Porteur IRL">👟</button>
         <button id="raidTrackingDrawerToggle" class="map-action-btn" onclick="toggleRaidTrackingDrawer()" aria-label="Raid Tactique">🚩</button>
       </div>
