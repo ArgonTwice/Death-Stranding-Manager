@@ -16,7 +16,7 @@ import { checkBankruptcy, checkGameEnd, saveGame } from '../persistence/SaveMana
 import { runAutomation } from '../systems/AutomationManager.js';
 import { checkSponsor, checkSubsidiaries } from '../systems/EconomySystem.js';
 import { checkAsyncNetwork, collectNearbyLostCargo, isNearPCC } from '../systems/NetworkSystem.js';
-import { gearEffectiveness, hireRaw, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
+import { activePorters, gearEffectiveness, hireRaw, porterCapacity, porterResist, recordHallOfFame, rollRelic, targetPorter } from '../systems/PorterSystem.js';
 import { robotBuddyCount } from '../systems/RobotBuddySystem.js';
 import { applyHermitGifts, applyPrepperDeliveryOutcome, generatePrepperContracts, maxPrepperStars, prepperPerkBonus, updatePrepperNeeds } from '../systems/PrepperSystem.js';
 import { applyUrgentQuestOutcome, clearExpiredUrgentQuests, tickUrgentQuestSpawns } from '../systems/QuestSystem.js';
@@ -792,7 +792,12 @@ export function tick() {
           if (d.btExposure > 0) recordJournalEntry(p, 'bt_encounter');
           { const wd = game.mapsData[d.map]; if (wd && wd.weather && (wd.weather.type === 'timefall' || wd.weather.type === 'duststorm')) recordJournalEntry(p, 'timefall_survived'); }
           p.likes += rating.likes;
-          if (rating.grade === 'S') game.reputation = Math.min(100, game.reputation + B.sRankReputationGain); // bonus S-rank
+          // V1.27.0 (revue de code) — ce bonus S-rank restait PLAT (jamais pondéré par la distance),
+          // alors que deliveryReputationGain juste plus bas l'est déjà depuis ce même correctif: sur
+          // une micro-route (mult au plancher 0.4), il représentait jusqu'à 67% du gain total de
+          // réputation d'une livraison — diluant largement l'effet recherché contre le farming de
+          // routes courtes. Même facteur partagé deliveryValueMult(), aucune formule dupliquée.
+          if (rating.grade === 'S') game.reputation = Math.min(100, game.reputation + Math.round(B.sRankReputationGain * deliveryValueMult(d.distance))); // bonus S-rank
 
           // Porter Grade: catégorie déterminée par le contexte de la livraison (canon DS2, 5 catégories)
           let category = 'portage';
@@ -832,7 +837,7 @@ export function startMonthBookkeeping() {
       game.monthState.moneyBeforeOps = game.money;
 
       // Salaires: licencie les plus chers si impayable, au lieu de freeze le jeu
-      let active = game.porters.filter(p => p.status !== "dead" && p.status !== "left");
+      let active = activePorters();
       active.sort((a, b) => b.salary - a.salary);
       let salary_cost = active.reduce((s, p) => s + p.salary, 0);
 

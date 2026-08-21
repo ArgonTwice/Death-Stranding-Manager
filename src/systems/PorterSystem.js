@@ -11,6 +11,20 @@ import { acquiredTraitDmgResist, applyIdentityToPorter } from './PorterStorySyst
 import { hasTalent } from './PorterTalentTree.js';
 import { dominantStructure } from '../engine/MapEngine.js';
 
+// V1.27.0 — factorise le prédicat "roster actif" (jamais mort/parti), jusqu'ici réimplémenté
+// indépendamment à plusieurs endroits (engine/DeliveryEngine.js#startMonthBookkeeping,
+// systems/PorterAiEngine.js#autoBuyEquipForIdlePorters). Deux appelants qui doivent voir EXACTEMENT le
+// même roster (le prélèvement mensuel réel des salaires, et la réserve de trésorerie qui protège CE
+// prélèvement) partagent désormais une seule source de vérité — plus de risque de divergence
+// silencieuse si la définition de "actif" change un jour.
+export function activePorters() {
+      return game.porters.filter(p => p.status !== 'dead' && p.status !== 'left');
+    }
+
+export function activeSalaryTotal() {
+      return activePorters().reduce((s, p) => s + (p.salary || 0), 0);
+    }
+
 export function gearEffectiveness(p) {
       const wear = p.gearWear || 0;
       return wear <= BALANCE.porter.gearEffectivenessWearThreshold ? 1 : Math.max(BALANCE.porter.gearEffectivenessMin, 1 - (wear - BALANCE.porter.gearEffectivenessWearThreshold) / BALANCE.porter.gearEffectivenessWearRange);

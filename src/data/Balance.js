@@ -411,6 +411,10 @@ export const BALANCE = {
     onRouteXpMult: 1.5,
     highStressXpMult: 0.8,
     highStressThreshold: 80,
+    // V1.27.0 (revue de code) — également pondéré par deliveryValueMult(distance), comme
+    // deliveryReputationGain ci-dessous: laissé plat lors du 1er passage, ce bonus S-rank représentait
+    // jusqu'à 67% du gain de réputation d'une micro-route (mult au plancher 0.4) et diluait largement
+    // le correctif anti-farming.
     sRankReputationGain: 2,
     // V1.27.0 — réputation ET Likes (ratingXLikes ci-dessous) pondérés par deliveryValueMult(distance)
     // (engine/DeliveryEngine.js): ce champ reste la valeur DE BASE (distance "neutre", mult=1), plus

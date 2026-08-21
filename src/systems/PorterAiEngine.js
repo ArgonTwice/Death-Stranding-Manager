@@ -6,8 +6,9 @@
 import { eventBus } from '../core/EventBus.js';
 import { game, logEvent } from '../core/GameState.js';
 import { BALANCE } from '../data/Balance.js';
-import { buyEquip } from './EconomySystem.js';
+import { buyEquip, equipCost } from './EconomySystem.js';
 import { gainConnection } from './MemoryEngine.js';
+import { activeSalaryTotal } from './PorterSystem.js';
 
 // Ordre de priorité d'achat FIXE (jamais un tirage RNG — l'automatisation reste 100% déterministe,
 // comme AutomationManager.js#runAutomation déjà en place): du moins cher au plus cher, cohérent avec
@@ -33,8 +34,7 @@ const AUTO_BUY_PRIORITY = ['cryptobiote', 'boots', 'cryobox', 'scanner', 'bolagu
 // MANUEL à la Boutique (systems/EconomySystem.js#buyEquip, jamais modifié) — un joueur reste toujours
 // libre de dépenser lui-même sa propre trésorerie, seule cette routine autonome est bridée.
 export function autoBuyEquipForIdlePorters() {
-      const activeSalaryTotal = game.porters.filter(p => p.status !== 'dead' && p.status !== 'left').reduce((s, p) => s + (p.salary || 0), 0);
-      const reserve = activeSalaryTotal * BALANCE.porterAi.autoBuyReserveSalaryMonths;
+      const reserve = activeSalaryTotal() * BALANCE.porterAi.autoBuyReserveSalaryMonths;
       let bought = 0, boughtWithCredits = 0;
       for (const p of game.porters) {
         if (p.status !== 'idle' || p.health <= 0) continue;
@@ -42,7 +42,13 @@ export function autoBuyEquipForIdlePorters() {
           // silent=true: sonde chaque type sans logger les tentatives ratées (déjà possédé, budget
           // insuffisant, gate rang/étoiles...) — un seul log groupé à la fin, cf. AutomationManager.js.
           if (buyEquip(type, p.id, true, 'credits')) { bought++; boughtWithCredits++; break; }
-          if (game.money > reserve && buyEquip(type, p.id, true)) { bought++; break; } // repli sur le budget de la base, jamais sous la réserve de salaires
+          // V1.27.0 (revue de code) — vérifie le solde APRÈS l'achat (game.money - equipCost(type)),
+          // pas juste AVANT: un simple `game.money > reserve` laissait un item cher (ex: exo, $400)
+          // faire passer game.money sous la réserve d'un coup si le solde initial était juste au-dessus
+          // — exactement le scénario que cette réserve est censée empêcher. equipCost() (systems/
+          // EconomySystem.js, factorisée hors de buyEquip) garantit que ce calcul ne peut jamais
+          // diverger du coût réellement facturé.
+          if (game.money - equipCost(type) >= reserve && buyEquip(type, p.id, true)) { bought++; break; } // repli sur le budget de la base, jamais sous la réserve de salaires
         }
       }
       if (bought > 0) logEvent(`🤖 Ordres permanents: ${bought} achat(s) autonome(s) d'équipement à la Boutique (dont ${boughtWithCredits} sur portefeuille personnel)`, 'good');

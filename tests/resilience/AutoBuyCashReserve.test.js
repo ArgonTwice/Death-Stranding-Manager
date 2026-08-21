@@ -61,6 +61,23 @@ await test('the reserve NEVER blocks spending from the porter\'s own personal cr
   assert(p.credits < 100000, `personal credits must still be spendable regardless of the common-budget reserve (credits=${p.credits}, expected a purchase to have gone through)`);
 });
 
+await test('the reserve guards the POST-purchase balance, not just the pre-purchase check — a single item cannot push money below it', async () => {
+  // Revue de code V1.27.0: la 1re version comparait game.money AU RESERVE avant l'achat
+  // (`game.money > reserve`), pas le solde APRÈS déduction du coût — un item cher pouvait donc encore
+  // faire chuter game.money sous la réserve d'un coup si le solde de départ était juste au-dessus.
+  // money=reserve+1: strictement au-dessus de la réserve (l'ancienne garde aurait laissé passer un
+  // achat), mais 'boots' ($200, 1er item non gaté par rang dans AUTO_BUY_PRIORITY après le cryptobiote
+  // gaté) ferait tomber le solde bien en dessous de la réserve.
+  const p = freshFixture(2714, 351);
+  const reserve = p.salary * BALANCE.porterAi.autoBuyReserveSalaryMonths;
+  assertEqual(reserve, 350, 'sanity: reserve must be exactly the porter salary (1 porter, autoBuyReserveSalaryMonths=1)');
+  assert(game.money > reserve, 'sanity: starting money sits just ABOVE the reserve — the old pre-purchase-only check would have let a purchase through here');
+
+  autoBuyEquipForIdlePorters();
+
+  assert(game.money >= reserve, `a single autonomous purchase must never push game.money (${game.money}) below the reserve (${reserve}) — the guard must account for the item's cost, not just the balance before spending it`);
+});
+
 await test('the reserve NEVER restricts a MANUAL purchase (Boutique) — only the autonomous routine is gated', async () => {
   const p = freshFixture(2713, 250); // sous la réserve ($350), au-dessus du coût de 'boots' ($200, non gaté par rang — cryptobiote l'est dès EQUIP_MIN_RANK=1, non pertinent ici)
   const bought = buyEquip('boots', p.id); // achat manuel direct, comme un joueur cliquant en Boutique

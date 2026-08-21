@@ -15,6 +15,13 @@ export function shopDiscountMult() {
       return (1 - (dominantStructure() === 'depot' ? BALANCE.economy.depotDominantDiscount : 0)) * (1 - festivalValue('shopDiscount')) * DIFFICULTIES[game.difficulty || 'normal'].costMult;
     }
 
+// V1.27.0 — factorisé hors de buyEquip() ci-dessous: permet à un appelant (systems/PorterAiEngine.js#
+// autoBuyEquipForIdlePorters, réserve de trésorerie) de connaître le coût AVANT de dépenser, sans
+// dupliquer la formule. Fonction pure, ne mute jamais game.*.
+export function equipCost(type) {
+      return Math.ceil(BALANCE.economy.equipBaseCosts[type] * (1 + game.equipBought[type] * BALANCE.economy.equipCostScalingPerBought) * (1 - (game.structures.depot || 0) * BALANCE.economy.depotStructureDiscountPerLevel) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
+    }
+
 // V1.5.0 — porterId optionnel: cible un porteur précis au lieu de targetPorter() (runtime.
 // selectedPorterId, piloté par l'UI Boutique) — utilisé par systems/PorterAiEngine.js pour l'achat
 // autonome et le don d'équipement, qui n'ont aucun rapport avec la sélection courante du joueur. Tous
@@ -26,7 +33,6 @@ export function shopDiscountMult() {
 // porteur (systems/PorterEconomy.js#p.credits) au lieu du budget de la base — même gating rang/
 // étoiles/slots, seule la SOURCE du paiement change.
 export function buyEquip(type, porterId, silent, payFrom) {
-      const base = BALANCE.economy.equipBaseCosts;
       const target = porterId != null ? game.porters.find(p => p.id === porterId) : targetPorter();
       if (!target) { if (!silent) logEvent('❌ Aucun porteur actif'); return false; }
       if (target.equipment[type] >= BALANCE.economy.equipMaxPerType) { if (!silent) logEvent(`❌ ${target.name} déjà au max (${type})`); return false; }
@@ -38,7 +44,7 @@ export function buyEquip(type, porterId, silent, payFrom) {
         if (!silent) logEvent(`❌ ${target.name}: slots pleins (${equippedCount(target)}/${equipSlots(target)}) — achetez un Sac de portage`);
         return false;
       }
-      const cost = Math.ceil(base[type] * (1 + game.equipBought[type] * BALANCE.economy.equipCostScalingPerBought) * (1 - (game.structures.depot || 0) * BALANCE.economy.depotStructureDiscountPerLevel) * RANKS[currentRankIndex()].costMult * shopDiscountMult());
+      const cost = equipCost(type);
       const usesCredits = payFrom === 'credits';
       const available = usesCredits ? (target.credits || 0) : game.money;
       if (available < cost) { if (!silent) logEvent(`❌ Budget ($${cost})`); return false; }
