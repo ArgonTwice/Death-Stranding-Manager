@@ -67,6 +67,24 @@ export function closeAllOpenDrawers() {
       }
     }
 
+// V1.36.0 — bug réel trouvé par un vrai geste de glisser Playwright (jamais testé ainsi cette
+// session, contrairement à un simple appel direct des fonctions exportées): l'ancien
+// `Math.max(0, delta)` mettait TOUJOURS le déplacement visuel à 0 dès que le doigt remontait (delta
+// négatif) — quel que soit l'état de départ. Pour un tiroir en 'peek', glisser vers le HAUT (vers
+// 'full') ne bougeait donc JAMAIS visuellement pendant tout le geste: le tiroir restait figé à sa
+// position de repos et ne basculait qu'au relâchement (delta<-60), comme si le glissement était
+// ignoré — confirmé: `--drawer-y` valait `calc(58vh + 0px)` du DÉBUT à la FIN d'un glissement de
+// -100px, alors que le sens inverse (glisser vers le bas depuis 'full', delta positif) suivait
+// correctement le doigt en temps réel (`calc(0% + 100px)`). Le clamp à 0 n'a de sens QUE pour
+// empêcher un tiroir déjà 'full' (baseline 0%) de dépasser visuellement le haut de l'écran si on
+// continue à tirer vers le haut — pas pour 'peek'/'collapsed', où un delta négatif doit au contraire
+// suivre le doigt normalement (translater VERS 0%). Extrait en fonction pure (même pattern que
+// RaidEventResolver.js/CombatResolver.js) pour rester testable sans simuler un vrai geste pointer,
+// que le stub DOM minimal des tests ne peut pas reproduire fidèlement.
+export function visualDragDelta(state, delta) {
+      return state === 'full' ? Math.max(0, delta) : delta;
+    }
+
 function attachSwipe(id, handle) {
       const d = drawers.get(id);
       const onDown = (e) => {
@@ -79,7 +97,7 @@ function attachSwipe(id, handle) {
         if (!d.dragging) return;
         const delta = e.clientY - d.dragStartY;
         const baseline = STATE_OFFSET[d.state];
-        d.el.style.setProperty('--drawer-y', `calc(${baseline} + ${Math.max(0, delta)}px)`);
+        d.el.style.setProperty('--drawer-y', `calc(${baseline} + ${visualDragDelta(d.state, delta)}px)`);
         d.lastDelta = delta;
       };
       const onUp = () => {
