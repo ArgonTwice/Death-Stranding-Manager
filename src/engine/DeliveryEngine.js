@@ -62,12 +62,24 @@ export function estimateNetMargin(d) {
       return { gross: d.reward, salaryCost, fuelCost, wearCost, net };
     }
 
-export function deliveryRating(condition) {
+// V1.27.0 — facteur partagé entre deliveryRating() (Likes) et la résolution de livraison (réputation,
+// tick()/advanceDay() plus bas): corrige l'exploit de farming des micro-routes (le risque tiré au
+// dispatch — generateEvent(), plus loin dans ce fichier — augmente avec la distance, donc une
+// micro-route reste quasi-systématiquement en condition parfaite pour un gain jusqu'ici PLAT, sans
+// rapport avec la distance réellement parcourue). Fonction pure, aucun RNG/mutation.
+export function deliveryValueMult(distance) {
       const B = BALANCE.delivery;
-      if (condition >= B.ratingSGradeThreshold) return { grade: 'S', likes: B.ratingSLikes };
-      if (condition >= B.ratingAGradeThreshold) return { grade: 'A', likes: B.ratingALikes };
-      if (condition >= B.ratingBGradeThreshold) return { grade: 'B', likes: B.ratingBLikes };
-      return { grade: 'C', likes: B.ratingCLikes };
+      return Math.min(B.deliveryValueMultCap, Math.max(B.deliveryValueMultFloor, distance / B.deliveryValueMultDistanceDivisor));
+    }
+
+export function deliveryRating(condition, distance = 0) {
+      const B = BALANCE.delivery;
+      let grade, baseLikes;
+      if (condition >= B.ratingSGradeThreshold) { grade = 'S'; baseLikes = B.ratingSLikes; }
+      else if (condition >= B.ratingAGradeThreshold) { grade = 'A'; baseLikes = B.ratingALikes; }
+      else if (condition >= B.ratingBGradeThreshold) { grade = 'B'; baseLikes = B.ratingBLikes; }
+      else { grade = 'C'; baseLikes = B.ratingCLikes; }
+      return { grade, likes: Math.max(1, Math.round(baseLikes * deliveryValueMult(distance))) };
     }
 
 export function triggerVoidout(x, y) {
@@ -766,7 +778,7 @@ export function tick() {
           p.xp += xpGain;
 
           // Note de livraison (condition cargo à l'arrivée) → likes, canon DS Porter Grade (#1)
-          const rating = deliveryRating(d.condition);
+          const rating = deliveryRating(d.condition, d.distance);
           applyPrepperDeliveryOutcome(d.quest, true, rating);
           // Quête "zéro-dommage" (ex: le Médecin): tout dégât en chemin invalide la réussite côté loyauté,
           // même si la livraison en elle-même est un succès normal (prime/XP/likes inchangés).
@@ -792,7 +804,7 @@ export function tick() {
 
           game.money += d.reward;
           game.completed++;
-          game.reputation = Math.min(100, game.reputation + B.deliveryReputationGain);
+          game.reputation = Math.min(100, game.reputation + Math.round(B.deliveryReputationGain * deliveryValueMult(d.distance)));
 
           if (d.quest) {
             if (rating.grade === 'S') eventBus.emit('sfx:brass', 0.5);

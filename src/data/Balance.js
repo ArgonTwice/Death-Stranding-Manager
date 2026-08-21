@@ -412,7 +412,20 @@ export const BALANCE = {
     highStressXpMult: 0.8,
     highStressThreshold: 80,
     sRankReputationGain: 2,
+    // V1.27.0 — réputation ET Likes (ratingXLikes ci-dessous) pondérés par deliveryValueMult(distance)
+    // (engine/DeliveryEngine.js): ce champ reste la valeur DE BASE (distance "neutre", mult=1), plus
+    // multipliée par ce facteur — jamais appliquée telle quelle. Corrige un exploit réel: ni la
+    // réputation ni les Likes ne dépendaient auparavant de la distance, alors que le risque tiré une
+    // seule fois au dispatch (generateEvent, ligne ~460) augmente justement AVEC la distance
+    // (riskDistanceMult) — une micro-route (distance≈0-1) gardait donc quasi-systématiquement le cargo
+    // en condition parfaite (grade S garanti) pour le MÊME gain plat qu'une livraison longue et risquée,
+    // en une fraction du temps de trajet. Spam de micro-routes = stratégie dominante pour farmer
+    // réputation/Likes. Résolu en indexant le gain sur la distance réelle plutôt qu'en imposant une
+    // distance minimale artificielle (aucune contrainte UI nouvelle).
     deliveryReputationGain: 3,
+    deliveryValueMultDistanceDivisor: 6, // calibré sur la grille RÉELLE 10x10 (MAP_WIDTH/HEIGHT, pas le générique "distance/40" du brief écrit pour une carte plus grande): mult=1 (neutre) à distance=6, environ le milieu de la portée utile
+    deliveryValueMultFloor: 0.4, // plancher: une livraison quasi-triviale reste toujours minimalement récompensée, jamais 0
+    deliveryValueMultCap: 1.7, // plafond: deliveryReputationGain(3) x 1.7 ≈ 5, conforme au "plafonné à ~5" du brief; atteint vers distance≈10.2, sous la diagonale max de la grille (~12.7)
     levelUpXpPerLevel: 50,
     levelUpSalaryIncrease: 70,
     // V1.24.0 — 2 -> 8: réaffûté à la hausse. V1.16.0 avait volontairement adouci cette valeur (10->2)
@@ -440,6 +453,10 @@ export const BALANCE = {
     ratingSGradeThreshold: 90,
     ratingAGradeThreshold: 70,
     ratingBGradeThreshold: 40,
+    // V1.27.0 — valeurs DE BASE (distance neutre, mult=1): deliveryRating(condition, distance)
+    // (engine/DeliveryEngine.js) les multiplie par deliveryValueMult(distance) ci-dessus, même facteur
+    // que deliveryReputationGain — un grade S obtenu sur une micro-route ne rapporte plus le même
+    // nombre de Likes qu'un grade S arraché sur une longue livraison à risque réel.
     ratingSLikes: 25,
     ratingALikes: 15,
     ratingBLikes: 8,
@@ -638,7 +655,17 @@ export const BALANCE = {
     gratitudeStepInterval: 10000,
     gratitudePerInterval: 1,
     speedBonusPerChiralKm: 0.002, // -0.2% de temps de trajet par km chiral marché IRL, cumulatif
-    speedBonusCap: 0.15, // jamais plus de -15% de temps, quel que soit le total de pas
+    // V1.27.0 — 0.15 -> 0.10: plafonne plus fermement l'avantage cumulé d'un joueur passif IRL
+    // (marche seule, aucune gestion active) sur un joueur actif en gestion pure. Mesuré via
+    // tests/balancing-simulation.test.mjs: l'archétype "realwalk" (setup IDENTIQUE à "casual", seule
+    // différence: recordSteps(7000)/jour) finissait avec ~2.6x l'argent et ~2.1x les Likes de "casual"
+    // sur 300 jours — l'essentiel de l'écart vient en réalité de l'extension réseau gratuite via les pas
+    // (systems/ReconnaissanceSystem.js#extendNetworkDeterministic, cumulatif avec CE bonus de vitesse),
+    // pas de speedBonusCap seul — mais c'est le seul levier direct nommé par le brief qui agit sur
+    // CHAQUE livraison sans dépendre du hasard du réseau déjà découvert, donc le plus sûr à resserrer
+    // sans toucher à extendNetworkDeterministic (mécanique de progression volontairement distincte,
+    // V1.6.0 — "deux voies de déblocage").
+    speedBonusCap: 0.10,
     milestoneStepInterval: 100, // émet walk:milestone (toast UI) tous les 100 pas
     checkpointSaveStepInterval: 100, // sauvegarde silencieuse tous les 100 pas, jamais à chaque pas
     stepCooldownMs: 300, // anti-triche: délai minimal entre deux pas validés (StepDetector.js)
@@ -693,7 +720,19 @@ export const BALANCE = {
   porterAi: {
     giftConnectionGain: 6, // Lien (systems/MemoryEngine.js#gainConnection) — même échelle que connectionGainMinor/Major
     giftLikesGain: 10, // bonus +Likes instantané du porteur qui reçoit le cadeau
-    autoBuyMaxPerTick: 1 // au plus 1 achat automatique par porteur idle par jour — jamais une rafale qui viderait le budget d'un coup
+    autoBuyMaxPerTick: 1, // au plus 1 achat automatique par porteur idle par jour — jamais une rafale qui viderait le budget d'un coup
+    // V1.27.0 — nouveau: autoBuyEquipForIdlePorters() (systems/PorterAiEngine.js) n'entame plus le
+    // budget commun (game.money, jamais les crédits personnels p.credits, toujours tentés en premier)
+    // au point de laisser moins d'un mois de salaires en réserve avant le PROCHAIN bilan mensuel
+    // (engine/DeliveryEngine.js#startMonthBookkeeping, salaires prélevés en une seule fois). Corrige un
+    // creux de trésorerie réel mesuré empiriquement (tests/balancing-simulation.test.mjs, archétype
+    // "optimiseur": jusqu'à $1-11 vers les jours 46-53, un roster idle nombreux avec autoBuyEquip actif
+    // dépensait en continu jusqu'à quasi $0 juste avant l'échéance de salaires suivante) — jamais un
+    // recalibrage de hireCostPerActivePorter (les recrutements initiaux ne coûtent rien dans ce
+    // scénario, hireRaw() direct) ni de VEHICLE_MAINTENANCE_COST (contribution marginale mesurée face
+    // au vrai moteur du creux). Un joueur reste TOUJOURS libre de vider sa propre trésorerie via un
+    // achat MANUEL (Boutique) — seule cette routine autonome est bridée.
+    autoBuyReserveSalaryMonths: 1
   },
   // V1.6.0 — Reconnaissance & Brumes de Guerre DS2 (systems/ReconnaissanceSystem.js)
   reconnaissance: {

@@ -23,7 +23,18 @@ const AUTO_BUY_PRIORITY = ['cryptobiote', 'boots', 'cryobox', 'scanner', 'bolagu
 // p.credits) est tenté EN PREMIER (silent — sonde sans dépenser le budget de base pour rien), puis
 // le budget de la base en repli si les credits sont insuffisants. Jamais l'inverse: un porteur qui
 // a économisé ses propres gains les dépense avant de puiser dans la caisse commune.
+// V1.27.0 — réserve de trésorerie: cette routine autonome ne descend plus jamais le budget commun
+// (game.money) sous un plancher tenant compte de la PROCHAINE échéance de salaires (engine/
+// DeliveryEngine.js#startMonthBookkeeping, tout le mois prélevé en une seule fois) — corrige un creux
+// de trésorerie réel mesuré empiriquement (tests/balancing-simulation.test.mjs, archétype
+// "optimiseur": jusqu'à $1-11 vers les jours 46-53, un roster idle nombreux avec autoBuyEquip actif
+// dépensait en continu jusqu'à quasi $0 juste avant le prélèvement suivant). Ne s'applique JAMAIS aux
+// crédits personnels (p.credits, tentés en premier ci-dessous, hors trésorerie commune) ni à un achat
+// MANUEL à la Boutique (systems/EconomySystem.js#buyEquip, jamais modifié) — un joueur reste toujours
+// libre de dépenser lui-même sa propre trésorerie, seule cette routine autonome est bridée.
 export function autoBuyEquipForIdlePorters() {
+      const activeSalaryTotal = game.porters.filter(p => p.status !== 'dead' && p.status !== 'left').reduce((s, p) => s + (p.salary || 0), 0);
+      const reserve = activeSalaryTotal * BALANCE.porterAi.autoBuyReserveSalaryMonths;
       let bought = 0, boughtWithCredits = 0;
       for (const p of game.porters) {
         if (p.status !== 'idle' || p.health <= 0) continue;
@@ -31,7 +42,7 @@ export function autoBuyEquipForIdlePorters() {
           // silent=true: sonde chaque type sans logger les tentatives ratées (déjà possédé, budget
           // insuffisant, gate rang/étoiles...) — un seul log groupé à la fin, cf. AutomationManager.js.
           if (buyEquip(type, p.id, true, 'credits')) { bought++; boughtWithCredits++; break; }
-          if (buyEquip(type, p.id, true)) { bought++; break; } // repli sur le budget de la base
+          if (game.money > reserve && buyEquip(type, p.id, true)) { bought++; break; } // repli sur le budget de la base, jamais sous la réserve de salaires
         }
       }
       if (bought > 0) logEvent(`🤖 Ordres permanents: ${bought} achat(s) autonome(s) d'équipement à la Boutique (dont ${boughtWithCredits} sur portefeuille personnel)`, 'good');
