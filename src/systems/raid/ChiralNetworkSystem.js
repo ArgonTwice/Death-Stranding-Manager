@@ -3,7 +3,15 @@
 // territoire n'a pas assez de réseau construit par les porteurs/convois en simulation (game.routes),
 // et les routes les plus dures exigent en plus un Super-Relais actif (RegionalNetwork.js).
 import { game } from '../../core/GameState.js';
+import { DAYS_PER_MONTH } from '../../data/Balance.js';
 import { activeSuperRelayCount } from '../RegionalNetwork.js';
+
+// V1.37.0 — même pattern que systems/ReconnaissanceSystem.js#totalDaysElapsed() (qui écrit
+// game.terrainHazards[id].untilDay): ce fichier doit lire la MÊME granularité (jours absolus, pas
+// des mois entiers) pour que routeStatus() reflète le déblocage réel d'un aléa de terrain.
+function totalDaysElapsed() {
+      return (game.month - 1) * DAYS_PER_MONTH + game.dayInMonth;
+    }
 
 // V1.6.0 — BLOCKED: aléa de terrain DS2 (éboulement/inondation, systems/ReconnaissanceSystem.js)
 // bloquant TEMPORAIREMENT une route déjà déverrouillée. État stocké dans game.terrainHazards
@@ -19,7 +27,7 @@ function routeCoverage(mapKey) {
 
 function isHazardBlocked(route) {
       const hazard = game.terrainHazards && game.terrainHazards[route.id];
-      return !!(hazard && game.month <= hazard.untilMonth);
+      return !!(hazard && totalDaysElapsed() < hazard.untilDay);
     }
 
 // Statut d'une route: LOCKED (réseau insuffisant), BLOCKED (aléa de terrain temporaire, V1.6.0),

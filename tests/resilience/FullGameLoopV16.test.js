@@ -14,6 +14,7 @@ const { routeStatus, ROUTE_STATUS, revealedRoutes, silhouetteRoutes } = await im
 const { dispatchPioneer, checkTerrainHazards, extendNetworkDeterministic } = await import('../../src/systems/ReconnaissanceSystem.js');
 const { advanceDay } = await import('../../src/engine/DeliveryEngine.js');
 const { recordSteps } = await import('../../src/systems/RealWalkSystem.js');
+const { DAYS_PER_MONTH } = await import('../../src/data/Balance.js');
 
 // ============================================================
 // 1) Silhouettes — routes/preppers non révélés visibles en position, jamais en détail.
@@ -115,12 +116,17 @@ await test('Terrain hazards: checkTerrainHazards() only ever blocks NETWORKED ro
   }
 });
 
-await test('Terrain hazards: a blocked route reports ROUTE_STATUS.BLOCKED and expires after its untilMonth', async () => {
+// V1.37.0 — field renamed untilMonth->untilDay (bug fix: an untilMonth-based expiration made a
+// "~2-5 day" hazard last 30-60 real days, cf. systems/ReconnaissanceSystem.js#checkTerrainHazards
+// for the full explanation). totalDaysElapsed() mirrors the helper duplicated in
+// ReconnaissanceSystem.js/ChiralNetworkSystem.js (same established pattern as MemoryStormCycle.js).
+await test('Terrain hazards: a blocked route reports ROUTE_STATUS.BLOCKED and expires after its untilDay', async () => {
+  const totalDaysElapsed = () => (game.month - 1) * DAYS_PER_MONTH + game.dayInMonth;
   const route = routesForMap('mexico')[0];
-  game.terrainHazards = { [route.id]: { type: 'rockslide', untilMonth: game.month + 1 } };
+  game.terrainHazards = { [route.id]: { type: 'rockslide', untilDay: totalDaysElapsed() + 3 } };
   assertEqual(routeStatus(route), ROUTE_STATUS.BLOCKED, 'a route with an active hazard must report BLOCKED, not NETWORKED');
-  game.month += 2; // dépasse untilMonth
-  assertEqual(routeStatus(route), ROUTE_STATUS.NETWORKED, 'once untilMonth has passed, the route must report NETWORKED again (hazard cleanup happens on the next checkTerrainHazards() call, but routeStatus() itself already ignores an expired hazard)');
+  game.dayInMonth += 3; // dépasse untilDay (le vrai grain de l'aléa, jamais un mois entier)
+  assertEqual(routeStatus(route), ROUTE_STATUS.NETWORKED, 'once untilDay has passed, the route must report NETWORKED again (hazard cleanup happens on the next checkTerrainHazards() call, but routeStatus() itself already ignores an expired hazard)');
 });
 
 summary('FullGameLoopV16.test.js');

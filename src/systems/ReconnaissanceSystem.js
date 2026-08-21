@@ -8,7 +8,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { game, logEvent } from '../core/GameState.js';
 import { RNG } from '../core/RNG.js';
-import { BALANCE } from '../data/Balance.js';
+import { BALANCE, DAYS_PER_MONTH } from '../data/Balance.js';
 import { RAID_ROUTES } from '../data/Routes.js';
 import { networkExpansionCandidates } from '../engine/MapEngine.js';
 import { routeStatus, ROUTE_STATUS } from './raid/ChiralNetworkSystem.js';
@@ -68,6 +68,14 @@ const HAZARD_TYPES = [
       { id: 'flood', label: '🌊 Inondation' }
     ];
 
+// V1.37.0 — même pattern que systems/MemoryStormCycle.js#totalDaysElapsed()/
+// systems/BBPodSystem.js#totalDaysElapsed(): jour absolu depuis le début de la partie. Bug réel
+// corrigé ici (game.month seul, avant ce fix, faisait durer un aléa "~2-5 jours" pendant 30 à 60
+// jours réels — cf. commentaire détaillé sur checkTerrainHazards() ci-dessous).
+function totalDaysElapsed() {
+      return (game.month - 1) * DAYS_PER_MONTH + game.dayInMonth;
+    }
+
 // Itère RAID_ROUTES au complet (toutes cartes), jamais routesForMap(game.currentMap): appelée depuis
 // engine/DeliveryEngine.js#advanceDay() APRÈS le bloc d'auto-dispatch qui peut laisser
 // game.currentMap sur la carte du DERNIER porteur traité (restauré à viewMap seulement en toute fin
@@ -76,9 +84,16 @@ const HAZARD_TYPES = [
 export function checkTerrainHazards() {
       const B = BALANCE.reconnaissance;
       game.terrainHazards = game.terrainHazards || {};
-      // Nettoyage des aléas expirés (mois révolu)
+      // V1.37.0 — bug réel trouvé par revue de code + confirmé empiriquement: l'ancien untilMonth
+      // (game.month + 1, quel que soit `days` 2-5) ne se nettoyait qu'au 2e passage d'un mois complet
+      // (le check `game.month > untilMonth` reste faux tant que game.month === untilMonth, donc il
+      // faut attendre le TOUR SUIVANT de game.month++ pour que la condition strict devienne vraie) —
+      // un aléa "~2-5 jours" durait en réalité 30 à 60 jours réels, peu importe le jour du mois où il
+      // se déclenchait (vérifié: injecté au jour 0 -> 31 jours ; injecté au jour 28 -> 33 jours).
+      // Fix: expiration en JOURS ABSOLUS (totalDaysElapsed(), même granularité que `days`), jamais en
+      // mois entiers — cohérent avec le message affiché au joueur ("~${days} jours").
       for (const routeId in game.terrainHazards) {
-        if (game.month > game.terrainHazards[routeId].untilMonth) delete game.terrainHazards[routeId];
+        if (totalDaysElapsed() >= game.terrainHazards[routeId].untilDay) delete game.terrainHazards[routeId];
       }
       for (const route of RAID_ROUTES) {
         if (!game.mapsData[route.mapKey]) continue; // territoire jamais initialisé (pas encore débloqué)
@@ -87,7 +102,7 @@ export function checkTerrainHazards() {
         if (RNG.next() > B.hazardSpawnChance) continue;
         const type = HAZARD_TYPES[Math.floor(RNG.next() * HAZARD_TYPES.length)];
         const days = B.hazardBlockDaysMin + Math.floor(RNG.next() * (B.hazardBlockDaysMax - B.hazardBlockDaysMin + 1));
-        game.terrainHazards[route.id] = { type: type.id, untilMonth: game.month + Math.max(1, Math.ceil(days / 30)) };
+        game.terrainHazards[route.id] = { type: type.id, untilDay: totalDaysElapsed() + days };
         logEvent(`${type.label} — ${route.name} temporairement impraticable (~${days} jours).`, 'warn');
         eventBus.emit('terrain:hazard', { routeId: route.id, type: type.id });
       }

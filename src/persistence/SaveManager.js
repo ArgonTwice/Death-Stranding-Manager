@@ -312,7 +312,8 @@ export function deserializeGame(s) {
       // peut légitimement être encore false si son premier raccordement réseau n'a jamais eu lieu).
       game.progression = s.progression || { realWalk: { unlocked: true } };
       game.progression.realWalk = game.progression.realWalk || { unlocked: true };
-      // V1.6.0 — terrainHazards survit au chargement (état purement temporel, untilMonth); jamais
+      // V1.6.0 — terrainHazards survit au chargement (état purement temporel, untilDay depuis
+      // V1.37.0); jamais
       // pioneerMissions (cf. serializeGame ci-dessus: vidé à chaque chargement, même règle que
       // game.deliveries/game.convoys — les porteurs concernés repartent 'idle' juste au-dessus).
       game.terrainHazards = s.terrainHazards || {};
