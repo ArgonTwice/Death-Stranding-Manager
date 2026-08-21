@@ -6,4 +6,4 @@
 // RÈGLE D'ISOLATION: VERSION est une métadonnée purement DESCRIPTIVE — jamais lue par RNG.js, jamais
 // consommée par la boucle de simulation (core/GameLoop.js, engine/*, systems/*). Un changement de
 // VERSION ne doit jamais altérer le déterminisme d'une partie.
-export const VERSION = "1.31.0";
+export const VERSION = "1.32.0";
