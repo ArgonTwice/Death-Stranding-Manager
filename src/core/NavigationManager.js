@@ -58,6 +58,36 @@ export function isPanelOpen(id) {
       return stack.some(p => p.id === id);
     }
 
+// V1.32.0 — bug réel trouvé en jouant une vraie partie (lancement d'un Raid Tactique depuis
+// RaidSelectionModal.js/ContractBoardModal.js): ces deux seuls appelants faisaient
+// `closeX(); openRaidTrackingDrawer();` — closePanel() est ASYNCHRONE (history.back(), popstate
+// différé), et le pushPanel() de openRaidTrackingDrawer() s'exécutait AVANT que ce popstate
+// n'arrive. Le navigateur résout ensuite history.back() par rapport à sa cible d'ORIGINE (la
+// position AVANT le pushPanel intercalé) plutôt que par rapport au nouveau sommet — un SEUL
+// popstate finissait alors par dépiler les DEUX panneaux d'un coup (celui qu'on voulait fermer ET
+// celui tout juste ouvert), refermant le tiroir de suivi de raid quelques centaines de ms après son
+// ouverture, sans la moindre erreur ni action du joueur. Confirmé empiriquement (Playwright,
+// history.state passe de {depth:2} juste après l'appel à un unique popstate à {depth:0}).
+//
+// Fix: séquencer réellement la fermeture avant l'ouverture — attendre le VRAI popstate déclenché
+// par closePanel(oldId) (donc que son apply() ait tourné) avant d'exécuter openFn (qui appelle
+// pushPanel() + toute logique d'ouverture propre au contrôleur — openDrawer()/render*(), etc., pas
+// seulement pushPanel seul). Un seul aller-retour popstate, jamais perceptible (<1 frame), élimine
+// la course par construction plutôt que par discipline d'appel — tout futur "fermer A puis ouvrir
+// B" doit passer par ici, jamais par un closeX() suivi d'un pushPanel()/openY() synchrone.
+export function closePanelThenPush(oldId, openFn) {
+      if (!isPanelOpen(oldId)) { openFn(); return; }
+      const onceClosed = () => {
+        window.removeEventListener('popstate', onceClosed);
+        openFn();
+      };
+      // Enregistré APRÈS onPopState (déjà attaché depuis initNavigation() au boot) — les listeners
+      // d'un même événement s'exécutent dans leur ordre d'ajout, donc celui-ci tourne TOUJOURS après
+      // que le popstate ait fini de dépiler/appliquer oldId, jamais avant.
+      window.addEventListener('popstate', onceClosed);
+      closePanel(oldId);
+    }
+
 function onPopState(event) {
       const targetDepth = (event.state && event.state.__nav) ? event.state.depth : 0;
       while (stack.length > targetDepth) {

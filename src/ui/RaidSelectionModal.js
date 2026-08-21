@@ -7,7 +7,7 @@ import { RAID_ROUTES, DIFFICULTY_COLORS } from '../data/Routes.js';
 import { HQ } from '../data/Balance.js';
 import { ROUTE_STATUS, isRouteAvailable, routeStatus, revealedRoutes } from '../systems/raid/ChiralNetworkSystem.js';
 import { launchRaid } from '../systems/raid/RaidSystem.js';
-import { closePanel, pushPanel } from '../core/NavigationManager.js';
+import { closePanel, closePanelThenPush, pushPanel } from '../core/NavigationManager.js';
 import { terminalCardHtml } from './components/TerminalCard.js';
 import { statusBadgeHtml } from './components/StatusBadge.js';
 import { openRaidTrackingDrawer } from './RaidTrackingDrawer.js';
@@ -112,8 +112,10 @@ export function launchRaidFromUI(routeId) {
       if (porterId == null) return;
       const ok = launchRaid(routeId, porterId);
       if (ok) {
-        closeRaidSelectionModal();
-        openRaidTrackingDrawer();
+        // V1.32.0 — closeRaidSelectionModal(); openRaidTrackingDrawer(); (fermeture async + ouverture
+        // synchrone juste après) refermait le tiroir de suivi quelques centaines de ms après son
+        // ouverture — cf. core/NavigationManager.js#closePanelThenPush pour le mécanisme exact.
+        closePanelThenPush('raidSelectionModal', openRaidTrackingDrawer);
       } else {
         renderRaidSelectionModal();
       }

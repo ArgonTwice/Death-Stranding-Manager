@@ -16,13 +16,16 @@ import { closeWalkDrawer } from './WalkDrawer.js';
 import { closeRaidTrackingDrawer } from './RaidTrackingDrawer.js';
 import { closeBuildActionDrawer } from './BuildActionDrawer.js';
 
+// V1.32.0 — 3e champ (elevatesBackdrop): SEULS Télémétrie/Terminal/Hall of Fame ont besoin que le
+// fond assombri partagé (#drawerBackdrop) passe au-dessus de leur propre z-index standard — cf.
+// commentaire détaillé sur DrawerManager.js#updateBackdrop pour le mécanisme et le bug que ça corrige.
 const BOTTOM_SHEET_DRAWERS = [
       ['questDrawer', closeQuestPanel],
       ['convoyDrawer', closeConvoyPanel],
       ['porterDrawer', closePorterDrawer],
-      ['hallOfFameDrawer', closeHallOfFamePanel],
-      ['terminalDrawer', closeTerminalConsole],
-      ['telemetryDrawer', closeTelemetryDrawer],
+      ['hallOfFameDrawer', closeHallOfFamePanel, true],
+      ['terminalDrawer', closeTerminalConsole, true],
+      ['telemetryDrawer', closeTelemetryDrawer, true],
       ['portersDrawer', closePortersDrawer],
       ['networkDrawer', closeNetworkDrawer],
       ['walkDrawer', closeWalkDrawer],
@@ -56,8 +59,8 @@ function ensureMtabBarHeightVar() {
 
 export function initUIShell() {
       initNavigation();
-      for (const [id, onCloseRequest] of BOTTOM_SHEET_DRAWERS) {
-        registerDrawer(id, { onCloseRequest });
+      for (const [id, onCloseRequest, elevatesBackdrop] of BOTTOM_SHEET_DRAWERS) {
+        registerDrawer(id, { onCloseRequest, elevatesBackdrop });
       }
       ensureMtabBarHeightVar();
     }

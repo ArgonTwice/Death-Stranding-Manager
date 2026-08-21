@@ -484,9 +484,19 @@
        tiroirs (Quêtes/Convoi/Porteurs/Réseau/Porteur IRL/Raid Tactique): ils ne s'ouvrent JAMAIS
        pendant qu'une modale .left est active (seul point d'entrée: .map-action-bar, visible
        uniquement sur le Dashboard, modale fermée) — ce z-index n'a donc d'effet réel que dans les 3
-       cas concernés. */
-    .ds-drawer-backdrop.active { z-index: 205; }
+       cas concernés.
+       V1.32.0 — bug réel trouvé en jouant une vraie partie: le 205 ci-dessus s'appliquait en fait à
+       TOUS les tiroirs (une seule classe .active, posée par le même updateBackdrop() quel que soit
+       le tiroir ouvert), pas seulement aux 3 concernés — 205 > 100 (z-index standard des 8 AUTRES
+       tiroirs: Quêtes/Convoi/Porteurs/Réseau/Porteur IRL/Raid Tactique/Fiche porteur/Construire)
+       faisait passer le fond assombri PAR-DESSUS leur propre contenu, interceptant tous leurs clics
+       — confirmé par un vrai clic Playwright sur le tiroir Quêtes standard. Fix: nouvelle classe
+       `.above-modal` (ui/DrawerManager.js#updateBackdrop, posée uniquement si un tiroir
+       `elevatesBackdrop` — les 3 d'origine — est ouvert) porte désormais SEULE le bump à 205; `.active`
+       seul revient à son z-index de base (90, css/style.css ligne ~475), sous tous les tiroirs
+       standards. */
     .ds-drawer-backdrop.active { opacity: 1; pointer-events: auto; }
+    .ds-drawer-backdrop.active.above-modal { z-index: 205; }
     .quest-drawer-panel {
       flex: 1; min-height: 0; overflow-y: auto;
       background: rgba(12,10,8,0.96);

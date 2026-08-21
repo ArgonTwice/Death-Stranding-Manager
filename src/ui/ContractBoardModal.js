@@ -8,7 +8,7 @@ import { routeById } from '../data/Routes.js';
 import { CONTRACT_TYPES } from '../data/ContractTemplates.js';
 import { contractsForRelay, isContractLaunchable } from '../systems/contracts/ContractGenerator.js';
 import { startExpedition } from '../systems/expedition/ExpeditionSystem.js';
-import { closePanel, pushPanel } from '../core/NavigationManager.js';
+import { closePanel, closePanelThenPush, pushPanel } from '../core/NavigationManager.js';
 import { terminalCardHtml } from './components/TerminalCard.js';
 import { statusBadgeHtml } from './components/StatusBadge.js';
 import { openRaidTrackingDrawer } from './RaidTrackingDrawer.js';
@@ -87,8 +87,10 @@ export function launchContractFromUI(contractId) {
       if (porterId == null) return;
       const ok = startExpedition(contract, porterId);
       if (ok) {
-        closeContractBoardModal();
-        openRaidTrackingDrawer();
+        // V1.32.0 — même correctif que RaidSelectionModal.js#launchRaidFromUI: closeContractBoardModal()
+        // (async) suivi d'un pushPanel synchrone refermait le tiroir de suivi peu après son ouverture —
+        // cf. core/NavigationManager.js#closePanelThenPush pour le mécanisme exact.
+        closePanelThenPush('contractBoardModal', openRaidTrackingDrawer);
       } else {
         renderContractBoardModal();
       }
