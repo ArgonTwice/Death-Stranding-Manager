@@ -89,6 +89,27 @@ seul levier de croissance réseau derrière un rang tardif — toute réorganisa
 visuellement en conditions quasi-réelles, pas seulement par des tests unitaires qui contournent les
 gates UI).
 
+**AUDIT RÉALISÉ (V1.28.0)**: cartographie complète de `index.html` contre les 3 paliers ci-dessus —
+globalement saine, confirme les 3 niveaux tels que décrits plus haut (`mainNavModal` héberge les 4
+onglets Meta: Livraisons/Réseau/Logistique/Options; les modales `raidSelectionModal`/
+`contractBoardModal`/`loadoutPanelModal`/`inspectorModal`/`miniMapModal` sont contextuelles au sens
+large, déclenchées depuis la carte ou un drawer). 2 écarts trouvés:
+1. **CORRIGÉ**: collision de nom "Réseau" — le bouton 📊 de `.map-action-bar` (Contextuel,
+   `#networkDrawerToggle`) ouvrait un tiroir de STATUT GÉNÉRAL du joueur (trésorerie/rang/réputation/
+   titres/score/journal — la couverture réseau n'est qu'UNE ligne parmi huit), alors que l'onglet
+   principal "Réseau & Preppers" (Meta) gère un contenu totalement différent (camps MULE, expansion,
+   Preppers). Renommé en "Statut" (aria-label + titre H2 uniquement, aucun id/fonction interne touché
+   — `networkDrawer`/`toggleNetworkDrawer` inchangés).
+2. **NON TRAITÉ, à valider explicitement avant toute future tentative**: Pause/Vitesse/Jour
+   (`#pauseBtn`/`#speedControls`/`#dayProgress`) sont enfouis sous Options > Paramètres de Gestion
+   (2 clics) alors que ce sont des contrôles de boucle de jeu fondamentaux — dans ce genre de jeu ils
+   sont typiquement toujours visibles. Le pause automatique sur événement urgent
+   (`TutorialManager.js`/`pauseForMessage`) atténue le problème mais ne l'élimine pas. Déplacer ces
+   contrôles vers le niveau Core toucherait la navigation — exactement le type de changement qui a
+   causé la régression V1.18.0 citée ci-dessus. L'utilisateur a explicitement choisi de NE PAS traiter
+   ce point en V1.28.0 (uniquement le renommage "Réseau"→"Statut") — ne pas le redemander sans
+   validation explicite d'un futur brief/session.
+
 ---
 
 ## Notes générales pour une future mission V2.0
