@@ -222,14 +222,22 @@
     /* Zone centrale (V0.7.0): dédiée exclusivement au Canvas — plus de sidebar toujours visible, le
        Journal/Réseau est désormais un tiroir (#networkDrawer) comme le reste. */
     .map-container {
-      flex: 1; position: relative; z-index: 1;
+      flex: 1; position: relative;
       display: flex; flex-direction: column; min-height: 0;
       /* V1.13.0 — overflow-y:auto (au lieu de hidden): sur un écran court avec un bandeau tutoriel
          haut/plusieurs lignes de statut au-dessus (ex: écran externe replié du Z Fold), la barre
          d'action (.map-action-bar, poussée en bas via margin-top:auto) pouvait dépasser sous la barre
          d'onglets fixe sans aucun moyen de l'atteindre — overflow:hidden rendait ses icônes invisibles
          ET incliquables. Même correctif "zéro troncage" (règle 4) déjà appliqué ailleurs (responsive.css
-         .left .panel/.quest-drawer-panel/.nav-main-content): un contenu trop long scrolle, jamais coupé. */
+         .left .panel/.quest-drawer-panel/.nav-main-content): un contenu trop long scrolle, jamais coupé.
+         V1.34.0 — z-index:1 retiré (même piège que #app-main, V1.33.0): un z-index non-auto sur un
+         élément positionné crée un contexte d'empilement qui plafonne TOUS ses descendants (dont
+         .map-action-bar z:20, .minimap-widget z:20, #dashboardCommandCenter) sous n'importe quel
+         élément EXTÉRIEUR à .map-container ayant un z-index supérieur à 1 (ex: #tutorialOverlay) —
+         latent aujourd'hui (rien ne chevauche actuellement), corrigé préventivement puisqu'une future
+         addition de contenu près du bord de .map-container tomberait dans le même piège que le bug
+         structurel déjà trouvé. z-index:1 ne servait à rien pour l'ordre interne des enfants (contrôlé
+         par LEUR propre z-index, indépendamment de la valeur du parent) — retrait strictement sûr. */
       overflow-x: hidden; overflow-y: auto;
       padding: 10px;
     }
