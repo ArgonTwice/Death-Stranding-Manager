@@ -69,7 +69,7 @@ export function abandonRaid() {
     }
 
 function applyCheckpointEvent(raid, fraction) {
-      const event = resolveCheckpointEvent(raid.raidSeed, fraction);
+      const event = resolveCheckpointEvent(raid.raidSeed, fraction, raid.events); // V1.30.0 — raid.events (déjà persisté) permet de rattraper le flux RNG si le cache mémoire a été perdu par un rechargement mi-raid
       raid.events.push(event);
       let appliedDetour = 0;
       if (event.detourSteps > 0) {
