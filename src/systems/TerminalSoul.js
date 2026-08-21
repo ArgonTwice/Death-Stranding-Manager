@@ -5,14 +5,27 @@
 // module de rester "vivant" sans jamais menacer la reproductibilité bit-à-bit de la simulation.
 import { eventBus } from '../core/EventBus.js';
 import { game, logEvent, runtime } from '../core/GameState.js';
-import { RNG } from '../core/RNG.js';
 import { BALANCE } from '../data/Balance.js';
 import { NARRATIVE_LOG_LINES, TERMINAL_MOOD_LINES } from '../data/Constants.js';
 import { logAbsenceJournalEntry } from './NarrativeLogEngine.js';
 import { generateNightlyDream } from './AbsenceMuseum.js';
 import { recordSteps, totalChiralKm } from './RealWalkSystem.js';
 
-function pick(arr) { return arr[Math.floor(RNG.next() * arr.length)]; }
+// V1.31.0 — bug réel trouvé par revue de code + confirmé empiriquement: pick() piochait via
+// RNG.next() (flux PARTAGÉ, core/RNG.js), alors que CE module dépend explicitement de Date.now()
+// (greetOnLoad: durée d'absence réelle; checkTerminalSlowdown: temps de session réel) et de la saisie
+// libre du joueur (LISTEN tapé au Terminal) — un nombre d'appels qui varie selon des facteurs NON
+// déterministes, exactement ce que core/RNG.js interdit explicitement dans son propre en-tête
+// ("volontairement PAS utilisé pour les effets purement cosmétiques... dont le nombre d'appels dépend
+// [de facteurs] non déterministes — désynchroniserait la seed"). Confirmé: avec la même seed, taper
+// UNE SEULE fois "LISTEN" avant de simuler 30 jours suffisait à faire diverger tout l'état de partie
+// (argent/réputation/etc.) par rapport à une run identique sans cette commande — la même classe de bug
+// que RngUiOrthogonality.test.js/determinism-check.mjs existent pour prévenir, simplement jamais
+// couverte pour ce fichier. Fix: Math.random(), même pattern déjà établi pour tout le reste du
+// contenu purement cosmétique (audio/SoundEngine.js, pluie du canvas main.js/MapRenderer.js) — ce
+// texte d'ambiance n'a AUCUN effet mécanique, sa source d'aléa n'a donc aucune raison d'être
+// reproductible ni de partager le flux de la simulation.
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 // Appelée uniquement au CHARGEMENT d'une sauvegarde existante (SaveManager.loadGame) — jamais à la
 // création d'une nouvelle partie, donc jamais exercée par tests/run-once.mjs (qui n'appelle que

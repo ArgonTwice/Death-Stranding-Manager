@@ -17,6 +17,21 @@ export async function saveLegends(list) {
       await storageSet(LEGENDS_KEY, JSON.stringify(list));
     }
 
+// V1.31.0 — bug réel trouvé par revue de code (même famille que game.beachSession/beachQueue,
+// V1.29.0, mais ici côté I/O storage plutôt qu'état mémoire): DeliveryEngine.tick() peut appeler
+// recordHallOfFame()/recordLegendIfEligible() pour PLUSIEURS porteurs dans le MÊME tick synchrone (2
+// morts simultanées). Chaque appel lançait sa PROPRE IIFE fire-and-forget indépendante
+// (load->unshift->save) — si 2 s'exécutaient en parallèle, les deux `await loadLegends()` résolvaient
+// AVANT que l'une ou l'autre n'ait sauvegardé (même la version stub synchrone de localStorage force un
+// aller-retour microtâche à chaque `await`), donc les deux lisaient la MÊME liste de départ: la 2e
+// sauvegarde à se terminer écrasait silencieusement la 1re — un porteur légendaire disparaissait
+// purement et simplement du Hall of Fame PERSISTÉ (jamais du `game.hallOfFame` en mémoire de la run
+// courante, qui reste correct puisque synchrone). Confirmé empiriquement (2 appels synchrones
+// consécutifs -> un seul survivant en storage). Fix: une chaîne de promesses sérialise TOUJOURS
+// load->modify->save d'un appel au suivant, jamais deux en vol simultanément — comportement fire-
+// and-forget inchangé pour l'appelant (RaidSystem.js), aucun blocage de la boucle de jeu.
+let legendWriteChain = Promise.resolve();
+
 // Appelée depuis PorterSystem.recordHallOfFame() — ne persiste entre les parties que les porteurs
 // qui ont vraiment marqué la run (niveau ou popularité au-dessus du seuil), pas chaque porteur mort
 // au niveau 1. Fire-and-forget (comme saveGame(true) ailleurs dans le code): l'I/O storage ne doit
@@ -24,7 +39,7 @@ export async function saveLegends(list) {
 export function recordLegendIfEligible(porter, cause) {
       const B = BALANCE.legacy;
       if (porter.level < B.legendMinLevel && (porter.likes || 0) < B.legendMinLikes) return;
-      (async () => {
+      legendWriteChain = legendWriteChain.then(async () => {
         const legends = await loadLegends();
         legends.unshift({
           name: porter.name, background: porter.background, phobia: porter.phobia, joy: porter.joy,
@@ -33,7 +48,7 @@ export function recordLegendIfEligible(porter, cause) {
         });
         await saveLegends(legends.slice(0, B.hallOfFameCap));
         eventBus.emit('legacy:legendRecorded', { name: porter.name, cause, porterId: porter.id });
-      })();
+      });
     }
 
 // New Game+ — transfert partiel de "schémas" (niveaux d'installations reportés à une fraction de
