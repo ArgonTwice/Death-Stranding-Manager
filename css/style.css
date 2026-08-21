@@ -105,7 +105,7 @@
       color: var(--amber); font-size: 13px; flex: 0 0 auto;
     }
     #app-main {
-      grid-row: 2; position: relative; z-index: 1;
+      grid-row: 2; position: relative;
       min-height: 0; overflow: hidden;
       /* V1.0.2 règle 1 — padding-top DYNAMIQUE (pas une valeur fixe devinée): --tutorial-h est posée
          par ui/TutorialOverlay.js (ResizeObserver, 0px si le tutoriel est fermé/terminé) pour que la
