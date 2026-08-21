@@ -19,11 +19,21 @@ export function maybeLogTelemetryLine(porter, delivery) {
 
 // Appelée au retour de session (TerminalSoul.greetOnLoad) — une ligne poétique sur ce qui s'est
 // passé "sans toi". Purement textuel: aucune conséquence mécanique.
+//
+// V1.35.0 — bug réel trouvé par revue de code (même famille que TerminalSoul.js#pick(), V1.31.0) +
+// confirmé empiriquement: contrairement à maybeLogTelemetryLine() ci-dessus (légitimement appelée
+// depuis DeliveryEngine.tick(), donc son nombre d'appels EST déterministe), cette fonction n'est
+// appelée QUE depuis TerminalSoul.js#greetOnLoad() — déclenché par un vrai loadGame() joueur, à un
+// moment NON déterministe (dépend de quand/si le joueur recharge une sauvegarde). Utiliser RNG.next()
+// (flux PARTAGÉ) ici consommait 2 tirages à chaque rechargement, désynchronisant silencieusement toute
+// la trajectoire de simulation qui suit — reproduit: même seed, un run avec un unique saveGame()+
+// loadGame() mid-partie (porteur vivant) diverge de la référence sans rechargement (argent/réputation
+// différents après les mêmes advanceDay() suivants). Fix: Math.random(), même pattern que TerminalSoul.js.
 export function logAbsenceJournalEntry() {
       const candidates = game.porters.filter(p => p.status !== 'dead' && p.status !== 'left');
       if (!candidates.length) return;
-      const p = candidates[Math.floor(RNG.next() * candidates.length)];
-      const template = ABSENCE_JOURNAL_TEMPLATES[Math.floor(RNG.next() * ABSENCE_JOURNAL_TEMPLATES.length)];
+      const p = candidates[Math.floor(Math.random() * candidates.length)];
+      const template = ABSENCE_JOURNAL_TEMPLATES[Math.floor(Math.random() * ABSENCE_JOURNAL_TEMPLATES.length)];
       logEvent(`📖 ${template(p.name)}`, 'good');
     }
 
