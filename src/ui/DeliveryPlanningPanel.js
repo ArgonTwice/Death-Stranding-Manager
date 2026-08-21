@@ -14,7 +14,7 @@
 import { game } from '../core/GameState.js';
 import { eventBus } from '../core/EventBus.js';
 import { CARGO_TYPES, ROUTE_TYPES } from '../data/Constants.js';
-import { dispatchDeliveryManually } from '../engine/DeliveryEngine.js';
+import { dispatchDeliveryManually, estimateNetMarginPreview } from '../engine/DeliveryEngine.js';
 import { dispatchPioneer } from '../systems/ReconnaissanceSystem.js';
 import { registerView, mountView, destroyView } from '../core/ViewLifecycle.js';
 import { revealedMainKnots } from '../systems/PrepperSystem.js';
@@ -25,10 +25,15 @@ function porterDispatchRowHtml(p) {
       // V1.4.0 — "Brumes de guerre": le menu de dispatch ne propose que les villes déjà révélées,
       // jamais tout le territoire d'un coup (cf. systems/PrepperSystem.js#revealedMainKnots).
       const knots = d ? revealedMainKnots(d) : [];
+      // V1.26.0 — aperçu de marge nette live (docs/ROADMAP_V2.md idée 2, engine/DeliveryEngine.js
+      // #estimateNetMarginPreview): recalculé à chaque changement de destination/cargo/route, AVANT le
+      // clic "Envoyer" — jusqu'ici la marge n'apparaissait qu'après le départ (QuestPanel.js, livraison
+      // déjà en cours).
       const dispatchBlock = knots.length ? `
-          <select id="dp-dest-${p.id}" class="qp-select">${knots.map(k => `<option value="${k.x},${k.y}">${k.name}</option>`).join('')}</select>
-          <select id="dp-cargo-${p.id}" class="qp-select">${Object.entries(CARGO_TYPES).map(([key, c]) => `<option value="${key}">${c.name}</option>`).join('')}</select>
-          <select id="dp-route-${p.id}" class="qp-select">${Object.entries(ROUTE_TYPES).map(([key, r]) => `<option value="${key}">${r.icon} ${r.name}</option>`).join('')}</select>
+          <select id="dp-dest-${p.id}" class="qp-select" onchange="updateDeliveryPlanningMarginUI(${p.id})">${knots.map(k => `<option value="${k.x},${k.y}">${k.name}</option>`).join('')}</select>
+          <select id="dp-cargo-${p.id}" class="qp-select" onchange="updateDeliveryPlanningMarginUI(${p.id})">${Object.entries(CARGO_TYPES).map(([key, c]) => `<option value="${key}">${c.name}</option>`).join('')}</select>
+          <select id="dp-route-${p.id}" class="qp-select" onchange="updateDeliveryPlanningMarginUI(${p.id})">${Object.entries(ROUTE_TYPES).map(([key, r]) => `<option value="${key}">${r.icon} ${r.name}</option>`).join('')}</select>
+          <div class="qp-card-meta" id="dp-margin-${p.id}" style="opacity:0.75;"></div>
           <button class="term-card-action success" onclick="dispatchDeliveryPlanningUI(${p.id})">🚚 Envoyer</button>` : '';
       // V1.6.0 — Dispatch Pionnier: gratuit en argent, mobilise ce porteur BALANCE.reconnaissance.
       // pioneerMissionDays jours pour étendre le Réseau Chiral d'une case (systems/
@@ -49,6 +54,25 @@ export function renderDeliveryPlanningPanel() {
       el.innerHTML = idle.length
         ? idle.map(porterDispatchRowHtml).join('')
         : '<div class="qp-empty">Aucun porteur disponible pour une commande principale — tous en mission ou indisponibles.</div>';
+      // Valeur initiale de l'aperçu (dès l'ouverture, pas seulement après une interaction) — le
+      // <select> destination arrive déjà pré-sélectionné sur sa 1re <option> par le navigateur.
+      idle.forEach(p => updateDeliveryPlanningMarginUI(p.id));
+    }
+
+export function updateDeliveryPlanningMarginUI(porterId) {
+      const marginEl = document.getElementById(`dp-margin-${porterId}`);
+      if (!marginEl) return;
+      const destEl = document.getElementById(`dp-dest-${porterId}`);
+      if (!destEl || !destEl.value) { marginEl.innerHTML = ''; return; }
+      const [destX, destY] = destEl.value.split(',').map(Number);
+      const cargoEl = document.getElementById(`dp-cargo-${porterId}`);
+      const routeEl = document.getElementById(`dp-route-${porterId}`);
+      const porterIdx = game.porters.findIndex(x => x.id === porterId);
+      if (porterIdx === -1) { marginEl.innerHTML = ''; return; }
+      const margin = estimateNetMarginPreview(porterIdx, destX, destY, cargoEl ? cargoEl.value : undefined, routeEl ? routeEl.value : undefined);
+      marginEl.innerHTML = margin
+        ? `💰 Marge nette estimée: <b style="color:${margin.net >= 0 ? 'var(--chiral)' : 'var(--blood)'};">${margin.net >= 0 ? '+' : ''}$${margin.net}</b> (brut $${margin.gross} − salaire $${margin.salaryCost}${margin.fuelCost ? ` − carburant $${margin.fuelCost}` : ''} − usure $${margin.wearCost})`
+        : '';
     }
 
 export function dispatchDeliveryPlanningUI(porterId) {

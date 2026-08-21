@@ -486,22 +486,28 @@ export function dispatchDeliveryManually(porterIdx, destX, destY, options = {}) 
       return true;
     }
 
-export function createDelivery(porterIdx, destX, destY, questOpts) {
+// V1.26.0 — factorise le calcul PUR (aucun RNG.next(), aucune mutation game.*/porter.*) de la
+// récompense et du temps de trajet d'une livraison, jusqu'ici en ligne dans createDelivery(). Appelée
+// par createDelivery() (dispatch réel) ET par estimateNetMarginPreview() ci-dessous (aperçu live
+// avant dispatch, ui/DeliveryPlanningPanel.js#porterDispatchRowHtml) — garantit que les deux formules
+// ne peuvent jamais diverger. Les étapes qui consomment du RNG (tirage d'événement, generateEvent) ou
+// mutent l'état (cargaison perdue récupérée, collectNearbyLostCargo() SPLICE le tableau) restent hors
+// de cette fonction, à la charge de chaque appelant — la réorganisation des lignes déplacées ici ne
+// change donc jamais l'ordre de consommation du flux RNG partagé.
+function computeDeliveryEconomics(porter, destX, destY, cargoType, routeKey, options = {}) {
       const B = BALANCE.delivery;
-      const porter = game.porters[porterIdx];
-      if (porter.status !== "idle" || porter.health <= 0) return;
-
       const distance = Math.hypot(destX - porter.x, destY - porter.y);
-
-      const cargoType = (questOpts && questOpts.forceCargoType) || pickCargoType();
       const cargo = CARGO_TYPES[cargoType];
+      const onRoute = isOnRoute(destX, destY);
+      const route = ROUTE_TYPES[routeKey] || null;
 
       // Calcul récompense (fixée par la quête si applicable — le cargo influence le risque/temps, pas le
-      // montant). V1.1 — testé sur questOpts.reward != null, PAS juste questOpts truthy: le dispatch
-      // manuel (dispatchDeliveryManually ci-dessous) passe un questOpts SANS .reward (seulement
-      // forceCargoType/route) pour obtenir le calcul auto normal malgré une destination/un cargo
-      // choisis à la main — jamais un montant NaN issu d'un questOpts.reward absent.
-      let reward = (questOpts && questOpts.reward != null) ? Math.ceil(questOpts.reward * (1 + gradeLevel(porter, 'service') * B.serviceGradeRewardMult)) : Math.ceil(distance * B.rewardDistanceMult * (1 + game.reputation / B.reputationRewardDivisor) * cargo.rewardMult);
+      // montant). V1.1 — testé sur options.rewardOverride != null: le dispatch manuel/l'aperçu passent
+      // un rewardOverride absent pour obtenir le calcul auto normal malgré une destination/un cargo
+      // choisis à la main — jamais un montant NaN issu d'un reward absent.
+      let reward = options.rewardOverride != null
+        ? Math.ceil(options.rewardOverride * (1 + gradeLevel(porter, 'service') * B.serviceGradeRewardMult))
+        : Math.ceil(distance * B.rewardDistanceMult * (1 + game.reputation / B.reputationRewardDivisor) * cargo.rewardMult);
       if (porter.equipment.vehicle) reward *= B.vehicleRewardMult;
       reward = Math.ceil(reward * (1 + (game.infraInvestments || 0) * B.infraRewardMultPerInvestment)); // investissements infrastructure, permanent
       reward = Math.ceil(reward * regionalNetworkRewardMult()); // V0.5.0: bonus permanent des Super-Relais régionaux
@@ -511,13 +517,8 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
 
       // Surcharge: ratio masse cargo / capacité porteur — au-delà de 0.9 ça pénalise risque + vitesse (canon: balance/stamina DS)
       const overload = overloadRatio(porter, cargo);
-      const overloadRiskMod = overload > B.overloadThreshold ? (overload - B.overloadThreshold) * B.overloadRiskMult : 0;
 
-      const onRoute = isOnRoute(destX, destY);
-      const campRiskCut = dominantStructure() === 'shelter' ? B.shelterDominantRiskCut : 0;
-      const route = ROUTE_TYPES[(questOpts && questOpts.route)] || null;
-      const event = generateEvent(porter, distance, destX, destY, cargo.riskMod + overloadRiskMod - (questOpts && questOpts.riskCut || 0) - festivalValue('riskCut') - campRiskCut + (route ? route.riskMod : 0) - regionalNetworkRiskCut()); // riskCut: raid + festival + spécialité camp + itinéraire + V0.5.0 Super-Relais
-      let timeMultiplier = (porter.equipment.vehicle ? VEHICLE_SPEED[porter.equipment.vehicle] : 1) * cargo.timeMult * (route ? route.timeMult : 1) * ((questOpts && questOpts.extraTimeMult) || 1);
+      let timeMultiplier = (porter.equipment.vehicle ? VEHICLE_SPEED[porter.equipment.vehicle] : 1) * cargo.timeMult * (route ? route.timeMult : 1) * (options.extraTimeMult || 1);
       if (onRoute) timeMultiplier *= Math.max(B.onRouteTimeFloor, B.onRouteTimeBase - gradeLevel(porter, 'reseau') * B.onRouteReseauGradeMult) * (1 - (game.structures.zipline || 0) * B.ziplineStructureTimeMultPerLevel) * (dominantStructure() === 'zipline' ? B.ziplineDominantTimeMult : 1) * (isNearPCC(destX, destY, 'zipline') ? B.ziplinePccTimeMult : 1); // -30% temps + Porter Grade Réseau + zipline + spécialité camp + tyrolienne PCC
       // Cargo lourd sans véhicule: pénalité de temps supplémentaire
       if (cargoType === 'heavy' && !porter.equipment.vehicle) timeMultiplier *= B.heavyCargoNoVehicleTimeMult;
@@ -534,9 +535,46 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
       if (destTerrain === 'river' && !isNearPCC(destX, destY, 'bridge')) timeMultiplier *= 1 + B.riverTimeMult * terrainMit;
       timeMultiplier *= timefallSpeedMult(porter.map, destX, destY); // V0.3.0: Timefall ralentit les porteurs non abrités
 
+      const maxSteps = Math.ceil(distance * B.maxStepsDistanceMult * timeMultiplier);
+      return { distance, cargo, route, onRoute, overload, destTerrain, reward, maxSteps };
+    }
+
+// V1.26.0 (docs/ROADMAP_V2.md idée 2) — aperçu de marge nette AVANT dispatch, appelé en live depuis
+// ui/DeliveryPlanningPanel.js à chaque changement de destination/cargo/route dans le formulaire de
+// dispatch manuel. Fonction pure: ne consomme jamais RNG.next() (event/BT exposure exclus, non
+// pertinents pour le calcul récompense/durée) et ne mute jamais l'état (la cargaison perdue proche est
+// PEEKÉE ici — jamais splicée comme le fait collectNearbyLostCargo() au dispatch réel — sans quoi
+// ouvrir le panneau de planification aurait "consommé" un pickup sans jamais envoyer le porteur).
+export function estimateNetMarginPreview(porterIdx, destX, destY, cargoType, routeKey) {
+      const porter = game.porters[porterIdx];
+      if (!porter || !cargoType) return null;
+      const mapData = game.mapsData[porter.map];
+      const peeked = mapData && mapData.lostCargo && mapData.lostCargo.find(c => Math.hypot(c.x - destX, c.y - destY) <= BALANCE.network.pccProximityRadius);
+      const econ = computeDeliveryEconomics(porter, destX, destY, cargoType, routeKey);
+      const reward = econ.reward + (peeked ? peeked.reward : 0);
+      return estimateNetMargin({ porter: porterIdx, maxSteps: econ.maxSteps, reward });
+    }
+
+export function createDelivery(porterIdx, destX, destY, questOpts) {
+      const B = BALANCE.delivery;
+      const porter = game.porters[porterIdx];
+      if (porter.status !== "idle" || porter.health <= 0) return;
+
+      const cargoType = (questOpts && questOpts.forceCargoType) || pickCargoType();
+      const econ = computeDeliveryEconomics(porter, destX, destY, cargoType, questOpts && questOpts.route, {
+        rewardOverride: questOpts && questOpts.reward,
+        extraTimeMult: (questOpts && questOpts.extraTimeMult) || 1
+      });
+      const { distance, cargo, route, onRoute, overload, destTerrain, maxSteps } = econ;
+
+      const overloadRiskMod = overload > B.overloadThreshold ? (overload - B.overloadThreshold) * B.overloadRiskMult : 0;
+
+      const campRiskCut = dominantStructure() === 'shelter' ? B.shelterDominantRiskCut : 0;
+      const event = generateEvent(porter, distance, destX, destY, cargo.riskMod + overloadRiskMod - (questOpts && questOpts.riskCut || 0) - festivalValue('riskCut') - campRiskCut + (route ? route.riskMod : 0) - regionalNetworkRiskCut()); // riskCut: raid + festival + spécialité camp + itinéraire + V0.5.0 Super-Relais
+
       // Réseau asynchrone: cargaison perdue récupérée au passage + structure fantôme empruntée (pour le récit)
       const lostCargoBonus = collectNearbyLostCargo(destX, destY);
-      reward += lostCargoBonus;
+      const reward = econ.reward + lostCargoBonus;
       const ghostPCC = (game.pccInstalls || []).find(p => p.ghost && Math.hypot(p.x - destX, p.y - destY) <= B.ghostPccProximityRadius);
 
       const delivery = {
@@ -559,9 +597,9 @@ export function createDelivery(porterIdx, destX, destY, questOpts) {
         gearWearMult: (questOpts && questOpts.gearWearMult) || 1, // V0.4.0: stratégie de convoi "Rapide" (+usure)
         routeType: (questOpts && questOpts.route) || null, // V0.4.0: TelemetrySystem (rendement par type d'itinéraire)
         destTerrain, lostCargoBonus, ghostName: ghostPCC ? ghostPCC.ghostName : null, // contexte pour le récit émergent
-        maxSteps: Math.ceil(distance * B.maxStepsDistanceMult * timeMultiplier),
+        maxSteps,
         reward,
-        timeRemaining: Math.max(1, Math.ceil(distance * B.maxStepsDistanceMult * timeMultiplier)),
+        timeRemaining: Math.max(1, maxSteps),
         event,
         started: false
       };
